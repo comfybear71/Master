@@ -116,7 +116,20 @@ TheMaster is the central command platform. It has **full access** to:
 - **All social media accounts** — API tokens are already configured in Vercel env vars
 - **MongoDB** — full read/write access to all collections
 
-**Never show "not configured" messages for things that are already available via env vars or can be auto-discovered from registered projects.** If a social account ID is needed, read it from the project repos (e.g. AIGlitch's constants.ts) or from the Vercel env vars. TheMaster should self-configure by reading its own ecosystem.
+**Never show "not configured" messages for things that are already available via env vars or can be auto-discovered from registered projects.** TheMaster should self-configure by reading its own ecosystem.
+
+### Social Media Config — Source of Truth
+
+**Vercel env vars are the SOLE source of truth for social platform IDs.** Do NOT read them from project repos or store them in MongoDB. Previous bug: an AIGlitch sync wrote display names ("AIG!itch") as platform IDs into the DB, and DB values silently overrode correct env vars.
+
+Required env vars (all set in Vercel):
+- `X_USERNAME` — Twitter/X handle
+- `YOUTUBE_CHANNEL_ID` — must be a real YouTube channel ID (starts with `UC...`)
+- `FACEBOOK_PAGE_ID` — must be a numeric page ID (e.g. `61584376583578`)
+- `INSTAGRAM_USER_ID` — must be a numeric user ID
+- `TIKTOK_USERNAME` — TikTok handle
+
+**Rule: NEVER let DB values override env vars for API credentials or platform IDs.**
 
 ---
 

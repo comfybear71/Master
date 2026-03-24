@@ -52,7 +52,7 @@ A unified platform for one solo developer to:
 - [x] Vercel API connected (deployments, build status)
 - [ ] MongoDB Atlas API connected (cluster health)
 - [x] Website uptime monitoring
-- [ ] Social follower counts (X, YouTube, Facebook, Instagram, TikTok)
+- [x] Social follower counts (X, YouTube, Facebook, Instagram, TikTok) — env vars only, DB override bug fixed
 - [ ] Deployed to Vercel
 
 ### ✅ Phase 2 — Dev Orchestrator
@@ -104,7 +104,23 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Known Issues
 
-*None yet — project not started*
+### RESOLVED: Social Media Config — DB Overriding Env Vars (2026-03-24)
+
+**Symptom**: YouTube, Facebook, Instagram, TikTok all showed "Not configured" or returned API errors despite env vars being correctly set in Vercel.
+
+**Root Cause Chain**:
+1. `syncSocialConfigFromProject()` read AIGlitch's `constants.ts` via GitHub API
+2. Loose regex extracted social media **display names** ("AIG!itch", "@AIGlitch") instead of actual platform API IDs (e.g. Facebook numeric page ID `61584376583578`, YouTube channel ID starting with `UC...`)
+3. These garbage values were written to MongoDB `settings` collection as `social_config`
+4. `getOrSyncConfig()` loaded correct env vars FIRST, but then ran `if (config.facebookPageId) fromEnv.facebookPageId = config.facebookPageId` — the DB garbage was truthy, so it **overwrote** the correct env vars every time
+5. All social API calls used "AIG!itch" as channel/page IDs — instant failures
+
+**Fix Applied**:
+- `getOrSyncConfig()` now reads ONLY from Vercel env vars — no DB lookup at all
+- Added `POST /api/social?action=clear-db` endpoint to nuke stale DB records
+- Env vars are the sole source of truth: `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME`
+
+**Lesson**: Never let DB values override env vars silently. Env vars set in Vercel are the source of truth for API credentials and platform IDs.
 
 ---
 
@@ -124,12 +140,15 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 ## Next Session — Start Here
 
 1. All 3 phases are built and deployed
-2. Social media accounts auto-sync from project repos and Vercel env vars — no manual config needed
-3. Add `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME` to Vercel env vars if not already there (these are fallback IDs used when repo sync can't find them)
-4. Seed projects via Projects page if not already done
-5. Test campaign generation: Growth → + New Campaign
-6. Run viral scan: Growth → Viral Alerts → Scan for Viral Posts
-7. Future: Add more social platform publishing APIs, growth charts over time
+2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
+3. Required env vars: `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME` (all set in Vercel)
+4. If social APIs still fail, check the actual values in Vercel — they must be real platform API IDs, not display names
+5. To clear any stale DB records: `POST /api/social?action=clear-db`
+6. Debug endpoint available: `GET /api/social/debug` to verify what env vars resolve to
+7. Seed projects via Projects page if not already done
+8. Test campaign generation: Growth → + New Campaign
+9. Run viral scan: Growth → Viral Alerts → Scan for Viral Posts
+10. Future: Add more social platform publishing APIs, growth charts over time
 
 ---
 
@@ -141,6 +160,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | 2026-03-24 | Phase 2 complete: AI Dev Orchestrator — Vercel build log ingestion & error extraction, Claude API error analysis, fix suggestion UI with approve/apply workflow, auto-commit fixes via GitHub API, auto-update HANDOFF.md, plug & play project onboarding (auto-reads CLAUDE.md/HANDOFF.md, detects stack, finds Vercel project), uptime monitoring, error alert banner on dashboard, expanded monitoring page with project status grid. Build passes. | Claude Code |
 | 2026-03-24 | Phase 3 complete: Growth Engine — Social media hub (X/YouTube/Facebook/Instagram/TikTok API integrations), follower counts & engagement stats per platform, cross-platform post analytics table, AI campaign generator (Claude generates posts for all 5 platforms), campaign preview/approve/publish flow, X auto-publish, viral trigger system (2.5x threshold detection, AI follow-up generation), social config panel, dashboard social follower widget. Build passes. | Claude Code |
 | 2026-03-24 | Mobile UI fixes: Projects & Monitoring page headers stack vertically on mobile, buttons wrap properly. Social self-config: TheMaster now auto-syncs social IDs from project repos + uses env var fallbacks (X_USERNAME, YOUTUBE_CHANNEL_ID, FACEBOOK_PAGE_ID, etc.) — no more "not configured" messages. Updated CLAUDE.md and HANDOFF.md to document that TheMaster has full access to all repos, Vercel projects, and env vars. | Claude Code |
+| 2026-03-24 | BUG FIX: Social config DB was overriding correct env vars with garbage. Old AIGlitch sync wrote display names ("AIG!itch") as platform IDs into MongoDB. `getOrSyncConfig()` let DB override env vars. Fixed: env vars are now the SOLE source of truth, no DB lookup. Added debug endpoint and clear-db action. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
