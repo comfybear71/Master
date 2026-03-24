@@ -46,48 +46,71 @@ export default function GrowthPage() {
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
 
-  // Social config — defaults from AIGlitch's configured accounts
-  const AIGLITCH_DEFAULTS = {
-    xUsername: "aiglitchapp",
-    youtubeChannelId: "",
-    facebookPageId: "",
-    instagramUserId: "",
-    tiktokUsername: "aiglitch",
-  };
-
+  // Social config — auto-synced from AIGlitch's GitHub repo via API
   const [showConfig, setShowConfig] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
-  const [socialConfig, setSocialConfig] = useState(AIGLITCH_DEFAULTS);
+  const [syncing, setSyncing] = useState(false);
+  const [syncSource, setSyncSource] = useState<string | null>(null);
+  const [socialConfig, setSocialConfig] = useState({
+    xUsername: "",
+    youtubeChannelId: "",
+    facebookPageId: "",
+    instagramUserId: "",
+    tiktokUsername: "",
+  });
 
-  // Load saved config on mount — fall back to AIGlitch defaults
+  // Load saved config on mount — API auto-syncs from AIGlitch if empty
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const res = await fetch("/api/social?action=config");
         if (res.ok) {
           const data = await res.json();
+          setSocialConfig({
+            xUsername: data.xUsername || "",
+            youtubeChannelId: data.youtubeChannelId || "",
+            facebookPageId: data.facebookPageId || "",
+            instagramUserId: data.instagramUserId || "",
+            tiktokUsername: data.tiktokUsername || "",
+          });
+          if (data.syncedFrom) setSyncSource(data.syncedFrom);
           const hasAnyConfig = data.xUsername || data.youtubeChannelId || data.facebookPageId || data.instagramUserId || data.tiktokUsername;
-          if (hasAnyConfig) {
-            setSocialConfig({
-              xUsername: data.xUsername || AIGLITCH_DEFAULTS.xUsername,
-              youtubeChannelId: data.youtubeChannelId || AIGLITCH_DEFAULTS.youtubeChannelId,
-              facebookPageId: data.facebookPageId || AIGLITCH_DEFAULTS.facebookPageId,
-              instagramUserId: data.instagramUserId || AIGLITCH_DEFAULTS.instagramUserId,
-              tiktokUsername: data.tiktokUsername || AIGLITCH_DEFAULTS.tiktokUsername,
-            });
-          } else {
-            // No config saved yet — keep AIGlitch defaults pre-filled
-            setShowConfig(true);
-          }
+          if (!hasAnyConfig) setShowConfig(true);
         }
       } catch {
-        // silently fail — defaults already set
+        // silently fail
       }
       setConfigLoaded(true);
     };
     loadConfig();
   }, []);
+
+  const syncFromProject = async (repo?: string) => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/social?action=sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: repo || "comfybear71/aiglitch" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const c = data.config;
+        setSocialConfig({
+          xUsername: c.xUsername || "",
+          youtubeChannelId: c.youtubeChannelId || "",
+          facebookPageId: c.facebookPageId || "",
+          instagramUserId: c.instagramUserId || "",
+          tiktokUsername: c.tiktokUsername || "",
+        });
+        setSyncSource(c.syncedFrom || null);
+      }
+    } catch {
+      // silently fail
+    }
+    setSyncing(false);
+  };
 
   const fetchAll = useCallback(async () => {
     const [statsRes, campaignsRes, alertsRes, projectsRes] = await Promise.allSettled([
@@ -294,13 +317,19 @@ export default function GrowthPage() {
               <input value={socialConfig.tiktokUsername} onChange={(e) => setSocialConfig({ ...socialConfig, tiktokUsername: e.target.value })} placeholder="username (without @)" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-3 mt-4">
             <button onClick={saveConfig} disabled={savingConfig} className="px-6 py-2 bg-accent text-base font-semibold rounded-lg text-sm hover:bg-accent/80 transition-colors disabled:opacity-50">
               {savingConfig ? "Saving..." : "Save & Fetch Stats"}
             </button>
+            <button onClick={() => syncFromProject()} disabled={syncing} className="px-4 py-2 bg-warning/10 text-warning border border-warning/20 rounded-lg text-sm hover:bg-warning/20 transition-colors disabled:opacity-50 font-mono">
+              {syncing ? "Syncing..." : "Sync from AIGlitch"}
+            </button>
             <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-slate-400 text-sm hover:text-white transition-colors">Cancel</button>
-            {configLoaded && !socialConfig.xUsername && !socialConfig.youtubeChannelId && !socialConfig.facebookPageId && !socialConfig.instagramUserId && !socialConfig.tiktokUsername && (
-              <span className="text-xs text-warning">No accounts configured yet — enter at least one to see live data</span>
+            {syncSource && (
+              <span className="text-xs text-success">Synced from {syncSource}</span>
+            )}
+            {configLoaded && !syncSource && !socialConfig.xUsername && !socialConfig.youtubeChannelId && !socialConfig.facebookPageId && !socialConfig.instagramUserId && !socialConfig.tiktokUsername && (
+              <span className="text-xs text-warning">No accounts configured — click &quot;Sync from AIGlitch&quot; to auto-fill</span>
             )}
           </div>
         </div>
