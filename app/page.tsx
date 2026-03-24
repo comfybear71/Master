@@ -5,7 +5,7 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 import CommitFeed from "@/components/dashboard/CommitFeed";
 import DeploymentList from "@/components/dashboard/DeploymentList";
-import { Project } from "@/lib/types";
+import { Project, DetectedError } from "@/lib/types";
 
 interface Commit {
   repo: string;
@@ -27,15 +27,16 @@ export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [commits, setCommits] = useState<Commit[]>([]);
   const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [errors, setErrors] = useState<DetectedError[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
     try {
-      const [projRes, deployRes, ghRes] = await Promise.allSettled([
+      const [projRes, deployRes, errRes] = await Promise.allSettled([
         fetch("/api/projects"),
         fetch("/api/vercel?action=deployments"),
-        fetch("/api/github?action=repos"),
+        fetch("/api/errors"),
       ]);
 
       if (projRes.status === "fulfilled" && projRes.value.ok) {
@@ -46,6 +47,11 @@ export default function Dashboard() {
       if (deployRes.status === "fulfilled" && deployRes.value.ok) {
         const data = await deployRes.value.json();
         setDeployments(Array.isArray(data) ? data : []);
+      }
+
+      if (errRes.status === "fulfilled" && errRes.value.ok) {
+        const data = await errRes.value.json();
+        setErrors(Array.isArray(data) ? data.filter((e: DetectedError) => e.status !== "dismissed" && e.status !== "fix_applied") : []);
       }
 
       // Fetch recent commits from registered project repos
@@ -78,7 +84,7 @@ export default function Dashboard() {
 
       setLastRefresh(new Date());
     } catch {
-      // silently fail — dashboard shows what it can
+      // silently fail
     } finally {
       setLoading(false);
     }
@@ -118,12 +124,35 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
+          {/* Error Alert Banner */}
+          {errors.length > 0 && (
+            <div className="mb-6 bg-danger/5 border border-danger/20 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="w-3 h-3 rounded-full bg-danger animate-pulse-live" />
+                  <div>
+                    <h3 className="text-sm font-semibold text-danger">
+                      {errors.length} Active Error{errors.length > 1 ? "s" : ""} Detected
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {errors.map((e) => e.projectName).filter((v, i, a) => a.indexOf(v) === i).join(", ")}
+                    </p>
+                  </div>
+                </div>
+                <a href="/monitoring" className="px-3 py-1.5 bg-danger/10 text-danger border border-danger/20 rounded-lg text-xs hover:bg-danger/20 transition-colors font-mono">
+                  View & Fix →
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
             <StatsCard label="Total Projects" value={projects.length} icon="◈" color="accent" />
-            <StatsCard label="Live Deployments" value={readyDeploys} icon="▲" color="success" subtitle={`${errorDeploys} errors`} />
+            <StatsCard label="Live Deployments" value={readyDeploys} icon="▲" color="success" />
+            <StatsCard label="Failed" value={errorDeploys} icon="✕" color="danger" />
             <StatsCard label="Building" value={buildingDeploys} icon="⟐" color="warning" />
-            <StatsCard label="Recent Commits" value={commits.length} icon="⬡" color="accent" subtitle="Across all repos" />
+            <StatsCard label="Active Errors" value={errors.length} icon="!" color={errors.length > 0 ? "danger" : "success"} />
           </div>
 
           {/* Main Content Grid */}
@@ -156,7 +185,10 @@ export default function Dashboard() {
             <div className="space-y-6">
               {/* Deployments */}
               <div className="bg-base-card rounded-xl border border-slate-800 p-4">
-                <h3 className="text-sm font-semibold text-white mb-3">Recent Deployments</h3>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">Recent Deployments</h3>
+                  <a href="/monitoring" className="text-xs text-accent hover:underline">All →</a>
+                </div>
                 <DeploymentList deployments={deployments.slice(0, 8)} />
               </div>
 

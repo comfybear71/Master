@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listProjects, listDeployments, triggerRedeploy } from "@/lib/vercel";
+import { listProjects, listDeployments, triggerRedeploy, getBuildLogs, getErrorLogs } from "@/lib/vercel";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -13,8 +13,21 @@ export async function GET(req: NextRequest) {
       }
       case "deployments": {
         const projectId = searchParams.get("projectId") || undefined;
-        const deployments = await listDeployments(projectId);
+        const limit = parseInt(searchParams.get("limit") || "10");
+        const deployments = await listDeployments(projectId, limit);
         return NextResponse.json(deployments);
+      }
+      case "build-logs": {
+        const deploymentId = searchParams.get("deploymentId");
+        if (!deploymentId) return NextResponse.json({ error: "Missing deploymentId" }, { status: 400 });
+        const logs = await getBuildLogs(deploymentId);
+        return NextResponse.json({ logs });
+      }
+      case "error-logs": {
+        const deploymentId = searchParams.get("deploymentId");
+        if (!deploymentId) return NextResponse.json({ error: "Missing deploymentId" }, { status: 400 });
+        const errors = await getErrorLogs(deploymentId);
+        return NextResponse.json({ errors });
       }
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
