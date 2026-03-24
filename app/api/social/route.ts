@@ -87,6 +87,27 @@ export async function GET(req: NextRequest) {
 
   try {
     switch (action) {
+      case "debug": {
+        // Shows what env vars and DB config are available — for troubleshooting
+        const config = await getOrSyncConfig();
+        return NextResponse.json({
+          envVarsSet: {
+            X_USERNAME: !!process.env.X_USERNAME,
+            YOUTUBE_CHANNEL_ID: !!process.env.YOUTUBE_CHANNEL_ID,
+            FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+            INSTAGRAM_USER_ID: !!process.env.INSTAGRAM_USER_ID,
+            TIKTOK_USERNAME: !!process.env.TIKTOK_USERNAME,
+          },
+          resolvedConfig: {
+            xUsername: config.xUsername ? `${config.xUsername.slice(0, 3)}...` : "(empty)",
+            youtubeChannelId: config.youtubeChannelId ? `${config.youtubeChannelId.slice(0, 5)}...` : "(empty)",
+            facebookPageId: config.facebookPageId ? `${config.facebookPageId.slice(0, 5)}...` : "(empty)",
+            instagramUserId: config.instagramUserId ? `${config.instagramUserId.slice(0, 3)}...` : "(empty)",
+            tiktokUsername: config.tiktokUsername ? `${config.tiktokUsername.slice(0, 3)}...` : "(empty)",
+          },
+          deployedAt: new Date().toISOString(),
+        });
+      }
       case "stats": {
         const config = await getOrSyncConfig();
         const stats = await getAllSocialStats({
