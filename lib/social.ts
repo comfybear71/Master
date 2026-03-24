@@ -71,9 +71,12 @@ export async function getXStats(username: string): Promise<SocialStats> {
     const creds = getAppCredentials();
     if (!creds) throw new Error("X OAuth 1.0a credentials not set (X_CONSUMER_KEY etc.)");
 
+    // Strip @ prefix if present
+    const cleanUsername = username.replace(/^@/, "");
+
     // X free tier is WRITE-ONLY — user lookup and tweet reading require Basic ($100/mo).
     // Try the API call, but gracefully handle 401/403 for free-tier accounts.
-    const userUrl = `https://api.twitter.com/2/users/by/username/${username}`;
+    const userUrl = `https://api.twitter.com/2/users/by/username/${cleanUsername}`;
     const userParams = { "user.fields": "public_metrics" };
     const userAuth = buildOAuth1Header("GET", userUrl, creds, userParams);
 
@@ -117,7 +120,7 @@ export async function getXStats(username: string): Promise<SocialStats> {
       id: t.id,
       platform: "x" as SocialPlatform,
       text: t.text,
-      url: `https://x.com/${username}/status/${t.id}`,
+      url: `https://x.com/${cleanUsername}/status/${t.id}`,
       likes: t.public_metrics.like_count,
       comments: t.public_metrics.reply_count,
       shares: t.public_metrics.retweet_count,
