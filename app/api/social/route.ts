@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
           youtubeChannelId: config?.youtubeChannelId || searchParams.get("youtubeChannelId") || undefined,
           facebookPageId: config?.facebookPageId || searchParams.get("facebookPageId") || undefined,
           instagramUserId: config?.instagramUserId || searchParams.get("instagramUserId") || undefined,
+          tiktokUsername: config?.tiktokUsername || searchParams.get("tiktokUsername") || undefined,
         });
 
         // Cache stats in MongoDB

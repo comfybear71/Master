@@ -46,40 +46,43 @@ export default function GrowthPage() {
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
 
-  // Social config
-  const [showConfig, setShowConfig] = useState(false);
-  const [configLoaded, setConfigLoaded] = useState(false);
-  const [savingConfig, setSavingConfig] = useState(false);
-  const [socialConfig, setSocialConfig] = useState({
-    xUsername: "",
+  // Social config — defaults from AIGlitch's configured accounts
+  const AIGLITCH_DEFAULTS = {
+    xUsername: "aiglitchapp",
     youtubeChannelId: "",
     facebookPageId: "",
     instagramUserId: "",
-    tiktokUsername: "",
-  });
+    tiktokUsername: "aiglitch",
+  };
 
-  // Load saved config on mount
+  const [showConfig, setShowConfig] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+  const [socialConfig, setSocialConfig] = useState(AIGLITCH_DEFAULTS);
+
+  // Load saved config on mount — fall back to AIGlitch defaults
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const res = await fetch("/api/social?action=config");
         if (res.ok) {
           const data = await res.json();
-          setSocialConfig((prev) => ({
-            xUsername: data.xUsername || prev.xUsername,
-            youtubeChannelId: data.youtubeChannelId || prev.youtubeChannelId,
-            facebookPageId: data.facebookPageId || prev.facebookPageId,
-            instagramUserId: data.instagramUserId || prev.instagramUserId,
-            tiktokUsername: data.tiktokUsername || prev.tiktokUsername,
-          }));
-          // If no config has been saved yet, show the config panel automatically
           const hasAnyConfig = data.xUsername || data.youtubeChannelId || data.facebookPageId || data.instagramUserId || data.tiktokUsername;
-          if (!hasAnyConfig) {
+          if (hasAnyConfig) {
+            setSocialConfig({
+              xUsername: data.xUsername || AIGLITCH_DEFAULTS.xUsername,
+              youtubeChannelId: data.youtubeChannelId || AIGLITCH_DEFAULTS.youtubeChannelId,
+              facebookPageId: data.facebookPageId || AIGLITCH_DEFAULTS.facebookPageId,
+              instagramUserId: data.instagramUserId || AIGLITCH_DEFAULTS.instagramUserId,
+              tiktokUsername: data.tiktokUsername || AIGLITCH_DEFAULTS.tiktokUsername,
+            });
+          } else {
+            // No config saved yet — keep AIGlitch defaults pre-filled
             setShowConfig(true);
           }
         }
       } catch {
-        // silently fail
+        // silently fail — defaults already set
       }
       setConfigLoaded(true);
     };
