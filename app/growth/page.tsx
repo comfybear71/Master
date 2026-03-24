@@ -48,12 +48,43 @@ export default function GrowthPage() {
 
   // Social config
   const [showConfig, setShowConfig] = useState(false);
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
   const [socialConfig, setSocialConfig] = useState({
     xUsername: "",
     youtubeChannelId: "",
     facebookPageId: "",
     instagramUserId: "",
+    tiktokUsername: "",
   });
+
+  // Load saved config on mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const res = await fetch("/api/social?action=config");
+        if (res.ok) {
+          const data = await res.json();
+          setSocialConfig((prev) => ({
+            xUsername: data.xUsername || prev.xUsername,
+            youtubeChannelId: data.youtubeChannelId || prev.youtubeChannelId,
+            facebookPageId: data.facebookPageId || prev.facebookPageId,
+            instagramUserId: data.instagramUserId || prev.instagramUserId,
+            tiktokUsername: data.tiktokUsername || prev.tiktokUsername,
+          }));
+          // If no config has been saved yet, show the config panel automatically
+          const hasAnyConfig = data.xUsername || data.youtubeChannelId || data.facebookPageId || data.instagramUserId || data.tiktokUsername;
+          if (!hasAnyConfig) {
+            setShowConfig(true);
+          }
+        }
+      } catch {
+        // silently fail
+      }
+      setConfigLoaded(true);
+    };
+    loadConfig();
+  }, []);
 
   const fetchAll = useCallback(async () => {
     const [statsRes, campaignsRes, alertsRes, projectsRes] = await Promise.allSettled([
@@ -90,7 +121,8 @@ export default function GrowthPage() {
   const refreshStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/social?action=stats&${new URLSearchParams(socialConfig).toString()}`);
+      // Server reads config from MongoDB, no need to pass via query params
+      const res = await fetch("/api/social?action=stats");
       if (res.ok) setStats(await res.json());
     } catch {
       // silently fail
@@ -99,13 +131,19 @@ export default function GrowthPage() {
   };
 
   const saveConfig = async () => {
-    await fetch("/api/social?action=configure", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(socialConfig),
-    });
-    setShowConfig(false);
-    refreshStats();
+    setSavingConfig(true);
+    try {
+      await fetch("/api/social?action=configure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(socialConfig),
+      });
+      setShowConfig(false);
+      await refreshStats();
+    } catch {
+      // silently fail
+    }
+    setSavingConfig(false);
   };
 
   const generateCampaign = async () => {
@@ -218,29 +256,49 @@ export default function GrowthPage() {
 
       {/* Social Config Panel */}
       {showConfig && (
-        <div className="bg-base-card rounded-xl border border-slate-700 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Social Media Configuration</h2>
+        <div className="bg-base-card rounded-xl border border-accent/20 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-white mb-1">Social Media Configuration</h2>
+          <p className="text-sm text-slate-400 mb-4">Enter your account IDs below. These are saved to the database and used to fetch live stats from each platform.</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">X / Twitter Username</label>
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-1.5">
+                <span className="text-base">{platformIcons.x}</span> X / Twitter Username
+              </label>
               <input value={socialConfig.xUsername} onChange={(e) => setSocialConfig({ ...socialConfig, xUsername: e.target.value })} placeholder="username (without @)" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">YouTube Channel ID</label>
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-1.5">
+                <span className="text-base">{platformIcons.youtube}</span> YouTube Channel ID
+              </label>
               <input value={socialConfig.youtubeChannelId} onChange={(e) => setSocialConfig({ ...socialConfig, youtubeChannelId: e.target.value })} placeholder="UC..." className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Facebook Page ID</label>
-              <input value={socialConfig.facebookPageId} onChange={(e) => setSocialConfig({ ...socialConfig, facebookPageId: e.target.value })} placeholder="Page ID" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-1.5">
+                <span className="text-base">{platformIcons.facebook}</span> Facebook Page ID
+              </label>
+              <input value={socialConfig.facebookPageId} onChange={(e) => setSocialConfig({ ...socialConfig, facebookPageId: e.target.value })} placeholder="Page ID or page name" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Instagram User ID</label>
-              <input value={socialConfig.instagramUserId} onChange={(e) => setSocialConfig({ ...socialConfig, instagramUserId: e.target.value })} placeholder="User ID" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-1.5">
+                <span className="text-base">{platformIcons.instagram}</span> Instagram User ID
+              </label>
+              <input value={socialConfig.instagramUserId} onChange={(e) => setSocialConfig({ ...socialConfig, instagramUserId: e.target.value })} placeholder="Numeric user ID from Instagram Graph API" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs text-slate-400 mb-1 block flex items-center gap-1.5">
+                <span className="text-base">{platformIcons.tiktok}</span> TikTok Username
+              </label>
+              <input value={socialConfig.tiktokUsername} onChange={(e) => setSocialConfig({ ...socialConfig, tiktokUsername: e.target.value })} placeholder="username (without @)" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
           </div>
-          <div className="flex gap-3 mt-4">
-            <button onClick={saveConfig} className="px-4 py-2 bg-accent text-base font-semibold rounded-lg text-sm hover:bg-accent/80 transition-colors">Save & Refresh</button>
+          <div className="flex items-center gap-3 mt-4">
+            <button onClick={saveConfig} disabled={savingConfig} className="px-6 py-2 bg-accent text-base font-semibold rounded-lg text-sm hover:bg-accent/80 transition-colors disabled:opacity-50">
+              {savingConfig ? "Saving..." : "Save & Fetch Stats"}
+            </button>
             <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-slate-400 text-sm hover:text-white transition-colors">Cancel</button>
+            {configLoaded && !socialConfig.xUsername && !socialConfig.youtubeChannelId && !socialConfig.facebookPageId && !socialConfig.instagramUserId && !socialConfig.tiktokUsername && (
+              <span className="text-xs text-warning">No accounts configured yet — enter at least one to see live data</span>
+            )}
           </div>
         </div>
       )}
@@ -327,7 +385,15 @@ export default function GrowthPage() {
                           <span className="text-xl">{platformIcons[platform]}</span>
                           <h3 className="font-semibold text-white text-sm">{platformLabels[platform]}</h3>
                         </div>
-                        {stat?.error && <span className="text-xs text-warning">Not connected</span>}
+                        {stat?.connected ? (
+                          <span className="text-xs text-success font-mono">Connected</span>
+                        ) : stat?.error && !stat?.error.includes("not configured") && !stat?.error.includes("not set") && !stat?.error.includes("coming soon") ? (
+                          <span className="text-xs text-warning font-mono">Not connected</span>
+                        ) : stat?.error ? (
+                          <button onClick={() => setShowConfig(true)} className="text-xs text-warning hover:text-white transition-colors">
+                            Configure →
+                          </button>
+                        ) : null}
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
@@ -359,7 +425,13 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
+                        stat.connected ? (
+                          <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
+                        ) : (
+                          <button onClick={() => setShowConfig(true)} className="text-xs text-slate-500 hover:text-accent mt-2 text-left transition-colors">
+                            {stat.error}
+                          </button>
+                        )
                       )}
                     </div>
                   );

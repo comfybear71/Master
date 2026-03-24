@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { generateCampaign } from "@/lib/ai";
-import { postToX } from "@/lib/social";
+import { publishToplatform } from "@/lib/social";
 import { Campaign } from "@/lib/types";
 import { ObjectId } from "mongodb";
 
@@ -75,20 +75,27 @@ export async function POST(req: NextRequest) {
 
       const results: Array<{ platform: string; success: boolean; error?: string }> = [];
 
+      // Load social config for Facebook page ID etc.
+      const socialConfig = await db.collection("settings").findOne({ key: "social_config" });
+
       for (let i = 0; i < campaign.posts.length; i++) {
         const post = campaign.posts[i];
         try {
-          if (post.platform === "x" && post.status !== "published") {
+          if (post.status !== "published") {
             const fullContent = post.hashtags?.length
               ? `${post.content}\n\n${post.hashtags.map((t: string) => `#${t}`).join(" ")}`
               : post.content;
-            await postToX(fullContent);
-            campaign.posts[i].status = "published";
-            campaign.posts[i].publishedAt = new Date().toISOString();
-            results.push({ platform: "x", success: true });
-          } else if (post.status !== "published") {
-            // Other platforms: mark as pending (API integration needed)
-            results.push({ platform: post.platform, success: false, error: "Platform publishing not yet implemented" });
+            const result = await publishToplatform(post.platform, fullContent, {
+              facebookPageId: socialConfig?.facebookPageId,
+              facebookAccessToken: process.env.FACEBOOK_ACCESS_TOKEN,
+            });
+            if (result.success) {
+              campaign.posts[i].status = "published";
+              campaign.posts[i].publishedAt = new Date().toISOString();
+            } else {
+              campaign.posts[i].status = "failed";
+            }
+            results.push({ platform: post.platform, success: result.success, error: result.error });
           }
         } catch (error) {
           campaign.posts[i].status = "failed";

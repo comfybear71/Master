@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAllSocialStats, postToX } from "@/lib/social";
+import { getAllSocialStats, publishToplatform } from "@/lib/social";
 import { getDb } from "@/lib/mongodb";
 
 export async function GET(req: NextRequest) {
@@ -28,6 +28,11 @@ export async function GET(req: NextRequest) {
         }
 
         return NextResponse.json(stats);
+      }
+      case "config": {
+        const db = await getDb();
+        const config = await db.collection("settings").findOne({ key: "social_config" });
+        return NextResponse.json(config || {});
       }
       case "cached": {
         const db = await getDb();
@@ -71,11 +76,13 @@ export async function POST(req: NextRequest) {
 
     if (action === "post") {
       const { platform, content } = await req.json();
-      if (platform === "x") {
-        const result = await postToX(content);
-        return NextResponse.json(result);
-      }
-      return NextResponse.json({ error: `Publishing to ${platform} not yet implemented` }, { status: 501 });
+      const db = await getDb();
+      const socialConfig = await db.collection("settings").findOne({ key: "social_config" });
+      const result = await publishToplatform(platform, content, {
+        facebookPageId: socialConfig?.facebookPageId,
+        facebookAccessToken: process.env.FACEBOOK_ACCESS_TOKEN,
+      });
+      return NextResponse.json(result);
     }
 
     if (action === "snapshot") {
