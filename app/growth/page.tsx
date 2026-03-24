@@ -232,24 +232,24 @@ export default function GrowthPage() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Growth Engine</h1>
           <p className="text-sm text-slate-500 mt-1">
             Social media, campaigns, and viral detection — Last: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowConfig(!showConfig)} className="px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg text-sm hover:bg-slate-700 transition-colors font-mono">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button onClick={() => setShowConfig(!showConfig)} className="px-3 sm:px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg text-xs sm:text-sm hover:bg-slate-700 transition-colors font-mono">
             Configure
           </button>
-          <button onClick={() => setShowCampaignForm(!showCampaignForm)} className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono">
-            + New Campaign
+          <button onClick={() => setShowCampaignForm(!showCampaignForm)} className="px-3 sm:px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs sm:text-sm hover:bg-accent/20 transition-colors font-mono">
+            + Campaign
           </button>
-          <button onClick={refreshStats} className="px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-sm hover:bg-success/20 transition-colors font-mono">
-            Refresh Stats
+          <button onClick={refreshStats} className="px-3 sm:px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-xs sm:text-sm hover:bg-success/20 transition-colors font-mono">
+            Refresh
           </button>
         </div>
       </div>
@@ -440,8 +440,8 @@ export default function GrowthPage() {
 
               {/* All Recent Posts */}
               <h2 className="text-lg font-semibold text-white mb-4">Recent Posts Across All Platforms</h2>
-              <div className="bg-base-card rounded-xl border border-slate-800 overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-base-card rounded-xl border border-slate-800 overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead>
                     <tr className="border-b border-slate-800">
                       <th className="text-left p-3 text-slate-400 font-medium">Platform</th>
