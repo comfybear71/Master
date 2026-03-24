@@ -49,63 +49,36 @@ async function syncSocialConfigFromProject(repo: string): Promise<SyncedConfig> 
 }
 
 /**
- * Get social config — TheMaster self-configures from multiple sources:
- * 1. DB (previously saved config)
- * 2. Auto-sync from registered project repos (AIGlitch constants.ts)
- * 3. Environment variables as ultimate fallback
- *
- * TheMaster has full access to all repos and all env vars on Vercel.
- * It should NEVER show "not configured" for accounts that exist.
+ * Get social config — env vars are the source of truth.
+ * TheMaster has EVERYTHING configured in Vercel already.
+ * DB overrides only if someone manually set something via the UI.
  */
 async function getOrSyncConfig(): Promise<Record<string, string>> {
-  const db = await getDb();
-  const config = await db.collection("settings").findOne({ key: "social_config" });
-
-  // Start with DB values
-  const merged: Record<string, string> = {
-    xUsername: config?.xUsername || "",
-    youtubeChannelId: config?.youtubeChannelId || "",
-    facebookPageId: config?.facebookPageId || "",
-    instagramUserId: config?.instagramUserId || "",
-    tiktokUsername: config?.tiktokUsername || "",
+  // Env vars FIRST — these are always available on Vercel
+  const fromEnv: Record<string, string> = {
+    xUsername: process.env.X_USERNAME || "",
+    youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || "",
+    facebookPageId: process.env.FACEBOOK_PAGE_ID || "",
+    instagramUserId: process.env.INSTAGRAM_USER_ID || "",
+    tiktokUsername: process.env.TIKTOK_USERNAME || "",
   };
 
-  // If we have all the main ones, return immediately
-  if (merged.xUsername && merged.youtubeChannelId && merged.facebookPageId) {
-    return merged;
-  }
-
-  // Auto-sync from AIGlitch repo if any fields are missing
-  if (!merged.xUsername || !merged.youtubeChannelId || !merged.facebookPageId || !merged.tiktokUsername) {
-    try {
-      const synced = await syncSocialConfigFromProject("comfybear71/aiglitch");
-      if (synced.xUsername && !merged.xUsername) merged.xUsername = synced.xUsername;
-      if (synced.youtubeChannelId && !merged.youtubeChannelId) merged.youtubeChannelId = synced.youtubeChannelId;
-      if (synced.facebookPageId && !merged.facebookPageId) merged.facebookPageId = synced.facebookPageId;
-      if (synced.instagramUserId && !merged.instagramUserId) merged.instagramUserId = synced.instagramUserId;
-      if (synced.tiktokUsername && !merged.tiktokUsername) merged.tiktokUsername = synced.tiktokUsername;
-    } catch {
-      // GitHub read failed — continue with env var fallbacks
+  // DB overrides — only if manually configured via the UI
+  try {
+    const db = await getDb();
+    const config = await db.collection("settings").findOne({ key: "social_config" });
+    if (config) {
+      if (config.xUsername) fromEnv.xUsername = config.xUsername;
+      if (config.youtubeChannelId) fromEnv.youtubeChannelId = config.youtubeChannelId;
+      if (config.facebookPageId) fromEnv.facebookPageId = config.facebookPageId;
+      if (config.instagramUserId) fromEnv.instagramUserId = config.instagramUserId;
+      if (config.tiktokUsername) fromEnv.tiktokUsername = config.tiktokUsername;
     }
+  } catch {
+    // DB unavailable — env vars are enough
   }
 
-  // Environment variable fallbacks — TheMaster has these configured in Vercel
-  if (!merged.xUsername) merged.xUsername = process.env.X_USERNAME || "";
-  if (!merged.youtubeChannelId) merged.youtubeChannelId = process.env.YOUTUBE_CHANNEL_ID || "";
-  if (!merged.facebookPageId) merged.facebookPageId = process.env.FACEBOOK_PAGE_ID || "";
-  if (!merged.instagramUserId) merged.instagramUserId = process.env.INSTAGRAM_USER_ID || "";
-  if (!merged.tiktokUsername) merged.tiktokUsername = process.env.TIKTOK_USERNAME || "";
-
-  // Persist the merged config so we don't re-sync every request
-  if (merged.xUsername || merged.youtubeChannelId || merged.facebookPageId) {
-    await db.collection("settings").updateOne(
-      { key: "social_config" },
-      { $set: { key: "social_config", ...merged, updatedAt: new Date().toISOString() } },
-      { upsert: true }
-    );
-  }
-
-  return merged;
+  return fromEnv;
 }
 
 export async function GET(req: NextRequest) {

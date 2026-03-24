@@ -424,7 +424,7 @@ export default function GrowthPage() {
                         ) : stat?.error?.includes("sandboxed") ? (
                           <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
                         ) : stat?.error ? (
-                          <span className="text-xs text-warning font-mono">Connecting...</span>
+                          <span className="text-xs text-error font-mono">Error</span>
                         ) : null}
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
@@ -457,9 +457,7 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        <p className="text-xs text-slate-500 mt-2">
-                          {stat.error.includes("not configured") ? "Auto-syncing from project repos..." : stat.error}
-                        </p>
+                        <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
                       )}
                     </div>
                   );
