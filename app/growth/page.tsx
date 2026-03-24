@@ -114,7 +114,7 @@ export default function GrowthPage() {
 
   const fetchAll = useCallback(async () => {
     const [statsRes, campaignsRes, alertsRes, projectsRes] = await Promise.allSettled([
-      fetch("/api/social?action=cached"),
+      fetch("/api/social?action=stats"),
       fetch("/api/campaigns"),
       fetch("/api/viral"),
       fetch("/api/projects"),

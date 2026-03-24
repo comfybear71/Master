@@ -187,17 +187,54 @@ export async function postToFacebook(text: string, pageId: string, accessToken: 
   }
 }
 
+/**
+ * Get the Page Access Token for a specific page from a User Access Token.
+ * User tokens can't read page stats directly — you need the page-specific token.
+ * GET /me/accounts returns all pages the user manages with their page tokens.
+ */
+async function getPageAccessToken(userToken: string, pageId: string): Promise<string> {
+  const res = await fetch(
+    `https://graph.facebook.com/v21.0/me/accounts?access_token=${userToken}`
+  );
+  if (!res.ok) {
+    // If /me/accounts fails, the token might already BE a page token — return it as-is
+    return userToken;
+  }
+  const data: { data?: Array<{ id: string; access_token: string }> } = await res.json();
+  const page = data.data?.find((p) => p.id === pageId);
+  // If we found a page-specific token, use it. Otherwise the token might already be a page token.
+  return page?.access_token || userToken;
+}
+
 export async function getFacebookStats(pageId: string): Promise<SocialStats> {
   try {
-    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
-    if (!accessToken) throw new Error("FACEBOOK_ACCESS_TOKEN not set");
+    const userToken = process.env.FACEBOOK_ACCESS_TOKEN;
+    if (!userToken) throw new Error("FACEBOOK_ACCESS_TOKEN not set in Vercel");
 
-    // Page info with fan count
+    // Exchange user token for page-specific token (required for page stats)
+    const accessToken = await getPageAccessToken(userToken, pageId);
+
+    // Page info with fan count — try multiple field combinations
+    // Some tokens only have access to certain fields
+    let pageData: { fan_count?: number; followers_count?: number; name?: string } = {};
     const pageRes = await fetch(
-      `https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,name&access_token=${accessToken}`
+      `https://graph.facebook.com/v21.0/${pageId}?fields=fan_count,followers_count,name&access_token=${accessToken}`
     );
-    if (!pageRes.ok) throw new Error(`Facebook API: ${pageRes.status} ${await pageRes.text()}`);
-    const pageData: { fan_count: number; name: string } = await pageRes.json();
+    if (pageRes.ok) {
+      pageData = await pageRes.json();
+    } else {
+      // Try with just the page token and fewer fields
+      const retryRes = await fetch(
+        `https://graph.facebook.com/v21.0/${pageId}?fields=name&access_token=${accessToken}`
+      );
+      if (!retryRes.ok) {
+        const errText = await retryRes.text();
+        throw new Error(`Facebook API ${retryRes.status}: ${errText.slice(0, 300)}`);
+      }
+      pageData = await retryRes.json();
+    }
+
+    const followers = pageData.fan_count || pageData.followers_count || 0;
 
     // Recent posts with engagement
     const postsRes = await fetch(
@@ -221,14 +258,14 @@ export async function getFacebookStats(pageId: string): Promise<SocialStats> {
         url: `https://facebook.com/${p.id}`,
         likes, comments, shares, views: 0,
         createdAt: p.created_time,
-        engagementRate: pageData.fan_count > 0
-          ? ((likes + comments + shares) / pageData.fan_count) * 100 : 0,
+        engagementRate: followers > 0
+          ? ((likes + comments + shares) / followers) * 100 : 0,
       };
     });
 
     return {
       platform: "facebook",
-      followers: pageData.fan_count,
+      followers,
       posts: recentPosts.length,
       engagementRate: recentPosts.length > 0
         ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
@@ -282,19 +319,33 @@ async function refreshYouTubeToken(): Promise<string | null> {
 
 export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
   try {
+    // Try API key first, then OAuth access token (AIGlitch uses YOUTUBE_ACCESS_TOKEN)
     const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) throw new Error("YOUTUBE_API_KEY not set");
+    let accessToken = process.env.YOUTUBE_ACCESS_TOKEN;
+    if (!accessToken && !apiKey) {
+      // Try refreshing OAuth token
+      accessToken = await refreshYouTubeToken() || undefined;
+    }
+    if (!apiKey && !accessToken) {
+      throw new Error("No YouTube credentials — set YOUTUBE_API_KEY or YOUTUBE_ACCESS_TOKEN in Vercel");
+    }
+
+    // YouTube Data API v3 accepts either key= or access_token= param
+    const authParam = apiKey ? `key=${apiKey}` : `access_token=${accessToken}`;
 
     const channelRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&key=${apiKey}`
+      `https://www.googleapis.com/youtube/v3/channels?part=statistics,snippet&id=${channelId}&${authParam}`
     );
-    if (!channelRes.ok) throw new Error(`YouTube API: ${channelRes.status}`);
-    const channelData: { items: Array<{ statistics: { subscriberCount: string; videoCount: string } }> } = await channelRes.json();
+    if (!channelRes.ok) {
+      const errText = await channelRes.text();
+      throw new Error(`YouTube API ${channelRes.status}: ${errText.slice(0, 200)}`);
+    }
+    const channelData: { items?: Array<{ statistics: { subscriberCount: string; videoCount: string } }> } = await channelRes.json();
     const channel = channelData.items?.[0];
-    if (!channel) throw new Error("Channel not found");
+    if (!channel) throw new Error(`Channel ${channelId} not found — check YOUTUBE_CHANNEL_ID`);
 
     const videosRes = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=10&type=video&key=${apiKey}`
+      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&order=date&maxResults=10&type=video&${authParam}`
     );
     const videosData: { items?: Array<{ id: { videoId: string }; snippet: { title: string; publishedAt: string } }> } =
       videosRes.ok ? await videosRes.json() : { items: [] };
@@ -303,7 +354,7 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
     let videoStats: Array<{ id: string; statistics: { viewCount: string; likeCount: string; commentCount: string } }> = [];
     if (videoIds) {
       const statsRes = await fetch(
-        `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds}&key=${apiKey}`
+        `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${videoIds}&${authParam}`
       );
       if (statsRes.ok) {
         const statsData: { items: typeof videoStats } = await statsRes.json();
@@ -379,11 +430,18 @@ async function refreshTikTokToken(): Promise<string | null> {
 
 export async function getTikTokStats(): Promise<SocialStats> {
   try {
-    let accessToken = process.env.TIKTOK_ACCESS_TOKEN;
+    let accessToken = process.env.TIKTOK_ACCESS_TOKEN || process.env.TIKTOK_TOKEN;
     if (!accessToken) {
       accessToken = await refreshTikTokToken() || undefined;
     }
-    if (!accessToken) throw new Error("TikTok access token not set — connect via OAuth or set TIKTOK_ACCESS_TOKEN");
+    if (!accessToken) {
+      const hasRefreshCreds = !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET && process.env.TIKTOK_REFRESH_TOKEN);
+      throw new Error(
+        hasRefreshCreds
+          ? "TikTok token refresh failed — TIKTOK_REFRESH_TOKEN may be expired, re-authenticate via OAuth"
+          : "No TikTok credentials — set TIKTOK_ACCESS_TOKEN in Vercel (or TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET + TIKTOK_REFRESH_TOKEN for auto-refresh)"
+      );
+    }
 
     // Query user info (sandboxed — may only return own data)
     const userRes = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,display_name", {
@@ -441,14 +499,65 @@ export async function getTikTokStats(): Promise<SocialStats> {
 
 export async function getInstagramStats(userId?: string): Promise<SocialStats> {
   try {
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!accessToken) throw new Error("Instagram coming soon — set INSTAGRAM_ACCESS_TOKEN when ready");
+    // Instagram Business API uses Facebook's token infrastructure
+    // Try INSTAGRAM_ACCESS_TOKEN first, fall back to FACEBOOK_ACCESS_TOKEN
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+    if (!accessToken) throw new Error("No Instagram token — set INSTAGRAM_ACCESS_TOKEN or FACEBOOK_ACCESS_TOKEN in Vercel");
 
-    // Same two-step pattern as AIGlitch: Graph API via Meta
+    // Instagram Business accounts are accessed via Facebook Graph API (graph.facebook.com),
+    // not the Instagram Basic Display API (graph.instagram.com)
+    // Try Facebook Graph API first (for Instagram Business/Creator accounts)
+    if (userId && userId !== "me") {
+      const fbRes = await fetch(
+        `https://graph.facebook.com/v21.0/${userId}?fields=id,username,name,media_count,followers_count&access_token=${accessToken}`
+      );
+      if (fbRes.ok) {
+        const fbData: { id: string; username?: string; name?: string; media_count?: number; followers_count?: number } = await fbRes.json();
+
+        const mediaRes = await fetch(
+          `https://graph.facebook.com/v21.0/${fbData.id}/media?fields=id,caption,timestamp,like_count,comments_count,permalink&limit=10&access_token=${accessToken}`
+        );
+        const mediaData: { data?: Array<{
+          id: string; caption?: string; timestamp: string;
+          like_count?: number; comments_count?: number; permalink?: string;
+        }> } = mediaRes.ok ? await mediaRes.json() : { data: [] };
+
+        const followersCount = fbData.followers_count || 0;
+        const recentPosts: SocialPost[] = (mediaData.data || []).map((m) => {
+          const likes = m.like_count || 0;
+          const comments = m.comments_count || 0;
+          return {
+            id: m.id,
+            platform: "instagram" as SocialPlatform,
+            text: m.caption || "",
+            url: m.permalink || "",
+            likes, comments, shares: 0, views: 0,
+            createdAt: m.timestamp,
+            engagementRate: followersCount > 0 ? ((likes + comments) / followersCount) * 100 : 0,
+          };
+        });
+
+        return {
+          platform: "instagram",
+          followers: followersCount,
+          posts: fbData.media_count || 0,
+          engagementRate: recentPosts.length > 0
+            ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
+          recentPosts,
+          fetchedAt: new Date().toISOString(),
+        };
+      }
+      // If Facebook Graph API fails, fall through to Instagram Basic Display API
+    }
+
+    // Fallback: Instagram Basic Display API
     const meRes = await fetch(
       `https://graph.instagram.com/${userId || "me"}?fields=id,username,media_count,followers_count&access_token=${accessToken}`
     );
-    if (!meRes.ok) throw new Error(`Instagram API: ${meRes.status}`);
+    if (!meRes.ok) {
+      const errText = await meRes.text();
+      throw new Error(`Instagram API ${meRes.status}: ${errText.slice(0, 200)}`);
+    }
     const meData: { id: string; username: string; media_count: number; followers_count: number } = await meRes.json();
 
     const mediaRes = await fetch(

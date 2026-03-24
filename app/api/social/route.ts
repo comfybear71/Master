@@ -100,14 +100,16 @@ export async function GET(req: NextRequest) {
           tiktokUsername: config.tiktokUsername || searchParams.get("tiktokUsername") || undefined,
         });
 
-        // Cache stats in MongoDB
+        // Only cache successful results — never cache errors
         const db = await getDb();
         for (const stat of stats) {
-          await db.collection("social_stats").updateOne(
-            { platform: stat.platform },
-            { $set: stat },
-            { upsert: true }
-          );
+          if (!stat.error) {
+            await db.collection("social_stats").updateOne(
+              { platform: stat.platform },
+              { $set: stat },
+              { upsert: true }
+            );
+          }
         }
 
         return NextResponse.json(stats);
@@ -158,10 +160,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "clear-db") {
-      // Nuke the stale DB config that was overriding env vars with garbage
+      // Nuke ALL stale social data — config, cached stats, and history
       const db = await getDb();
       await db.collection("settings").deleteOne({ key: "social_config" });
-      return NextResponse.json({ success: true, message: "Stale social config cleared from DB" });
+      await db.collection("social_stats").deleteMany({});
+      await db.collection("social_history").deleteMany({});
+      return NextResponse.json({ success: true, message: "All stale social data cleared from DB" });
     }
 
     if (action === "sync") {
