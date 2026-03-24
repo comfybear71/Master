@@ -5,7 +5,11 @@ import StatsCard from "@/components/dashboard/StatsCard";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 import CommitFeed from "@/components/dashboard/CommitFeed";
 import DeploymentList from "@/components/dashboard/DeploymentList";
-import { Project, DetectedError } from "@/lib/types";
+import { Project, DetectedError, SocialStats, SocialPlatform } from "@/lib/types";
+
+const platformIcons: Record<SocialPlatform, string> = {
+  x: "\ud835\udd4f", youtube: "\u25b6", facebook: "f", instagram: "\u25ce", tiktok: "\u266a",
+};
 
 interface Commit {
   repo: string;
@@ -28,15 +32,17 @@ export default function Dashboard() {
   const [commits, setCommits] = useState<Commit[]>([]);
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [errors, setErrors] = useState<DetectedError[]>([]);
+  const [socialStats, setSocialStats] = useState<SocialStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
     try {
-      const [projRes, deployRes, errRes] = await Promise.allSettled([
+      const [projRes, deployRes, errRes, socialRes] = await Promise.allSettled([
         fetch("/api/projects"),
         fetch("/api/vercel?action=deployments"),
         fetch("/api/errors"),
+        fetch("/api/social?action=cached"),
       ]);
 
       if (projRes.status === "fulfilled" && projRes.value.ok) {
@@ -52,6 +58,11 @@ export default function Dashboard() {
       if (errRes.status === "fulfilled" && errRes.value.ok) {
         const data = await errRes.value.json();
         setErrors(Array.isArray(data) ? data.filter((e: DetectedError) => e.status !== "dismissed" && e.status !== "fix_applied") : []);
+      }
+
+      if (socialRes.status === "fulfilled" && socialRes.value.ok) {
+        const data = await socialRes.value.json();
+        setSocialStats(Array.isArray(data) ? data : []);
       }
 
       // Fetch recent commits from registered project repos
@@ -190,6 +201,37 @@ export default function Dashboard() {
                   <a href="/monitoring" className="text-xs text-accent hover:underline">All →</a>
                 </div>
                 <DeploymentList deployments={deployments.slice(0, 8)} />
+              </div>
+
+              {/* Social Media Followers */}
+              <div className="bg-base-card rounded-xl border border-slate-800 p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">Social Media</h3>
+                  <a href="/growth" className="text-xs text-accent hover:underline">Growth →</a>
+                </div>
+                {socialStats.length > 0 ? (
+                  <div className="space-y-2">
+                    {socialStats.map((s) => (
+                      <div key={s.platform} className="flex items-center justify-between py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{platformIcons[s.platform]}</span>
+                          <span className="text-xs text-slate-400 capitalize">{s.platform === "x" ? "X/Twitter" : s.platform}</span>
+                        </div>
+                        <span className={`text-xs font-mono ${s.error ? "text-slate-600" : "text-white"}`}>
+                          {s.error ? "—" : s.followers.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="border-t border-slate-800 pt-2 mt-2 flex justify-between">
+                      <span className="text-xs text-slate-500">Total</span>
+                      <span className="text-xs font-mono text-accent font-semibold">
+                        {socialStats.reduce((s, p) => s + (p.followers || 0), 0).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500">Configure social accounts in Growth page.</p>
+                )}
               </div>
 
               {/* Commit Feed */}
