@@ -29,6 +29,11 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json(stats);
       }
+      case "config": {
+        const db = await getDb();
+        const config = await db.collection("settings").findOne({ key: "social_config" });
+        return NextResponse.json(config || {});
+      }
       case "cached": {
         const db = await getDb();
         const cached = await db.collection("social_stats").find({}).toArray();
