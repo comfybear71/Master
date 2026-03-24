@@ -9,7 +9,7 @@
 **Last Updated**: Project created — no build sessions yet  
 **Current Phase**: Phase 1 — Not started  
 **Platform Live URL**: Not deployed yet  
-**Repo**: github.com/[YOUR-USERNAME]/TheMaster  
+**Repo**: github.com/comfybear71/Master  
 
 ---
 
