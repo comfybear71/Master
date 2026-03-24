@@ -49,36 +49,18 @@ async function syncSocialConfigFromProject(repo: string): Promise<SyncedConfig> 
 }
 
 /**
- * Get social config — env vars are the source of truth.
- * TheMaster has EVERYTHING configured in Vercel already.
- * DB overrides only if someone manually set something via the UI.
+ * Get social config — env vars are the SOLE source of truth.
+ * TheMaster has everything in Vercel env vars. Period.
+ * DB had stale garbage from old AIGlitch sync — ignore it.
  */
 async function getOrSyncConfig(): Promise<Record<string, string>> {
-  // Env vars FIRST — these are always available on Vercel
-  const fromEnv: Record<string, string> = {
+  return {
     xUsername: process.env.X_USERNAME || "",
     youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || "",
     facebookPageId: process.env.FACEBOOK_PAGE_ID || "",
     instagramUserId: process.env.INSTAGRAM_USER_ID || "",
     tiktokUsername: process.env.TIKTOK_USERNAME || "",
   };
-
-  // DB overrides — only if manually configured via the UI
-  try {
-    const db = await getDb();
-    const config = await db.collection("settings").findOne({ key: "social_config" });
-    if (config) {
-      if (config.xUsername) fromEnv.xUsername = config.xUsername;
-      if (config.youtubeChannelId) fromEnv.youtubeChannelId = config.youtubeChannelId;
-      if (config.facebookPageId) fromEnv.facebookPageId = config.facebookPageId;
-      if (config.instagramUserId) fromEnv.instagramUserId = config.instagramUserId;
-      if (config.tiktokUsername) fromEnv.tiktokUsername = config.tiktokUsername;
-    }
-  } catch {
-    // DB unavailable — env vars are enough
-  }
-
-  return fromEnv;
 }
 
 export async function GET(req: NextRequest) {
@@ -164,6 +146,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (action === "configure") {
+      // Config comes from env vars now — but allow UI overrides
       const config = await req.json();
       const db = await getDb();
       await db.collection("settings").updateOne(
@@ -174,28 +157,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "clear-db") {
+      // Nuke the stale DB config that was overriding env vars with garbage
+      const db = await getDb();
+      await db.collection("settings").deleteOne({ key: "social_config" });
+      return NextResponse.json({ success: true, message: "Stale social config cleared from DB" });
+    }
+
     if (action === "sync") {
       // Force re-sync from a project's GitHub repo
       const { repo } = await req.json();
       const targetRepo = repo || "comfybear71/aiglitch";
       const synced = await syncSocialConfigFromProject(targetRepo);
 
-      // Merge with existing config (don't overwrite manually-set IDs with empty strings)
-      const db = await getDb();
-      const existing = await db.collection("settings").findOne({ key: "social_config" });
       const merged = {
         key: "social_config",
-        xUsername: synced.xUsername || existing?.xUsername || "",
-        youtubeChannelId: synced.youtubeChannelId || existing?.youtubeChannelId || "",
-        facebookPageId: synced.facebookPageId || existing?.facebookPageId || "",
-        instagramUserId: synced.instagramUserId || existing?.instagramUserId || "",
-        tiktokUsername: synced.tiktokUsername || existing?.tiktokUsername || "",
+        xUsername: synced.xUsername || "",
+        youtubeChannelId: synced.youtubeChannelId || "",
+        facebookPageId: synced.facebookPageId || "",
+        instagramUserId: synced.instagramUserId || "",
+        tiktokUsername: synced.tiktokUsername || "",
         syncedFrom: synced.syncedFrom,
         syncedAt: synced.syncedAt,
         updatedAt: new Date().toISOString(),
       };
 
-      await db.collection("settings").updateOne(
+      const db2 = await getDb();
+      await db2.collection("settings").updateOne(
         { key: "social_config" },
         { $set: merged },
         { upsert: true }
