@@ -174,31 +174,31 @@ export default function ProjectsPage() {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Project Registry</h1>
           <p className="text-sm text-slate-500 mt-1">{projects.length} projects registered</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={seedProjects}
             disabled={adding}
-            className="px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-sm hover:bg-success/20 transition-colors font-mono disabled:opacity-50"
+            className="px-3 sm:px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-xs sm:text-sm hover:bg-success/20 transition-colors font-mono disabled:opacity-50"
           >
-            {adding ? "Adding..." : "Seed All Projects"}
+            {adding ? "Adding..." : "Seed All"}
           </button>
           <button
             onClick={() => { setShowOnboard(!showOnboard); setShowForm(false); }}
-            className="px-4 py-2 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-sm hover:bg-purple-500/20 transition-colors font-mono"
+            className="px-3 sm:px-4 py-2 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs sm:text-sm hover:bg-purple-500/20 transition-colors font-mono"
           >
             Plug & Play
           </button>
           <button
             onClick={() => { setShowForm(!showForm); setShowOnboard(false); }}
-            className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono"
+            className="px-3 sm:px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs sm:text-sm hover:bg-accent/20 transition-colors font-mono"
           >
-            + Manual Add
+            + Add
           </button>
         </div>
       </div>

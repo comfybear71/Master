@@ -81,20 +81,24 @@ A unified platform for one solo developer to:
 
 ## Environment Variables Status
 
+All environment variables are configured in Vercel. TheMaster has full runtime access to everything it needs.
+
 | Variable | Status |
 |---|---|
-| GITHUB_TOKEN | ⬜ Not added yet |
-| VERCEL_TOKEN | ⬜ Not added yet |
-| MONGODB_URI | ⬜ Not added yet |
-| MONGODB_ATLAS_PUBLIC_KEY | ⬜ Not added yet |
-| X_API_KEY | ✅ Have it |
-| YOUTUBE_API_KEY | ✅ Have it |
-| FACEBOOK_APP_ID | ✅ Have it |
-| INSTAGRAM_ACCESS_TOKEN | ✅ Have it |
-| TIKTOK_CLIENT_KEY | ✅ Have it |
-| ANTHROPIC_API_KEY | ✅ Have it |
-| GROK_API_KEY | ✅ Have it |
-| NEXTAUTH_SECRET | ⬜ Generate on setup |
+| GITHUB_TOKEN | ✅ Configured in Vercel — full access to all comfybear71 repos |
+| VERCEL_TOKEN | ✅ Configured in Vercel — full access to all projects & deployments |
+| MONGODB_URI | ✅ Configured in Vercel — full database access |
+| MONGODB_ATLAS_PUBLIC_KEY | ✅ Configured in Vercel |
+| X_API_KEY | ✅ Configured in Vercel |
+| YOUTUBE_API_KEY | ✅ Configured in Vercel |
+| FACEBOOK_ACCESS_TOKEN | ✅ Configured in Vercel |
+| INSTAGRAM_ACCESS_TOKEN | ✅ Configured in Vercel |
+| TIKTOK_CLIENT_KEY | ✅ Configured in Vercel |
+| ANTHROPIC_API_KEY | ✅ Configured in Vercel |
+| GROK_API_KEY | ✅ Configured in Vercel |
+| NEXTAUTH_SECRET | ✅ Configured in Vercel |
+
+> **Important**: TheMaster is the central platform. It already has access to all repos, all Vercel projects, all social APIs, and all databases. Never ask the user to manually configure tokens or IDs that are already available.
 
 ---
 
@@ -120,11 +124,12 @@ A unified platform for one solo developer to:
 ## Next Session — Start Here
 
 1. All 3 phases are built and deployed
-2. Configure social media accounts via Growth page → Configure button
-3. Seed projects via Projects page if not already done
-4. Test campaign generation: Growth → + New Campaign
-5. Run viral scan: Growth → Viral Alerts → Scan for Viral Posts
-6. Future: Add more social platform publishing APIs, growth charts over time
+2. Social media accounts auto-sync from project repos and Vercel env vars — no manual config needed
+3. Add `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME` to Vercel env vars if not already there (these are fallback IDs used when repo sync can't find them)
+4. Seed projects via Projects page if not already done
+5. Test campaign generation: Growth → + New Campaign
+6. Run viral scan: Growth → Viral Alerts → Scan for Viral Posts
+7. Future: Add more social platform publishing APIs, growth charts over time
 
 ---
 
@@ -135,6 +140,7 @@ A unified platform for one solo developer to:
 | 2026-03-24 | Phase 1 complete: Next.js 14 scaffold, MongoDB connection, project registry CRUD, dashboard UI, GitHub API (repos/commits/issues/file content), Vercel API (projects/deployments/redeploy), monitoring page, CI/CD page, growth placeholder. Build passes. | Claude Code |
 | 2026-03-24 | Phase 2 complete: AI Dev Orchestrator — Vercel build log ingestion & error extraction, Claude API error analysis, fix suggestion UI with approve/apply workflow, auto-commit fixes via GitHub API, auto-update HANDOFF.md, plug & play project onboarding (auto-reads CLAUDE.md/HANDOFF.md, detects stack, finds Vercel project), uptime monitoring, error alert banner on dashboard, expanded monitoring page with project status grid. Build passes. | Claude Code |
 | 2026-03-24 | Phase 3 complete: Growth Engine — Social media hub (X/YouTube/Facebook/Instagram/TikTok API integrations), follower counts & engagement stats per platform, cross-platform post analytics table, AI campaign generator (Claude generates posts for all 5 platforms), campaign preview/approve/publish flow, X auto-publish, viral trigger system (2.5x threshold detection, AI follow-up generation), social config panel, dashboard social follower widget. Build passes. | Claude Code |
+| 2026-03-24 | Mobile UI fixes: Projects & Monitoring page headers stack vertically on mobile, buttons wrap properly. Social self-config: TheMaster now auto-syncs social IDs from project repos + uses env var fallbacks (X_USERNAME, YOUTUBE_CHANNEL_ID, FACEBOOK_PAGE_ID, etc.) — no more "not configured" messages. Updated CLAUDE.md and HANDOFF.md to document that TheMaster has full access to all repos, Vercel projects, and env vars. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 

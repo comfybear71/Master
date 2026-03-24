@@ -99,7 +99,24 @@ TheMaster reads these files via GitHub API to understand every project without n
 
 ## Environment Variables
 
-See `.env.local` for all values. Never commit this file. The `.env.example` in the repo shows all required keys with empty values.
+All environment variables are configured in Vercel's project settings. The deployed app has full access to every key it needs at runtime. `.env.example` documents the required keys for reference only.
+
+**DO NOT ask the user to configure API tokens.** TheMaster already has:
+- `GITHUB_TOKEN` — full access to all repos under comfybear71
+- `VERCEL_TOKEN` — full access to all Vercel projects and deployments
+- All social media API keys (X, YouTube, Facebook, Instagram, TikTok)
+- `ANTHROPIC_API_KEY` and `GROK_API_KEY` for AI features
+- `MONGODB_URI` for database access
+
+### TheMaster's Access Scope
+
+TheMaster is the central command platform. It has **full access** to:
+- **Every GitHub repo** under comfybear71 — can read code, CLAUDE.md, HANDOFF.md, constants, env files
+- **Every Vercel project** — can read deployments, build logs, env vars, trigger redeploys
+- **All social media accounts** — API tokens are already configured in Vercel env vars
+- **MongoDB** — full read/write access to all collections
+
+**Never show "not configured" messages for things that are already available via env vars or can be auto-discovered from registered projects.** If a social account ID is needed, read it from the project repos (e.g. AIGlitch's constants.ts) or from the Vercel env vars. TheMaster should self-configure by reading its own ecosystem.
 
 ---
 

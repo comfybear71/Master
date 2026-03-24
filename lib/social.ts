@@ -71,9 +71,12 @@ export async function getXStats(username: string): Promise<SocialStats> {
     const creds = getAppCredentials();
     if (!creds) throw new Error("X OAuth 1.0a credentials not set (X_CONSUMER_KEY etc.)");
 
+    // Strip @ prefix if present
+    const cleanUsername = username.replace(/^@/, "");
+
     // X free tier is WRITE-ONLY — user lookup and tweet reading require Basic ($100/mo).
     // Try the API call, but gracefully handle 401/403 for free-tier accounts.
-    const userUrl = `https://api.twitter.com/2/users/by/username/${username}`;
+    const userUrl = `https://api.twitter.com/2/users/by/username/${cleanUsername}`;
     const userParams = { "user.fields": "public_metrics" };
     const userAuth = buildOAuth1Header("GET", userUrl, creds, userParams);
 
@@ -117,7 +120,7 @@ export async function getXStats(username: string): Promise<SocialStats> {
       id: t.id,
       platform: "x" as SocialPlatform,
       text: t.text,
-      url: `https://x.com/${username}/status/${t.id}`,
+      url: `https://x.com/${cleanUsername}/status/${t.id}`,
       likes: t.public_metrics.like_count,
       comments: t.public_metrics.reply_count,
       shares: t.public_metrics.retweet_count,
@@ -503,19 +506,19 @@ export async function getAllSocialStats(config: {
   const results = await Promise.allSettled([
     config.xUsername
       ? getXStats(config.xUsername)
-      : Promise.resolve({ platform: "x" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "X username not configured" }),
+      : Promise.resolve({ platform: "x" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "X account pending sync" }),
     config.youtubeChannelId
       ? getYouTubeStats(config.youtubeChannelId)
-      : Promise.resolve({ platform: "youtube" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "YouTube channel ID not configured" }),
+      : Promise.resolve({ platform: "youtube" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "YouTube channel pending sync" }),
     config.facebookPageId
       ? getFacebookStats(config.facebookPageId)
-      : Promise.resolve({ platform: "facebook" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Facebook page ID not configured" }),
+      : Promise.resolve({ platform: "facebook" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Facebook page pending sync" }),
     config.instagramUserId
       ? getInstagramStats(config.instagramUserId)
       : Promise.resolve({ platform: "instagram" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Instagram coming soon" }),
     config.tiktokUsername
       ? getTikTokStats()
-      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok not configured (sandboxed)" }),
+      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok sandboxed — limited API access" }),
   ]);
 
   return results.map((r, i) => {

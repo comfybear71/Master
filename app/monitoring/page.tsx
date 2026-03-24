@@ -133,26 +133,26 @@ export default function MonitoringPage() {
   const activeErrors = errors.filter((e) => e.status !== "dismissed" && e.status !== "fix_applied");
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-2xl font-bold text-white">Monitoring</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Deployment status, error detection, and AI fix suggestions — Last: {lastRefresh.toLocaleTimeString()}
+            Errors &amp; uptime — Last: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={runUptimeCheck} className="px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-sm hover:bg-success/20 transition-colors font-mono">
-            Check Uptime
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button onClick={runUptimeCheck} className="px-3 sm:px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-xs sm:text-sm hover:bg-success/20 transition-colors font-mono">
+            Uptime
           </button>
           <button
             onClick={scanForErrors}
             disabled={scanning}
-            className="px-4 py-2 bg-danger/10 text-danger border border-danger/20 rounded-lg text-sm hover:bg-danger/20 transition-colors font-mono disabled:opacity-50"
+            className="px-3 sm:px-4 py-2 bg-danger/10 text-danger border border-danger/20 rounded-lg text-xs sm:text-sm hover:bg-danger/20 transition-colors font-mono disabled:opacity-50"
           >
-            {scanning ? "Scanning..." : "Scan for Errors"}
+            {scanning ? "Scanning..." : "Scan Errors"}
           </button>
-          <button onClick={fetchAll} className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono">
+          <button onClick={fetchAll} className="px-3 sm:px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs sm:text-sm hover:bg-accent/20 transition-colors font-mono">
             Refresh
           </button>
         </div>

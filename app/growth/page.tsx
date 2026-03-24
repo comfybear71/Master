@@ -46,10 +46,12 @@ export default function GrowthPage() {
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
 
-  // Social config
+  // Social config — auto-synced from AIGlitch's GitHub repo via API
   const [showConfig, setShowConfig] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncSource, setSyncSource] = useState<string | null>(null);
   const [socialConfig, setSocialConfig] = useState({
     xUsername: "",
     youtubeChannelId: "",
@@ -58,25 +60,23 @@ export default function GrowthPage() {
     tiktokUsername: "",
   });
 
-  // Load saved config on mount
+  // Load saved config on mount — API auto-syncs from AIGlitch if empty
   useEffect(() => {
     const loadConfig = async () => {
       try {
         const res = await fetch("/api/social?action=config");
         if (res.ok) {
           const data = await res.json();
-          setSocialConfig((prev) => ({
-            xUsername: data.xUsername || prev.xUsername,
-            youtubeChannelId: data.youtubeChannelId || prev.youtubeChannelId,
-            facebookPageId: data.facebookPageId || prev.facebookPageId,
-            instagramUserId: data.instagramUserId || prev.instagramUserId,
-            tiktokUsername: data.tiktokUsername || prev.tiktokUsername,
-          }));
-          // If no config has been saved yet, show the config panel automatically
+          setSocialConfig({
+            xUsername: data.xUsername || "",
+            youtubeChannelId: data.youtubeChannelId || "",
+            facebookPageId: data.facebookPageId || "",
+            instagramUserId: data.instagramUserId || "",
+            tiktokUsername: data.tiktokUsername || "",
+          });
+          if (data.syncedFrom) setSyncSource(data.syncedFrom);
           const hasAnyConfig = data.xUsername || data.youtubeChannelId || data.facebookPageId || data.instagramUserId || data.tiktokUsername;
-          if (!hasAnyConfig) {
-            setShowConfig(true);
-          }
+          if (!hasAnyConfig) setShowConfig(true);
         }
       } catch {
         // silently fail
@@ -85,6 +85,32 @@ export default function GrowthPage() {
     };
     loadConfig();
   }, []);
+
+  const syncFromProject = async (repo?: string) => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/social?action=sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: repo || "comfybear71/aiglitch" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const c = data.config;
+        setSocialConfig({
+          xUsername: c.xUsername || "",
+          youtubeChannelId: c.youtubeChannelId || "",
+          facebookPageId: c.facebookPageId || "",
+          instagramUserId: c.instagramUserId || "",
+          tiktokUsername: c.tiktokUsername || "",
+        });
+        setSyncSource(c.syncedFrom || null);
+      }
+    } catch {
+      // silently fail
+    }
+    setSyncing(false);
+  };
 
   const fetchAll = useCallback(async () => {
     const [statsRes, campaignsRes, alertsRes, projectsRes] = await Promise.allSettled([
@@ -232,24 +258,24 @@ export default function GrowthPage() {
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-white">Growth Engine</h1>
           <p className="text-sm text-slate-500 mt-1">
             Social media, campaigns, and viral detection — Last: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button onClick={() => setShowConfig(!showConfig)} className="px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg text-sm hover:bg-slate-700 transition-colors font-mono">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
+          <button onClick={() => setShowConfig(!showConfig)} className="px-3 sm:px-4 py-2 bg-slate-700/50 text-slate-300 border border-slate-600 rounded-lg text-xs sm:text-sm hover:bg-slate-700 transition-colors font-mono">
             Configure
           </button>
-          <button onClick={() => setShowCampaignForm(!showCampaignForm)} className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono">
-            + New Campaign
+          <button onClick={() => setShowCampaignForm(!showCampaignForm)} className="px-3 sm:px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs sm:text-sm hover:bg-accent/20 transition-colors font-mono">
+            + Campaign
           </button>
-          <button onClick={refreshStats} className="px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-sm hover:bg-success/20 transition-colors font-mono">
-            Refresh Stats
+          <button onClick={refreshStats} className="px-3 sm:px-4 py-2 bg-success/10 text-success border border-success/20 rounded-lg text-xs sm:text-sm hover:bg-success/20 transition-colors font-mono">
+            Refresh
           </button>
         </div>
       </div>
@@ -291,13 +317,19 @@ export default function GrowthPage() {
               <input value={socialConfig.tiktokUsername} onChange={(e) => setSocialConfig({ ...socialConfig, tiktokUsername: e.target.value })} placeholder="username (without @)" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
             </div>
           </div>
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex flex-wrap items-center gap-3 mt-4">
             <button onClick={saveConfig} disabled={savingConfig} className="px-6 py-2 bg-accent text-base font-semibold rounded-lg text-sm hover:bg-accent/80 transition-colors disabled:opacity-50">
               {savingConfig ? "Saving..." : "Save & Fetch Stats"}
             </button>
+            <button onClick={() => syncFromProject()} disabled={syncing} className="px-4 py-2 bg-warning/10 text-warning border border-warning/20 rounded-lg text-sm hover:bg-warning/20 transition-colors disabled:opacity-50 font-mono">
+              {syncing ? "Syncing..." : "Sync from AIGlitch"}
+            </button>
             <button onClick={() => setShowConfig(false)} className="px-4 py-2 text-slate-400 text-sm hover:text-white transition-colors">Cancel</button>
-            {configLoaded && !socialConfig.xUsername && !socialConfig.youtubeChannelId && !socialConfig.facebookPageId && !socialConfig.instagramUserId && !socialConfig.tiktokUsername && (
-              <span className="text-xs text-warning">No accounts configured yet — enter at least one to see live data</span>
+            {syncSource && (
+              <span className="text-xs text-success">Synced from {syncSource}</span>
+            )}
+            {configLoaded && !syncSource && !socialConfig.xUsername && !socialConfig.youtubeChannelId && !socialConfig.facebookPageId && !socialConfig.instagramUserId && !socialConfig.tiktokUsername && (
+              <span className="text-xs text-warning">No accounts configured — click &quot;Sync from AIGlitch&quot; to auto-fill</span>
             )}
           </div>
         </div>
@@ -387,12 +419,12 @@ export default function GrowthPage() {
                         </div>
                         {stat?.connected ? (
                           <span className="text-xs text-success font-mono">Connected</span>
-                        ) : stat?.error && !stat?.error.includes("not configured") && !stat?.error.includes("not set") && !stat?.error.includes("coming soon") ? (
-                          <span className="text-xs text-warning font-mono">Not connected</span>
+                        ) : stat?.error?.includes("coming soon") ? (
+                          <span className="text-xs text-slate-500 font-mono">Coming soon</span>
+                        ) : stat?.error?.includes("sandboxed") ? (
+                          <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
                         ) : stat?.error ? (
-                          <button onClick={() => setShowConfig(true)} className="text-xs text-warning hover:text-white transition-colors">
-                            Configure →
-                          </button>
+                          <span className="text-xs text-warning font-mono">Connecting...</span>
                         ) : null}
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
@@ -425,13 +457,9 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        stat.connected ? (
-                          <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
-                        ) : (
-                          <button onClick={() => setShowConfig(true)} className="text-xs text-slate-500 hover:text-accent mt-2 text-left transition-colors">
-                            {stat.error}
-                          </button>
-                        )
+                        <p className="text-xs text-slate-500 mt-2">
+                          {stat.error.includes("not configured") ? "Auto-syncing from project repos..." : stat.error}
+                        </p>
                       )}
                     </div>
                   );
@@ -440,8 +468,8 @@ export default function GrowthPage() {
 
               {/* All Recent Posts */}
               <h2 className="text-lg font-semibold text-white mb-4">Recent Posts Across All Platforms</h2>
-              <div className="bg-base-card rounded-xl border border-slate-800 overflow-hidden">
-                <table className="w-full text-sm">
+              <div className="bg-base-card rounded-xl border border-slate-800 overflow-x-auto">
+                <table className="w-full text-sm min-w-[600px]">
                   <thead>
                     <tr className="border-b border-slate-800">
                       <th className="text-left p-3 text-slate-400 font-medium">Platform</th>
