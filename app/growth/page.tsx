@@ -419,12 +419,12 @@ export default function GrowthPage() {
                         </div>
                         {stat?.connected ? (
                           <span className="text-xs text-success font-mono">Connected</span>
-                        ) : stat?.error && !stat?.error.includes("not configured") && !stat?.error.includes("not set") && !stat?.error.includes("coming soon") ? (
-                          <span className="text-xs text-warning font-mono">Not connected</span>
+                        ) : stat?.error?.includes("coming soon") ? (
+                          <span className="text-xs text-slate-500 font-mono">Coming soon</span>
+                        ) : stat?.error?.includes("sandboxed") ? (
+                          <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
                         ) : stat?.error ? (
-                          <button onClick={() => setShowConfig(true)} className="text-xs text-warning hover:text-white transition-colors">
-                            Configure →
-                          </button>
+                          <span className="text-xs text-warning font-mono">Connecting...</span>
                         ) : null}
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
@@ -457,13 +457,9 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        stat.connected ? (
-                          <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
-                        ) : (
-                          <button onClick={() => setShowConfig(true)} className="text-xs text-slate-500 hover:text-accent mt-2 text-left transition-colors">
-                            {stat.error}
-                          </button>
-                        )
+                        <p className="text-xs text-slate-500 mt-2">
+                          {stat.error.includes("not configured") ? "Auto-syncing from project repos..." : stat.error}
+                        </p>
                       )}
                     </div>
                   );

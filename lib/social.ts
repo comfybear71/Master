@@ -506,19 +506,19 @@ export async function getAllSocialStats(config: {
   const results = await Promise.allSettled([
     config.xUsername
       ? getXStats(config.xUsername)
-      : Promise.resolve({ platform: "x" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "X username not configured" }),
+      : Promise.resolve({ platform: "x" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "X account pending sync" }),
     config.youtubeChannelId
       ? getYouTubeStats(config.youtubeChannelId)
-      : Promise.resolve({ platform: "youtube" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "YouTube channel ID not configured" }),
+      : Promise.resolve({ platform: "youtube" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "YouTube channel pending sync" }),
     config.facebookPageId
       ? getFacebookStats(config.facebookPageId)
-      : Promise.resolve({ platform: "facebook" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Facebook page ID not configured" }),
+      : Promise.resolve({ platform: "facebook" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Facebook page pending sync" }),
     config.instagramUserId
       ? getInstagramStats(config.instagramUserId)
       : Promise.resolve({ platform: "instagram" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Instagram coming soon" }),
     config.tiktokUsername
       ? getTikTokStats()
-      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok not configured (sandboxed)" }),
+      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok sandboxed — limited API access" }),
   ]);
 
   return results.map((r, i) => {
