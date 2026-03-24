@@ -37,6 +37,22 @@ export interface VercelDeployment {
   state: "READY" | "ERROR" | "BUILDING" | "QUEUED" | "CANCELED";
   created: number;
   readyState: string;
+  meta?: {
+    githubCommitSha?: string;
+    githubCommitMessage?: string;
+    githubCommitRepo?: string;
+  };
+}
+
+export interface DeploymentEvent {
+  type: string;
+  created: number;
+  payload?: {
+    text?: string;
+    statusCode?: number;
+    deploymentId?: string;
+  };
+  text?: string;
 }
 
 export async function listProjects(): Promise<VercelProject[]> {
@@ -57,6 +73,42 @@ export async function getDeployment(deploymentId: string): Promise<VercelDeploym
   return vercelFetch<VercelDeployment>(`/v13/deployments/${deploymentId}`);
 }
 
+export async function getDeploymentEvents(deploymentId: string): Promise<DeploymentEvent[]> {
+  return vercelFetch<DeploymentEvent[]>(`/v3/deployments/${deploymentId}/events`);
+}
+
+export async function getBuildLogs(deploymentId: string): Promise<string> {
+  const events = await getDeploymentEvents(deploymentId);
+  return events
+    .filter((e) => e.text || e.payload?.text)
+    .map((e) => e.text || e.payload?.text || "")
+    .join("\n");
+}
+
+export async function getErrorLogs(deploymentId: string): Promise<string> {
+  const logs = await getBuildLogs(deploymentId);
+  const lines = logs.split("\n");
+  const errorLines: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (
+      /error/i.test(line) ||
+      /failed/i.test(line) ||
+      /ERR!/i.test(line) ||
+      /TypeError/i.test(line) ||
+      /SyntaxError/i.test(line) ||
+      /ModuleNotFoundError/i.test(line) ||
+      /Cannot find module/i.test(line) ||
+      /Build failed/i.test(line)
+    ) {
+      const start = Math.max(0, i - 2);
+      const end = Math.min(lines.length, i + 5);
+      errorLines.push(lines.slice(start, end).join("\n"));
+    }
+  }
+  return errorLines.length > 0 ? errorLines.join("\n---\n") : "";
+}
+
 export async function triggerRedeploy(deploymentId: string): Promise<VercelDeployment> {
   const res = await fetch(
     `https://api.vercel.com/v13/deployments${VERCEL_TEAM_ID ? `?teamId=${VERCEL_TEAM_ID}` : ""}`,
@@ -70,4 +122,12 @@ export async function triggerRedeploy(deploymentId: string): Promise<VercelDeplo
     throw new Error(`Vercel redeploy error: ${res.status}`);
   }
   return res.json() as Promise<VercelDeployment>;
+}
+
+export async function getProjectByName(name: string): Promise<VercelProject | null> {
+  try {
+    return await vercelFetch<VercelProject>(`/v9/projects/${encodeURIComponent(name)}` + teamParam());
+  } catch {
+    return null;
+  }
 }

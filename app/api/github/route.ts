@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listRepos, getRepoCommits, getRepoFileContent, getRepoIssues } from "@/lib/github";
+import { listRepos, getRepoCommits, getRepoFileContent, getRepoIssues, detectStack, getRepo } from "@/lib/github";
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -10,6 +10,12 @@ export async function GET(req: NextRequest) {
       case "repos": {
         const repos = await listRepos();
         return NextResponse.json(repos);
+      }
+      case "repo": {
+        const repo = searchParams.get("repo");
+        if (!repo) return NextResponse.json({ error: "Missing repo param" }, { status: 400 });
+        const repoData = await getRepo(repo);
+        return NextResponse.json(repoData);
       }
       case "commits": {
         const repo = searchParams.get("repo");
@@ -31,6 +37,12 @@ export async function GET(req: NextRequest) {
         if (!repo) return NextResponse.json({ error: "Missing repo param" }, { status: 400 });
         const issues = await getRepoIssues(repo);
         return NextResponse.json(issues);
+      }
+      case "detect-stack": {
+        const repo = searchParams.get("repo");
+        if (!repo) return NextResponse.json({ error: "Missing repo param" }, { status: 400 });
+        const stack = await detectStack(repo);
+        return NextResponse.json({ stack });
       }
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 });
