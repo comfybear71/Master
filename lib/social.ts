@@ -71,7 +71,8 @@ export async function getXStats(username: string): Promise<SocialStats> {
     const creds = getAppCredentials();
     if (!creds) throw new Error("X OAuth 1.0a credentials not set (X_CONSUMER_KEY etc.)");
 
-    // Use OAuth 1.0a for user lookup (same as AIGlitch)
+    // X free tier is WRITE-ONLY — user lookup and tweet reading require Basic ($100/mo).
+    // Try the API call, but gracefully handle 401/403 for free-tier accounts.
     const userUrl = `https://api.twitter.com/2/users/by/username/${username}`;
     const userParams = { "user.fields": "public_metrics" };
     const userAuth = buildOAuth1Header("GET", userUrl, creds, userParams);
@@ -79,10 +80,25 @@ export async function getXStats(username: string): Promise<SocialStats> {
     const userRes = await fetch(`${userUrl}?user.fields=public_metrics`, {
       headers: { Authorization: userAuth },
     });
+
+    // Free tier returns 401/403 for read endpoints — this is normal
+    if (userRes.status === 401 || userRes.status === 403) {
+      return {
+        platform: "x",
+        followers: 0,
+        posts: 0,
+        engagementRate: 0,
+        recentPosts: [],
+        fetchedAt: new Date().toISOString(),
+        connected: true,
+        error: "X free tier is write-only — stats require Basic plan ($100/mo). Posting works fine.",
+      };
+    }
+
     if (!userRes.ok) throw new Error(`X API: ${userRes.status} ${await userRes.text()}`);
     const userData: { data: { id: string; public_metrics: { followers_count: number; tweet_count: number } } } = await userRes.json();
 
-    // Fetch recent tweets
+    // Fetch recent tweets (also requires Basic tier)
     const tweetsUrl = `https://api.twitter.com/2/users/${userData.data.id}/tweets`;
     const tweetsParams = { max_results: "10", "tweet.fields": "public_metrics,created_at" };
     const tweetsAuth = buildOAuth1Header("GET", tweetsUrl, creds, tweetsParams);
@@ -119,6 +135,7 @@ export async function getXStats(username: string): Promise<SocialStats> {
       engagementRate: recentPosts.length > 0
         ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
       recentPosts,
+      connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {

@@ -385,11 +385,15 @@ export default function GrowthPage() {
                           <span className="text-xl">{platformIcons[platform]}</span>
                           <h3 className="font-semibold text-white text-sm">{platformLabels[platform]}</h3>
                         </div>
-                        {stat?.error && (
+                        {stat?.connected ? (
+                          <span className="text-xs text-success font-mono">Connected</span>
+                        ) : stat?.error && !stat?.error.includes("not configured") && !stat?.error.includes("not set") && !stat?.error.includes("coming soon") ? (
+                          <span className="text-xs text-warning font-mono">Not connected</span>
+                        ) : stat?.error ? (
                           <button onClick={() => setShowConfig(true)} className="text-xs text-warning hover:text-white transition-colors">
                             Configure →
                           </button>
-                        )}
+                        ) : null}
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
@@ -421,9 +425,13 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        <button onClick={() => setShowConfig(true)} className="text-xs text-slate-500 hover:text-accent mt-2 text-left transition-colors">
-                          {stat.error} — Click to configure
-                        </button>
+                        stat.connected ? (
+                          <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
+                        ) : (
+                          <button onClick={() => setShowConfig(true)} className="text-xs text-slate-500 hover:text-accent mt-2 text-left transition-colors">
+                            {stat.error}
+                          </button>
+                        )
                       )}
                     </div>
                   );

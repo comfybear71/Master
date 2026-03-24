@@ -73,6 +73,7 @@ export interface SocialStats {
   engagementRate: number;
   recentPosts: SocialPost[];
   fetchedAt: string;
+  connected?: boolean;
   error?: string;
 }
 
