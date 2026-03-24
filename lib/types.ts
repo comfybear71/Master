@@ -61,3 +61,65 @@ export interface UptimeCheck {
   responseTimeMs: number | null;
   checkedAt: string;
 }
+
+// Phase 3 — Social & Growth types
+
+export type SocialPlatform = "x" | "youtube" | "facebook" | "instagram" | "tiktok";
+
+export interface SocialStats {
+  platform: SocialPlatform;
+  followers: number;
+  posts: number;
+  engagementRate: number;
+  recentPosts: SocialPost[];
+  fetchedAt: string;
+  error?: string;
+}
+
+export interface SocialPost {
+  id: string;
+  platform: SocialPlatform;
+  text: string;
+  url?: string;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+  createdAt: string;
+  engagementRate: number;
+}
+
+export interface Campaign {
+  _id?: string;
+  name: string;
+  brief: string;
+  projectName: string;
+  targetAudience: string;
+  status: "draft" | "scheduled" | "active" | "completed";
+  posts: CampaignPost[];
+  createdAt: string;
+  scheduledFor?: string;
+}
+
+export interface CampaignPost {
+  platform: SocialPlatform;
+  content: string;
+  hashtags: string[];
+  optimalTime: string;
+  status: "pending" | "published" | "failed";
+  publishedAt?: string;
+}
+
+export interface ViralAlert {
+  _id?: string;
+  platform: SocialPlatform;
+  postId: string;
+  postText: string;
+  metric: string;
+  currentValue: number;
+  averageValue: number;
+  multiplier: number;
+  suggestedFollowUp?: string;
+  detectedAt: string;
+  status: "new" | "actioned" | "dismissed";
+}
