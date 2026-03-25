@@ -39,6 +39,20 @@ A unified platform for one solo developer to:
 
 > New projects are added via the dashboard UI. The platform reads their CLAUDE.md and HANDOFF.md automatically.
 
+### AIGlitch — Ad Campaigns Feature
+
+AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered video ads:
+
+- **API:** `/api/generate-ads` (POST plan/submit, GET poll/cron, PUT publish)
+- **Cron:** Every 4 hours — auto-generates and posts ads
+- **Admin UI:** `/admin/personas` page — collapsible ad campaign section
+- **Product distribution:** 70% AIG!itch ecosystem, 20% §GLITCH coin, 10% marketplace products
+- **Video gen:** Grok `grok-imagine-video` — 10s standard or 30s extended (multi-clip stitched)
+- **AI content:** Claude generates captions + video prompts, PromptViewer for admin preview/edit
+- **Auto-spread:** Posts to feed as The Architect (glitch-000), spreads to X, TikTok, Instagram, Facebook, YouTube, Telegram
+- **5 rotating angles** for ecosystem ads (full overview, Channels/AI Netflix, mobile app/Bestie, 108 personas reveal, logo-centric brand)
+- **Frontend spec:** `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo
+
 ---
 
 ## Build Phases
@@ -162,7 +176,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | 2026-03-24 | Phase 3 complete: Growth Engine — Social media hub (X/YouTube/Facebook/Instagram/TikTok API integrations), follower counts & engagement stats per platform, cross-platform post analytics table, AI campaign generator (Claude generates posts for all 5 platforms), campaign preview/approve/publish flow, X auto-publish, viral trigger system (2.5x threshold detection, AI follow-up generation), social config panel, dashboard social follower widget. Build passes. | Claude Code |
 | 2026-03-24 | Mobile UI fixes: Projects & Monitoring page headers stack vertically on mobile, buttons wrap properly. Social self-config: TheMaster now auto-syncs social IDs from project repos + uses env var fallbacks (X_USERNAME, YOUTUBE_CHANNEL_ID, FACEBOOK_PAGE_ID, etc.) — no more "not configured" messages. Updated CLAUDE.md and HANDOFF.md to document that TheMaster has full access to all repos, Vercel projects, and env vars. | Claude Code |
 | 2026-03-24 | BUG FIX: Social config DB was overriding correct env vars with garbage. Old AIGlitch sync wrote display names ("AIG!itch") as platform IDs into MongoDB. `getOrSyncConfig()` let DB override env vars. Fixed: env vars are now the SOLE source of truth, no DB lookup. Added debug endpoint and clear-db action. |
-| 2026-03-25 | Social media fixes: Fixed YouTube OAuth (GOOGLE_CLIENT_ID/SECRET, not YOUTUBE_), fixed Google OAuth redirect double-slash, added `connected: true` to all social platform responses, added Instagram posting via Content Publishing API (image/video/Reels with 2-step create→publish flow). Confirmed Facebook & Instagram env vars now set in Vercel. | Claude Code | Claude Code |
+| 2026-03-25 | Social media fixes: Fixed YouTube OAuth (GOOGLE_CLIENT_ID/SECRET, not YOUTUBE_), fixed Google OAuth redirect double-slash, added `connected: true` to all social platform responses, added Instagram posting via Content Publishing API (image/video/Reels with 2-step create→publish flow). Confirmed Facebook & Instagram env vars now set in Vercel. | Claude Code |
+| 2026-03-25 | Documented AIGlitch Ad Campaigns system in Master HANDOFF. Created `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo — full frontend spec for the ad campaign feature (API endpoints, styles, platforms, video specs, database tables, social spreading, PromptViewer integration). | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
