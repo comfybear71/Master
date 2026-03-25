@@ -46,6 +46,34 @@ export default function GrowthPage() {
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
 
+  // TikTok auth status from OAuth callback redirect
+  const [tiktokAuthMsg, setTiktokAuthMsg] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const authResult = params.get("tiktok_auth");
+    if (authResult === "success") {
+      setTiktokAuthMsg({ type: "success", message: "TikTok authorized successfully! Refreshing stats..." });
+      window.history.replaceState({}, "", "/growth");
+    } else if (authResult === "error") {
+      setTiktokAuthMsg({ type: "error", message: params.get("message") || "TikTok authorization failed" });
+      window.history.replaceState({}, "", "/growth");
+    }
+  }, []);
+
+  // Auto-refresh stats after successful TikTok auth
+  useEffect(() => {
+    if (tiktokAuthMsg?.type === "success") {
+      const timer = setTimeout(() => {
+        refreshStats();
+        setTiktokAuthMsg(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tiktokAuthMsg]);
+
   // Social config — auto-synced from AIGlitch's GitHub repo via API
   const [showConfig, setShowConfig] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
@@ -280,6 +308,18 @@ export default function GrowthPage() {
         </div>
       </div>
 
+      {/* TikTok Auth Status */}
+      {tiktokAuthMsg && (
+        <div className={`rounded-lg border p-3 mb-4 text-sm font-mono ${
+          tiktokAuthMsg.type === "success"
+            ? "bg-success/10 border-success/20 text-success"
+            : "bg-danger/10 border-danger/20 text-danger"
+        }`}>
+          {tiktokAuthMsg.message}
+          <button onClick={() => setTiktokAuthMsg(null)} className="ml-3 text-xs opacity-60 hover:opacity-100">dismiss</button>
+        </div>
+      )}
+
       {/* Social Config Panel */}
       {showConfig && (
         <div className="bg-base-card rounded-xl border border-accent/20 p-6 mb-6">
@@ -423,6 +463,8 @@ export default function GrowthPage() {
                           <span className="text-xs text-slate-500 font-mono">Coming soon</span>
                         ) : stat?.error?.includes("sandboxed") ? (
                           <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
+                        ) : stat?.error?.includes("Authorize TikTok") ? (
+                          <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
                         ) : stat?.error ? (
                           <span className="text-xs text-error font-mono">Error</span>
                         ) : null}
@@ -457,7 +499,14 @@ export default function GrowthPage() {
                         </div>
                       )}
                       {stat?.error && !stat.recentPosts?.length && (
-                        <p className="text-xs text-slate-500 mt-2">{stat.error}</p>
+                        <div className="mt-2">
+                          <p className="text-xs text-slate-500">{stat.error}</p>
+                          {platform === "tiktok" && stat.error.includes("Authorize") && (
+                            <a href="/api/auth/tiktok" className="inline-block mt-2 px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg text-xs hover:bg-cyan-500/20 transition-colors font-mono">
+                              Authorize TikTok
+                            </a>
+                          )}
+                        </div>
                       )}
                     </div>
                   );

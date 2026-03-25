@@ -39,7 +39,7 @@ This is the MASTER repo. All other projects are registered here and managed from
 | YouTube Data API | Video stats, channel analytics |
 | Facebook Graph API | Page stats, post performance |
 | Instagram Graph API | Post engagement, follower growth, content publishing (image/video/Reels) |
-| TikTok API | Video stats, follower counts |
+| TikTok API | Video stats, follower counts (OAuth flow stores tokens in MongoDB `settings` collection) |
 | Helios | As configured |
 | Anthropic API | AI fix suggestions, campaign content generation |
 | Grok API | Alternative AI, real-time data |
@@ -135,6 +135,36 @@ Required env vars (all set in Vercel):
 - `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` — TikTok API credentials
 
 **Rule: NEVER let DB values override env vars for API credentials or platform IDs.**
+
+### TikTok OAuth
+
+TikTok uses OAuth 2.0 with authorization code flow. Tokens are stored in MongoDB `settings` collection (key: `tiktok_oauth`). Endpoints:
+- `GET /api/auth/tiktok` — Initiates OAuth flow (redirects to TikTok)
+- `GET /api/auth/tiktok/callback` — Handles callback, exchanges code for token, stores in MongoDB
+- `GET /api/auth/tiktok/debug` — Debug endpoint: shows token status, expiry, and tests against TikTok user info API
+
+### YouTube API Quota
+
+YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacific). Both TheMaster and AIGlitch share the same API key and poll YouTube stats. A 403 "quota exceeded" error does NOT mean auth is broken — it means the daily limit is hit. Do NOT treat this as a reconnect/reauth issue. It auto-resolves at midnight Pacific.
+
+### Social Platform Stats — TheMaster vs AIGlitch
+
+TheMaster and AIGlitch show **different numbers** for the same platforms because they measure different things:
+- **TheMaster** (`/growth`) — pulls real-time stats from platform APIs (total followers, total posts on the actual account, engagement rate)
+- **AIGlitch** (`/admin/marketing`) — tracks only posts made **through AIGlitch's spreading system** and their metrics. "Posted 4" means AIGlitch spread 4 posts, not that the account has 4 total posts
+
+### AIGlitch Ad Campaigns
+
+AIGlitch has a fully automated **Ad Campaign system** managed from `/admin/personas`:
+- **API:** `/api/generate-ads` — POST (plan/submit), GET (poll/cron), PUT (publish)
+- **Cron:** Every 4 hours auto-generates video ads
+- **Product mix:** 70% AIG!itch ecosystem, 20% §GLITCH coin, 10% marketplace products
+- **Video:** Grok `grok-imagine-video` — 10s or 30s (multi-clip stitched)
+- **AI:** Claude generates captions + video prompts with PromptViewer for admin preview/edit
+- **Distribution:** Auto-posts to feed as The Architect, spreads to all social platforms
+- **5 rotating angles:** ecosystem overview, Channels/AI Netflix, mobile app/Bestie, 108 personas, logo-centric brand
+- **Frontend spec:** `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo
+- **Branding:** AIG!ITCH logo must appear prominently, neon purple/cyan palette, never mention Solana/blockchain
 
 ---
 
