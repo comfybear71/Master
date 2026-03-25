@@ -806,15 +806,16 @@ export async function getInstagramStats(userId?: string): Promise<SocialStats> {
       FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
     });
     // Instagram Business API uses Facebook's token infrastructure
-    // Try INSTAGRAM_ACCESS_TOKEN first, fall back to FACEBOOK_ACCESS_TOKEN
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+    // FACEBOOK_ACCESS_TOKEN is the correct token (Facebook Page token with Instagram permissions)
+    // INSTAGRAM_ACCESS_TOKEN is a fallback only — it's often the same token or a stale/invalid one
+    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN;
     if (!accessToken) {
       const missing: string[] = [];
-      if (!process.env.INSTAGRAM_ACCESS_TOKEN) missing.push("INSTAGRAM_ACCESS_TOKEN");
       if (!process.env.FACEBOOK_ACCESS_TOKEN) missing.push("FACEBOOK_ACCESS_TOKEN");
+      if (!process.env.INSTAGRAM_ACCESS_TOKEN) missing.push("INSTAGRAM_ACCESS_TOKEN");
       throw new Error(`Instagram credentials missing — need at least one of: ${missing.join(", ")} in Vercel. Instagram Business accounts use Facebook Graph API tokens.`);
     }
-    console.log("[Instagram] Using token from:", process.env.INSTAGRAM_ACCESS_TOKEN ? "INSTAGRAM_ACCESS_TOKEN" : "FACEBOOK_ACCESS_TOKEN (fallback)");
+    console.log("[Instagram] Using token from:", process.env.FACEBOOK_ACCESS_TOKEN ? "FACEBOOK_ACCESS_TOKEN" : "INSTAGRAM_ACCESS_TOKEN (fallback)");
 
     // Instagram Business accounts are accessed via Facebook Graph API (graph.facebook.com),
     // not the Instagram Basic Display API (graph.instagram.com)
@@ -970,13 +971,13 @@ export async function postToInstagram(
 ): Promise<PostResult> {
   try {
     const userId = igUserId || process.env.INSTAGRAM_USER_ID;
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+    const accessToken = process.env.FACEBOOK_ACCESS_TOKEN || process.env.INSTAGRAM_ACCESS_TOKEN;
 
     if (!userId) {
       return { success: false, error: "INSTAGRAM_USER_ID not set in Vercel env vars" };
     }
     if (!accessToken) {
-      return { success: false, error: "INSTAGRAM_ACCESS_TOKEN (or FACEBOOK_ACCESS_TOKEN) not set in Vercel env vars" };
+      return { success: false, error: "FACEBOOK_ACCESS_TOKEN (or INSTAGRAM_ACCESS_TOKEN) not set in Vercel env vars" };
     }
     if (!imageUrl) {
       return { success: false, error: "Instagram requires an image URL — text-only posts are not supported" };
