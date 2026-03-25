@@ -92,8 +92,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | MONGODB_ATLAS_PUBLIC_KEY | ✅ Configured in Vercel |
 | X_CONSUMER_KEY + X_CONSUMER_SECRET + X_ACCESS_TOKEN + X_ACCESS_TOKEN_SECRET | ✅ Configured in Vercel |
 | GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + YOUTUBE_CHANNEL_ID | ✅ Configured in Vercel |
-| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ✅ Configured in Vercel |
-| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ✅ Configured in Vercel (username: sfrench71) |
+| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ⚠️ NEEDS CONFIRMATION from user |
+| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ⚠️ NEEDS CONFIRMATION from user |
 | TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET | ✅ Configured in Vercel |
 | ANTHROPIC_API_KEY | ✅ Configured in Vercel |
 | GROK_API_KEY | ✅ Configured in Vercel |
@@ -142,9 +142,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 1. All 3 phases are built and deployed
 2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
-3. All social env vars confirmed: X, YouTube, Facebook, Instagram, TikTok all configured in Vercel
-4. Instagram posting is live — uses Content Publishing API (2-step: create container → publish). Supports image, video, and Reels
-5. AIGlitch already has Instagram posting code in `/src/lib/marketing/platforms.ts` — just needs `INSTAGRAM_ACCESS_TOKEN` env var set in its Vercel project
+3. Confirmed env vars: `X_USERNAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_CHANNEL_ID`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. Facebook/Instagram vars NEED CONFIRMATION.
+4. If social APIs still fail, check the actual values in Vercel — they must be real platform API IDs, not display names
 5. To clear any stale DB records: `POST /api/social?action=clear-db`
 6. Debug endpoint available: `GET /api/social/debug` to verify what env vars resolve to
 7. Seed projects via Projects page if not already done
