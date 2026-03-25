@@ -676,6 +676,7 @@ export async function getInstagramStats(userId?: string): Promise<SocialStats> {
           engagementRate: recentPosts.length > 0
             ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
           recentPosts,
+          connected: true,
           fetchedAt: new Date().toISOString(),
         };
       }
@@ -728,6 +729,7 @@ export async function getInstagramStats(userId?: string): Promise<SocialStats> {
   } catch (error) {
     return {
       platform: "instagram", followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
+      connected: !!(process.env.INSTAGRAM_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN),
       fetchedAt: new Date().toISOString(),
       error: error instanceof Error ? error.message : "Instagram API error",
     };
