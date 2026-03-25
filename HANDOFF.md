@@ -6,7 +6,7 @@
 
 ## Current Status: 🟢 ALL PHASES COMPLETE — READY TO DEPLOY
 
-**Last Updated**: 2026-03-24
+**Last Updated**: 2026-03-25
 **Current Phase**: Phase 3 — Complete, all phases built
 **Platform Live URL**: Not deployed yet
 **Repo**: github.com/comfybear71/Master  
@@ -71,7 +71,8 @@ A unified platform for one solo developer to:
 - [x] Post engagement analytics with cross-platform table
 - [x] AI campaign generator (Claude API — generates for all 5 platforms)
 - [x] Campaign preview, approve, and publish flow
-- [x] Auto-publish to X (other platforms API-ready)
+- [x] Auto-publish to X
+- [x] Instagram posting via Content Publishing API (image, video, Reels)
 - [x] Viral trigger detection and alerts (2.5x threshold)
 - [x] AI follow-up post generation for viral content
 - [x] Social follower counts on main dashboard
@@ -91,8 +92,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | MONGODB_ATLAS_PUBLIC_KEY | ✅ Configured in Vercel |
 | X_CONSUMER_KEY + X_CONSUMER_SECRET + X_ACCESS_TOKEN + X_ACCESS_TOKEN_SECRET | ✅ Configured in Vercel |
 | GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + YOUTUBE_CHANNEL_ID | ✅ Configured in Vercel |
-| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ⚠️ NEEDS CONFIRMATION from user |
-| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ⚠️ NEEDS CONFIRMATION from user |
+| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ✅ Configured in Vercel |
+| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ✅ Configured in Vercel |
 | TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET | ✅ Configured in Vercel |
 | ANTHROPIC_API_KEY | ✅ Configured in Vercel |
 | GROK_API_KEY | ✅ Configured in Vercel |
@@ -141,8 +142,9 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 1. All 3 phases are built and deployed
 2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
-3. Confirmed env vars: `X_USERNAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_CHANNEL_ID`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. Facebook/Instagram vars NEED CONFIRMATION.
-4. If social APIs still fail, check the actual values in Vercel — they must be real platform API IDs, not display names
+3. All social env vars confirmed: X, YouTube, Facebook, Instagram, TikTok all configured in Vercel
+4. Instagram posting is live — uses Content Publishing API (2-step: create container → publish). Supports image, video, and Reels
+5. AIGlitch already has Instagram posting code in `/src/lib/marketing/platforms.ts` — just needs `INSTAGRAM_ACCESS_TOKEN` env var set in its Vercel project
 5. To clear any stale DB records: `POST /api/social?action=clear-db`
 6. Debug endpoint available: `GET /api/social/debug` to verify what env vars resolve to
 7. Seed projects via Projects page if not already done
@@ -160,7 +162,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | 2026-03-24 | Phase 2 complete: AI Dev Orchestrator — Vercel build log ingestion & error extraction, Claude API error analysis, fix suggestion UI with approve/apply workflow, auto-commit fixes via GitHub API, auto-update HANDOFF.md, plug & play project onboarding (auto-reads CLAUDE.md/HANDOFF.md, detects stack, finds Vercel project), uptime monitoring, error alert banner on dashboard, expanded monitoring page with project status grid. Build passes. | Claude Code |
 | 2026-03-24 | Phase 3 complete: Growth Engine — Social media hub (X/YouTube/Facebook/Instagram/TikTok API integrations), follower counts & engagement stats per platform, cross-platform post analytics table, AI campaign generator (Claude generates posts for all 5 platforms), campaign preview/approve/publish flow, X auto-publish, viral trigger system (2.5x threshold detection, AI follow-up generation), social config panel, dashboard social follower widget. Build passes. | Claude Code |
 | 2026-03-24 | Mobile UI fixes: Projects & Monitoring page headers stack vertically on mobile, buttons wrap properly. Social self-config: TheMaster now auto-syncs social IDs from project repos + uses env var fallbacks (X_USERNAME, YOUTUBE_CHANNEL_ID, FACEBOOK_PAGE_ID, etc.) — no more "not configured" messages. Updated CLAUDE.md and HANDOFF.md to document that TheMaster has full access to all repos, Vercel projects, and env vars. | Claude Code |
-| 2026-03-24 | BUG FIX: Social config DB was overriding correct env vars with garbage. Old AIGlitch sync wrote display names ("AIG!itch") as platform IDs into MongoDB. `getOrSyncConfig()` let DB override env vars. Fixed: env vars are now the SOLE source of truth, no DB lookup. Added debug endpoint and clear-db action. | Claude Code |
+| 2026-03-24 | BUG FIX: Social config DB was overriding correct env vars with garbage. Old AIGlitch sync wrote display names ("AIG!itch") as platform IDs into MongoDB. `getOrSyncConfig()` let DB override env vars. Fixed: env vars are now the SOLE source of truth, no DB lookup. Added debug endpoint and clear-db action. |
+| 2026-03-25 | Social media fixes: Fixed YouTube OAuth (GOOGLE_CLIENT_ID/SECRET, not YOUTUBE_), fixed Google OAuth redirect double-slash, added `connected: true` to all social platform responses, added Instagram posting via Content Publishing API (image/video/Reels with 2-step create→publish flow). Confirmed Facebook & Instagram env vars now set in Vercel. | Claude Code | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 

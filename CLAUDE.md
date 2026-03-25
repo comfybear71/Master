@@ -38,7 +38,7 @@ This is the MASTER repo. All other projects are registered here and managed from
 | X (Twitter) API | Posts, analytics, follower counts |
 | YouTube Data API | Video stats, channel analytics |
 | Facebook Graph API | Page stats, post performance |
-| Instagram Graph API | Post engagement, follower growth |
+| Instagram Graph API | Post engagement, follower growth, content publishing (image/video/Reels) |
 | TikTok API | Video stats, follower counts |
 | Helios | As configured |
 | Anthropic API | AI fix suggestions, campaign content generation |
@@ -124,10 +124,15 @@ TheMaster is the central command platform. It has **full access** to:
 
 Required env vars (all set in Vercel):
 - `X_USERNAME` — Twitter/X handle
+- `X_CONSUMER_KEY`, `X_CONSUMER_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_TOKEN_SECRET` — X OAuth 1.0a
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_REFRESH_TOKEN` — YouTube OAuth
 - `YOUTUBE_CHANNEL_ID` — must be a real YouTube channel ID (starts with `UC...`)
+- `FACEBOOK_ACCESS_TOKEN` — Facebook Graph API token (also used for Instagram)
 - `FACEBOOK_PAGE_ID` — must be a numeric page ID (e.g. `61584376583578`)
-- `INSTAGRAM_USER_ID` — must be a numeric user ID
+- `INSTAGRAM_ACCESS_TOKEN` — Instagram Content Publishing API token
+- `INSTAGRAM_USER_ID` — must be a numeric Instagram Business Account user ID
 - `TIKTOK_USERNAME` — TikTok handle
+- `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` — TikTok API credentials
 
 **Rule: NEVER let DB values override env vars for API credentials or platform IDs.**
 
