@@ -89,11 +89,11 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | VERCEL_TOKEN | ✅ Configured in Vercel — full access to all projects & deployments |
 | MONGODB_URI | ✅ Configured in Vercel — full database access |
 | MONGODB_ATLAS_PUBLIC_KEY | ✅ Configured in Vercel |
-| X_API_KEY | ✅ Configured in Vercel |
-| YOUTUBE_API_KEY | ✅ Configured in Vercel |
-| FACEBOOK_ACCESS_TOKEN | ✅ Configured in Vercel |
-| INSTAGRAM_ACCESS_TOKEN | ✅ Configured in Vercel |
-| TIKTOK_CLIENT_KEY | ✅ Configured in Vercel |
+| X_CONSUMER_KEY + X_CONSUMER_SECRET + X_ACCESS_TOKEN + X_ACCESS_TOKEN_SECRET | ✅ Configured in Vercel |
+| GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + YOUTUBE_CHANNEL_ID | ✅ Configured in Vercel |
+| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ⚠️ NEEDS CONFIRMATION from user |
+| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ⚠️ NEEDS CONFIRMATION from user |
+| TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET | ✅ Configured in Vercel |
 | ANTHROPIC_API_KEY | ✅ Configured in Vercel |
 | GROK_API_KEY | ✅ Configured in Vercel |
 | NEXTAUTH_SECRET | ✅ Configured in Vercel |
@@ -118,7 +118,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 **Fix Applied**:
 - `getOrSyncConfig()` now reads ONLY from Vercel env vars — no DB lookup at all
 - Added `POST /api/social?action=clear-db` endpoint to nuke stale DB records
-- Env vars are the sole source of truth: `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME`
+- Env vars are the sole source of truth: `X_USERNAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`
 
 **Lesson**: Never let DB values override env vars silently. Env vars set in Vercel are the source of truth for API credentials and platform IDs.
 
@@ -141,7 +141,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 1. All 3 phases are built and deployed
 2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
-3. Required env vars: `X_USERNAME`, `YOUTUBE_CHANNEL_ID`, `FACEBOOK_PAGE_ID`, `INSTAGRAM_USER_ID`, `TIKTOK_USERNAME` (all set in Vercel)
+3. Confirmed env vars: `X_USERNAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_CHANNEL_ID`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. Facebook/Instagram vars NEED CONFIRMATION.
 4. If social APIs still fail, check the actual values in Vercel — they must be real platform API IDs, not display names
 5. To clear any stale DB records: `POST /api/social?action=clear-db`
 6. Debug endpoint available: `GET /api/social/debug` to verify what env vars resolve to

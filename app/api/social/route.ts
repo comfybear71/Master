@@ -54,12 +54,13 @@ async function syncSocialConfigFromProject(repo: string): Promise<SyncedConfig> 
  * DB had stale garbage from old AIGlitch sync — ignore it.
  */
 async function getOrSyncConfig(): Promise<Record<string, string>> {
+  // Only reference env vars that are CONFIRMED to exist in Vercel
   return {
     xUsername: process.env.X_USERNAME || "",
     youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || "",
-    facebookPageId: process.env.FACEBOOK_PAGE_ID || "",
-    instagramUserId: process.env.INSTAGRAM_USER_ID || "",
-    tiktokUsername: process.env.TIKTOK_USERNAME || "",
+    facebookPageId: process.env.FACEBOOK_PAGE_ID || "",        // NEEDS CONFIRMATION
+    instagramUserId: process.env.INSTAGRAM_USER_ID || "",      // NEEDS CONFIRMATION
+    tiktokUsername: "",  // No TIKTOK_USERNAME env var — TikTok uses CLIENT_KEY + CLIENT_SECRET
   };
 }
 
@@ -75,10 +76,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           envVarsSet: {
             X_USERNAME: !!process.env.X_USERNAME,
+            GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
             YOUTUBE_CHANNEL_ID: !!process.env.YOUTUBE_CHANNEL_ID,
             FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+            FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
             INSTAGRAM_USER_ID: !!process.env.INSTAGRAM_USER_ID,
-            TIKTOK_USERNAME: !!process.env.TIKTOK_USERNAME,
+            INSTAGRAM_ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+            TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
+            TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
           },
           resolvedConfig: {
             xUsername: config.xUsername ? `${config.xUsername.slice(0, 3)}...` : "(empty)",
@@ -92,6 +98,30 @@ export async function GET(req: NextRequest) {
       }
       case "stats": {
         const config = await getOrSyncConfig();
+        console.log("[Social API] Fetching stats with config:", {
+          xUsername: config.xUsername ? `${config.xUsername.slice(0, 3)}...` : "(empty)",
+          youtubeChannelId: config.youtubeChannelId || "(empty)",
+          facebookPageId: config.facebookPageId ? `${config.facebookPageId.slice(0, 5)}...` : "(empty)",
+          instagramUserId: config.instagramUserId ? `${config.instagramUserId.slice(0, 3)}...` : "(empty)",
+          tiktokUsername: config.tiktokUsername ? `${config.tiktokUsername.slice(0, 3)}...` : "(empty)",
+        });
+        console.log("[Social API] YouTube env vars:", {
+          GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+          GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
+          YOUTUBE_CHANNEL_ID: process.env.YOUTUBE_CHANNEL_ID || "(not set)",
+        });
+        console.log("[Social API] Facebook env vars:", {
+          FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
+          FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+        });
+        console.log("[Social API] Instagram env vars:", {
+          INSTAGRAM_ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+          INSTAGRAM_USER_ID: !!process.env.INSTAGRAM_USER_ID,
+        });
+        console.log("[Social API] TikTok env vars:", {
+          TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
+          TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
+        });
         const stats = await getAllSocialStats({
           xUsername: config.xUsername || searchParams.get("xUsername") || undefined,
           youtubeChannelId: config.youtubeChannelId || searchParams.get("youtubeChannelId") || undefined,
@@ -100,14 +130,16 @@ export async function GET(req: NextRequest) {
           tiktokUsername: config.tiktokUsername || searchParams.get("tiktokUsername") || undefined,
         });
 
-        // Cache stats in MongoDB
+        // Only cache successful results — never cache errors
         const db = await getDb();
         for (const stat of stats) {
-          await db.collection("social_stats").updateOne(
-            { platform: stat.platform },
-            { $set: stat },
-            { upsert: true }
-          );
+          if (!stat.error) {
+            await db.collection("social_stats").updateOne(
+              { platform: stat.platform },
+              { $set: stat },
+              { upsert: true }
+            );
+          }
         }
 
         return NextResponse.json(stats);
@@ -158,10 +190,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "clear-db") {
-      // Nuke the stale DB config that was overriding env vars with garbage
+      // Nuke ALL stale social data — config, cached stats, and history
       const db = await getDb();
       await db.collection("settings").deleteOne({ key: "social_config" });
-      return NextResponse.json({ success: true, message: "Stale social config cleared from DB" });
+      await db.collection("social_stats").deleteMany({});
+      await db.collection("social_history").deleteMany({});
+      return NextResponse.json({ success: true, message: "All stale social data cleared from DB" });
     }
 
     if (action === "sync") {
