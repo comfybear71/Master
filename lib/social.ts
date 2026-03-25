@@ -774,25 +774,126 @@ export async function getAllSocialStats(config: {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+//  Instagram — Content Publishing API (Graph API v21.0)
+//  Posts images with captions to Instagram Business/Creator accounts.
+//  Instagram requires an image_url for every post — no text-only posts.
+//  Flow: 1) Create media container → 2) Publish container
+//  Env vars: INSTAGRAM_USER_ID, INSTAGRAM_ACCESS_TOKEN (or FACEBOOK_ACCESS_TOKEN)
+// ══════════════════════════════════════════════════════════════════════════
+
+export async function postToInstagram(
+  caption: string,
+  imageUrl: string,
+  igUserId?: string
+): Promise<PostResult> {
+  try {
+    const userId = igUserId || process.env.INSTAGRAM_USER_ID;
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
+
+    if (!userId) {
+      return { success: false, error: "INSTAGRAM_USER_ID not set in Vercel env vars" };
+    }
+    if (!accessToken) {
+      return { success: false, error: "INSTAGRAM_ACCESS_TOKEN (or FACEBOOK_ACCESS_TOKEN) not set in Vercel env vars" };
+    }
+    if (!imageUrl) {
+      return { success: false, error: "Instagram requires an image URL — text-only posts are not supported" };
+    }
+
+    console.log("[Instagram] Creating media container for user:", userId);
+
+    // Step 1: Create media container
+    const createRes = await fetch(
+      `https://graph.facebook.com/v21.0/${userId}/media`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image_url: imageUrl,
+          caption,
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    if (!createRes.ok) {
+      const errBody = await createRes.text();
+      return { success: false, error: `Instagram container creation failed ${createRes.status}: ${errBody.slice(0, 300)}` };
+    }
+
+    const createData: { id?: string } = await createRes.json();
+    const containerId = createData.id;
+    if (!containerId) {
+      return { success: false, error: "Instagram: no container ID returned" };
+    }
+
+    console.log("[Instagram] Container created:", containerId, "— publishing...");
+
+    // Step 2: Publish the container
+    const publishRes = await fetch(
+      `https://graph.facebook.com/v21.0/${userId}/media_publish`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          creation_id: containerId,
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    if (!publishRes.ok) {
+      const errBody = await publishRes.text();
+      return { success: false, error: `Instagram publish failed ${publishRes.status}: ${errBody.slice(0, 300)}` };
+    }
+
+    const publishData: { id?: string } = await publishRes.json();
+    const mediaId = publishData.id;
+
+    console.log("[Instagram] Published successfully, media ID:", mediaId);
+
+    // Get permalink for the published post
+    let platformUrl: string | undefined;
+    if (mediaId) {
+      const permalinkRes = await fetch(
+        `https://graph.facebook.com/v21.0/${mediaId}?fields=permalink&access_token=${accessToken}`
+      );
+      if (permalinkRes.ok) {
+        const permalinkData: { permalink?: string } = await permalinkRes.json();
+        platformUrl = permalinkData.permalink;
+      }
+    }
+
+    return {
+      success: true,
+      platformPostId: mediaId,
+      platformUrl,
+    };
+  } catch (err) {
+    return { success: false, error: `Instagram error: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 //  Unified Publisher (same pattern as AIGlitch's postToPlatform dispatcher)
 // ══════════════════════════════════════════════════════════════════════════
 
 export async function publishToplatform(
   platform: SocialPlatform,
   text: string,
-  config: { facebookPageId?: string; facebookAccessToken?: string }
+  config: { facebookPageId?: string; facebookAccessToken?: string; instagramImageUrl?: string }
 ): Promise<PostResult> {
   switch (platform) {
     case "x":
       return postToX(text);
     case "facebook":
       return postToFacebook(text, config.facebookPageId || "", config.facebookAccessToken || process.env.FACEBOOK_ACCESS_TOKEN || "");
+    case "instagram":
+      return postToInstagram(text, config.instagramImageUrl || "");
     case "youtube":
       return { success: false, error: "YouTube requires video content — use YouTube Studio" };
     case "tiktok":
       return { success: false, error: "TikTok requires video content — sandboxed" };
-    case "instagram":
-      return { success: false, error: "Instagram requires media — coming soon" };
     default:
       return { success: false, error: `Unknown platform: ${platform}` };
   }

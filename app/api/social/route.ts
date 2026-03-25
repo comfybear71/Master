@@ -227,11 +227,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "post") {
-      const { platform, content } = await req.json();
+      const { platform, content, imageUrl } = await req.json();
       const config = await getOrSyncConfig();
       const result = await publishToplatform(platform, content, {
         facebookPageId: config.facebookPageId,
         facebookAccessToken: process.env.FACEBOOK_ACCESS_TOKEN,
+        instagramImageUrl: imageUrl,
       });
       return NextResponse.json(result);
     }
