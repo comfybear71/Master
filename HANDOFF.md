@@ -106,8 +106,8 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | MONGODB_ATLAS_PUBLIC_KEY | ✅ Configured in Vercel |
 | X_CONSUMER_KEY + X_CONSUMER_SECRET + X_ACCESS_TOKEN + X_ACCESS_TOKEN_SECRET | ✅ Configured in Vercel |
 | GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + YOUTUBE_CHANNEL_ID | ✅ Configured in Vercel |
-| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ⚠️ NEEDS CONFIRMATION from user |
-| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ⚠️ NEEDS CONFIRMATION from user |
+| FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ✅ Configured in Vercel (confirmed 2026-03-25) |
+| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ✅ Configured in Vercel (confirmed 2026-03-25, username: sfrench71) |
 | TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET | ✅ Configured in Vercel |
 | ANTHROPIC_API_KEY | ✅ Configured in Vercel |
 | GROK_API_KEY | ✅ Configured in Vercel |
@@ -118,6 +118,27 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 ---
 
 ## Known Issues
+
+### ACTIVE: YouTube API Quota Exhaustion (2026-03-25)
+
+**Symptom**: YouTube shows 403 error: "The request cannot be completed because you have exceeded your quota."
+
+**Root Cause**: YouTube Data API free tier allows 10,000 units/day. Both TheMaster (polling every 60s) and AIGlitch (cron jobs + marketing metrics) share the same `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`, burning through quota quickly.
+
+**This is NOT an auth issue.** Do NOT reconnect YouTube OAuth when this happens. Quota resets at **midnight Pacific time** daily.
+
+**Mitigation options** (not yet implemented):
+- Increase TheMaster polling interval for YouTube from 60s to 5-10 minutes
+- Cache YouTube stats in MongoDB for longer periods
+- Apply for YouTube API quota increase via Google Cloud Console
+
+### ACTIVE: TikTok OAuth — Token May Be Invalid (2026-03-25)
+
+**Symptom**: TikTok shows "token expired or invalid" after completing OAuth authorization flow.
+
+**Status**: OAuth flow completes (token stored in MongoDB `settings.tiktok_oauth`), but the token gets 401 when calling `/v2/user/info/`. Debug endpoint added at `GET /api/auth/tiktok/debug` to diagnose.
+
+**Possible causes**: Sandbox app limitations, scope mismatch, or very short token expiry. Need to check debug endpoint output on the deployed app.
 
 ### RESOLVED: Social Media Config — DB Overriding Env Vars (2026-03-24)
 
@@ -156,14 +177,14 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 1. All 3 phases are built and deployed
 2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
-3. Confirmed env vars: `X_USERNAME`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `YOUTUBE_CHANNEL_ID`, `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`. Facebook/Instagram vars NEED CONFIRMATION.
-4. If social APIs still fail, check the actual values in Vercel — they must be real platform API IDs, not display names
-5. To clear any stale DB records: `POST /api/social?action=clear-db`
-6. Debug endpoint available: `GET /api/social/debug` to verify what env vars resolve to
-7. Seed projects via Projects page if not already done
-8. Test campaign generation: Growth → + New Campaign
-9. Run viral scan: Growth → Viral Alerts → Scan for Viral Posts
-10. Future: Add more social platform publishing APIs, growth charts over time
+3. All social env vars confirmed set in Vercel (X, YouTube, Facebook, Instagram, TikTok)
+4. **YouTube 403 = quota limit**, NOT auth failure. Resets at midnight Pacific. Do NOT reconnect OAuth.
+5. **TikTok debug**: Check `GET /api/auth/tiktok/debug` on deployed app to see why token is rejected
+6. **AIGlitch Ad Campaigns**: Full system documented — see AIGlitch section above + `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo
+7. Debug endpoints: `GET /api/social/debug` (social config), `GET /api/auth/tiktok/debug` (TikTok token)
+8. To clear stale DB records: `POST /api/social?action=clear-db`
+9. TheMaster stats vs AIGlitch stats show different numbers — TheMaster = real platform totals, AIGlitch = only posts spread through its system
+10. Future: Increase YouTube polling interval to reduce quota usage, TikTok token refresh flow, growth charts over time
 
 ---
 
