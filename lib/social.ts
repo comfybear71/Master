@@ -481,6 +481,7 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
       engagementRate: recentPosts.length > 0
         ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
       recentPosts,
+      connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
