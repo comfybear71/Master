@@ -497,22 +497,65 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  TikTok — sandboxed (TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET only)
-//  Confirmed Vercel env vars: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET
+//  TikTok — OAuth 2.0 User Token (stored in MongoDB via /api/auth/tiktok)
+//  Env vars: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET
+//  User token: stored in MongoDB settings.tiktok_oauth after OAuth flow
 // ══════════════════════════════════════════════════════════════════════════
 
+interface TikTokOAuth {
+  accessToken: string;
+  refreshToken: string | null;
+  openId: string | null;
+  expiresAt: string | null;
+  authorizedAt: string;
+}
+
 /**
- * Get TikTok access token using client credentials grant.
- * Uses TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET — the only vars we have.
+ * Get TikTok user access token from MongoDB (set via OAuth flow).
+ * Falls back to TIKTOK_ACCESS_TOKEN env var if set.
+ * If token is expired, attempts refresh using refresh_token.
  */
-async function getTikTokAccessToken(): Promise<string | null> {
+async function getTikTokUserToken(): Promise<{ token: string; openId: string | null } | null> {
+  // Check env var first (manual override)
+  if (process.env.TIKTOK_ACCESS_TOKEN) {
+    console.log("[TikTok] Using TIKTOK_ACCESS_TOKEN env var");
+    return { token: process.env.TIKTOK_ACCESS_TOKEN, openId: null };
+  }
+
+  try {
+    const db = await getDb();
+    const oauth = await db.collection("settings").findOne({ key: "tiktok_oauth" }) as TikTokOAuth | null;
+
+    if (!oauth?.accessToken) {
+      console.log("[TikTok] No OAuth token found in DB — need to authorize via /api/auth/tiktok");
+      return null;
+    }
+
+    // Check if token is expired
+    if (oauth.expiresAt && new Date(oauth.expiresAt) < new Date()) {
+      console.log("[TikTok] Token expired, attempting refresh...");
+      const refreshed = await refreshTikTokToken(oauth.refreshToken);
+      if (refreshed) return refreshed;
+      console.log("[TikTok] Refresh failed — need to re-authorize");
+      return null;
+    }
+
+    console.log("[TikTok] Using stored OAuth token (authorized:", oauth.authorizedAt, ")");
+    return { token: oauth.accessToken, openId: oauth.openId };
+  } catch (err) {
+    console.error("[TikTok] Error reading OAuth token from DB:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
+/**
+ * Refresh an expired TikTok access token using the refresh token.
+ */
+async function refreshTikTokToken(refreshToken: string | null): Promise<{ token: string; openId: string | null } | null> {
+  if (!refreshToken) return null;
+
   const clientKey = process.env.TIKTOK_CLIENT_KEY;
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
-
-  console.log("[TikTok] getTikTokAccessToken called");
-  console.log("[TikTok]   TIKTOK_CLIENT_KEY set:", !!clientKey, clientKey ? `(${clientKey.slice(0, 8)}...)` : "");
-  console.log("[TikTok]   TIKTOK_CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
-
   if (!clientKey || !clientSecret) return null;
 
   try {
@@ -522,28 +565,47 @@ async function getTikTokAccessToken(): Promise<string | null> {
       body: new URLSearchParams({
         client_key: clientKey,
         client_secret: clientSecret,
-        grant_type: "client_credentials",
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
       }),
     });
 
-    const responseText = await res.text();
-    console.log("[TikTok] Token response status:", res.status);
-    console.log("[TikTok] Token response body:", responseText.slice(0, 400));
+    const text = await res.text();
+    console.log("[TikTok] Refresh response:", res.status, text.slice(0, 300));
 
-    if (!res.ok) {
-      console.error("[TikTok] Token request failed:", res.status, responseText.slice(0, 400));
-      return null;
-    }
+    if (!res.ok) return null;
 
-    const data = JSON.parse(responseText) as { access_token?: string; expires_in?: number };
-    if (data.access_token) {
-      console.log("[TikTok] Got access token, expires_in:", data.expires_in);
-      return data.access_token;
-    }
-    console.error("[TikTok] Token response had no access_token:", responseText.slice(0, 200));
-    return null;
+    const data = JSON.parse(text) as {
+      access_token?: string;
+      refresh_token?: string;
+      open_id?: string;
+      expires_in?: number;
+      refresh_expires_in?: number;
+    };
+
+    if (!data.access_token) return null;
+
+    // Update stored tokens
+    const db = await getDb();
+    await db.collection("settings").updateOne(
+      { key: "tiktok_oauth" },
+      {
+        $set: {
+          accessToken: data.access_token,
+          refreshToken: data.refresh_token || refreshToken,
+          openId: data.open_id || null,
+          expiresAt: data.expires_in
+            ? new Date(Date.now() + data.expires_in * 1000).toISOString()
+            : null,
+          refreshedAt: new Date().toISOString(),
+        },
+      }
+    );
+
+    console.log("[TikTok] Token refreshed successfully");
+    return { token: data.access_token, openId: data.open_id || null };
   } catch (err) {
-    console.error("[TikTok] Token request exception:", err instanceof Error ? err.message : err);
+    console.error("[TikTok] Refresh exception:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -551,62 +613,137 @@ async function getTikTokAccessToken(): Promise<string | null> {
 export async function getTikTokStats(): Promise<SocialStats> {
   try {
     console.log("[TikTok] getTikTokStats called");
-    console.log("[TikTok] Env vars check:", {
-      TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
-      TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
-    });
 
     const clientKey = process.env.TIKTOK_CLIENT_KEY;
     const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
 
     if (!clientKey || !clientSecret) {
-      const missing: string[] = [];
-      if (!clientKey) missing.push("TIKTOK_CLIENT_KEY");
-      if (!clientSecret) missing.push("TIKTOK_CLIENT_SECRET");
-      throw new Error(`TikTok credentials missing in Vercel: ${missing.join(", ")}`);
+      throw new Error("TikTok credentials missing: TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET");
     }
 
-    // Get access token using client credentials
-    console.log("[TikTok] Requesting access token with CLIENT_KEY + CLIENT_SECRET...");
-    const accessToken = await getTikTokAccessToken();
-    if (!accessToken) {
+    // Get user OAuth token (from DB or env var)
+    const userAuth = await getTikTokUserToken();
+    if (!userAuth) {
       throw new Error(
-        "TikTok: have TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET but token request failed. " +
-        "Check Vercel function logs for detailed response. " +
-        "Note: TikTok sandbox may have limitations."
+        "TikTok not authorized. Click 'Authorize TikTok' on the Growth page to connect your account."
       );
     }
 
-    // Query user info (sandboxed — may only return own data)
-    console.log("[TikTok] Fetching user info...");
-    const userRes = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,display_name", {
-      method: "GET",
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    // Query user info with user token
+    console.log("[TikTok] Fetching user info with OAuth token...");
+    const userRes = await fetch(
+      "https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,likes_count,display_name",
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${userAuth.token}` },
+      }
+    );
 
     if (!userRes.ok) {
       const errText = await userRes.text();
       console.error("[TikTok] User info failed:", userRes.status, errText.slice(0, 400));
+
+      // If 401, token might be invalid — clear it
+      if (userRes.status === 401) {
+        throw new Error(
+          "TikTok token expired or invalid. Click 'Authorize TikTok' to re-connect your account."
+        );
+      }
       throw new Error(`TikTok API ${userRes.status}: ${errText.slice(0, 200)}`);
     }
 
-    const userData: { data?: { user?: { follower_count?: number; video_count?: number } } } = await userRes.json();
-    console.log("[TikTok] User data:", JSON.stringify(userData).slice(0, 200));
+    const userData: {
+      data?: {
+        user?: {
+          follower_count?: number;
+          video_count?: number;
+          likes_count?: number;
+          display_name?: string;
+        };
+      };
+    } = await userRes.json();
+    console.log("[TikTok] User data:", JSON.stringify(userData).slice(0, 300));
+
+    const user = userData.data?.user;
+    const followers = user?.follower_count || 0;
+    const posts = user?.video_count || 0;
+    const likes = user?.likes_count || 0;
+
+    // Engagement rate: total likes / total posts (rough metric)
+    const engagementRate = posts > 0 ? Math.round((likes / posts / Math.max(followers, 1)) * 10000) / 100 : 0;
+
+    // Fetch recent videos if video.list scope is available
+    let recentPosts: SocialStats["recentPosts"] = [];
+    try {
+      const videosRes = await fetch(
+        "https://open.tiktokapis.com/v2/video/list/?fields=id,title,like_count,comment_count,view_count,share_count,create_time",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${userAuth.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ max_count: 5 }),
+        }
+      );
+
+      if (videosRes.ok) {
+        const videosData: {
+          data?: {
+            videos?: Array<{
+              id: string;
+              title?: string;
+              like_count?: number;
+              comment_count?: number;
+              view_count?: number;
+              share_count?: number;
+              create_time?: number;
+            }>;
+          };
+        } = await videosRes.json();
+
+        recentPosts = (videosData.data?.videos || []).map((v) => ({
+          id: v.id,
+          platform: "tiktok" as const,
+          text: v.title || "(no title)",
+          likes: v.like_count || 0,
+          comments: v.comment_count || 0,
+          shares: v.share_count || 0,
+          views: v.view_count || 0,
+          engagementRate: v.view_count && v.view_count > 0
+            ? Math.round(((v.like_count || 0) + (v.comment_count || 0)) / v.view_count * 10000) / 100
+            : 0,
+          createdAt: v.create_time
+            ? new Date(v.create_time * 1000).toISOString()
+            : new Date().toISOString(),
+          url: `https://www.tiktok.com/@/video/${v.id}`,
+        }));
+        console.log("[TikTok] Fetched", recentPosts.length, "recent videos");
+      } else {
+        console.log("[TikTok] Video list not available (may need video.list scope)");
+      }
+    } catch (videoErr) {
+      console.log("[TikTok] Video list fetch error (non-fatal):", videoErr instanceof Error ? videoErr.message : videoErr);
+    }
 
     return {
       platform: "tiktok",
-      followers: userData.data?.user?.follower_count || 0,
-      posts: userData.data?.user?.video_count || 0,
-      engagementRate: 0,
-      recentPosts: [],
+      followers,
+      posts,
+      engagementRate,
+      recentPosts,
       connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : "TikTok API error (sandboxed)";
+    const errMsg = error instanceof Error ? error.message : "TikTok API error";
     console.error("[TikTok] FAILED:", errMsg);
     return {
-      platform: "tiktok", followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
+      platform: "tiktok",
+      followers: 0,
+      posts: 0,
+      engagementRate: 0,
+      recentPosts: [],
       fetchedAt: new Date().toISOString(),
       error: errMsg,
     };
