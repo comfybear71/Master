@@ -61,8 +61,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Build the same redirect_uri used in /api/auth/google
-  const baseUrl = process.env.NEXTAUTH_URL
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  const baseUrl = (process.env.NEXTAUTH_URL
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")).replace(/\/+$/, "");
   const redirectUri = `${baseUrl}/api/auth/callback/google`;
 
   console.log("[Google OAuth Callback] Exchanging code for tokens");
