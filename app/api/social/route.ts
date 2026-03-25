@@ -54,12 +54,13 @@ async function syncSocialConfigFromProject(repo: string): Promise<SyncedConfig> 
  * DB had stale garbage from old AIGlitch sync — ignore it.
  */
 async function getOrSyncConfig(): Promise<Record<string, string>> {
+  // Only reference env vars that are CONFIRMED to exist in Vercel
   return {
     xUsername: process.env.X_USERNAME || "",
     youtubeChannelId: process.env.YOUTUBE_CHANNEL_ID || "",
-    facebookPageId: process.env.FACEBOOK_PAGE_ID || "",
-    instagramUserId: process.env.INSTAGRAM_USER_ID || "",
-    tiktokUsername: process.env.TIKTOK_USERNAME || "",
+    facebookPageId: process.env.FACEBOOK_PAGE_ID || "",        // NEEDS CONFIRMATION
+    instagramUserId: process.env.INSTAGRAM_USER_ID || "",      // NEEDS CONFIRMATION
+    tiktokUsername: "",  // No TIKTOK_USERNAME env var — TikTok uses CLIENT_KEY + CLIENT_SECRET
   };
 }
 
@@ -75,10 +76,15 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           envVarsSet: {
             X_USERNAME: !!process.env.X_USERNAME,
+            YOUTUBE_CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
+            YOUTUBE_CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
             YOUTUBE_CHANNEL_ID: !!process.env.YOUTUBE_CHANNEL_ID,
             FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+            FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
             INSTAGRAM_USER_ID: !!process.env.INSTAGRAM_USER_ID,
-            TIKTOK_USERNAME: !!process.env.TIKTOK_USERNAME,
+            INSTAGRAM_ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+            TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
+            TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
           },
           resolvedConfig: {
             xUsername: config.xUsername ? `${config.xUsername.slice(0, 3)}...` : "(empty)",
@@ -100,26 +106,21 @@ export async function GET(req: NextRequest) {
           tiktokUsername: config.tiktokUsername ? `${config.tiktokUsername.slice(0, 3)}...` : "(empty)",
         });
         console.log("[Social API] YouTube env vars:", {
-          CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
-          CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
-          REFRESH_TOKEN: !!process.env.YOUTUBE_REFRESH_TOKEN,
-          CHANNEL_ID: process.env.YOUTUBE_CHANNEL_ID || "(not set)",
+          YOUTUBE_CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
+          YOUTUBE_CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
+          YOUTUBE_CHANNEL_ID: process.env.YOUTUBE_CHANNEL_ID || "(not set)",
         });
         console.log("[Social API] Facebook env vars:", {
-          ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
-          PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+          FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
+          FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
         });
         console.log("[Social API] Instagram env vars:", {
-          ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
-          USER_ID: !!process.env.INSTAGRAM_USER_ID,
+          INSTAGRAM_ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+          INSTAGRAM_USER_ID: !!process.env.INSTAGRAM_USER_ID,
         });
         console.log("[Social API] TikTok env vars:", {
-          ACCESS_TOKEN: !!process.env.TIKTOK_ACCESS_TOKEN,
-          TOKEN: !!process.env.TIKTOK_TOKEN,
-          CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
-          CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
-          REFRESH_TOKEN: !!process.env.TIKTOK_REFRESH_TOKEN,
-          USERNAME: !!process.env.TIKTOK_USERNAME,
+          TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
+          TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
         });
         const stats = await getAllSocialStats({
           xUsername: config.xUsername || searchParams.get("xUsername") || undefined,

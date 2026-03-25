@@ -285,61 +285,61 @@ export async function getFacebookStats(pageId: string): Promise<SocialStats> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  YouTube — Data API v3 (OAuth via CLIENT_ID + CLIENT_SECRET)
+//  YouTube — Data API v3 (OAuth via YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET)
+//  Confirmed Vercel env vars: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
 // ══════════════════════════════════════════════════════════════════════════
 
 /**
- * Refresh YouTube OAuth token using CLIENT_ID + CLIENT_SECRET + REFRESH_TOKEN.
- * This is the PRIMARY auth method — we have these credentials in Vercel.
+ * Get YouTube OAuth2 access token using CLIENT_ID + CLIENT_SECRET.
+ * Uses Google's OAuth2 token endpoint to exchange client credentials.
  */
-async function refreshYouTubeToken(): Promise<string | null> {
+async function getYouTubeAccessToken(): Promise<string | null> {
   const clientId = process.env.YOUTUBE_CLIENT_ID;
   const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-  const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
 
-  console.log("[YouTube] refreshYouTubeToken called");
-  console.log("[YouTube]   CLIENT_ID set:", !!clientId, clientId ? `(${clientId.slice(0, 8)}...)` : "");
-  console.log("[YouTube]   CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
-  console.log("[YouTube]   REFRESH_TOKEN set:", !!refreshToken, refreshToken ? `(${refreshToken.length} chars)` : "");
+  console.log("[YouTube] getYouTubeAccessToken called");
+  console.log("[YouTube]   YOUTUBE_CLIENT_ID set:", !!clientId, clientId ? `(${clientId.slice(0, 12)}...)` : "");
+  console.log("[YouTube]   YOUTUBE_CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
 
   if (!clientId || !clientSecret) {
-    console.error("[YouTube] Missing YOUTUBE_CLIENT_ID or YOUTUBE_CLIENT_SECRET — cannot refresh token");
-    return null;
-  }
-  if (!refreshToken) {
-    console.error("[YouTube] Missing YOUTUBE_REFRESH_TOKEN — have CLIENT_ID + CLIENT_SECRET but cannot refresh without a refresh token");
+    console.error("[YouTube] Missing credentials:", {
+      YOUTUBE_CLIENT_ID: !!clientId,
+      YOUTUBE_CLIENT_SECRET: !!clientSecret,
+    });
     return null;
   }
 
   try {
+    // Try OAuth2 token request with client credentials
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        refresh_token: refreshToken,
-        grant_type: "refresh_token",
+        grant_type: "client_credentials",
+        scope: "https://www.googleapis.com/auth/youtube.readonly",
       }),
     });
 
     const responseText = await res.text();
-    console.log("[YouTube] Token refresh response:", res.status, responseText.slice(0, 300));
+    console.log("[YouTube] Token response status:", res.status);
+    console.log("[YouTube] Token response body:", responseText.slice(0, 400));
 
     if (!res.ok) {
-      console.error("[YouTube] Token refresh failed:", res.status, responseText.slice(0, 300));
+      console.error("[YouTube] Token request failed:", res.status, responseText.slice(0, 400));
       return null;
     }
 
-    const data = JSON.parse(responseText) as { access_token?: string; expires_in?: number };
+    const data = JSON.parse(responseText) as { access_token?: string; expires_in?: number; token_type?: string };
     if (data.access_token) {
-      console.log("[YouTube] Token refresh SUCCESS — got access_token, expires_in:", data.expires_in);
+      console.log("[YouTube] Got access token, type:", data.token_type, "expires_in:", data.expires_in);
       return data.access_token;
     }
-    console.error("[YouTube] Token refresh returned no access_token:", responseText.slice(0, 200));
+    console.error("[YouTube] Token response had no access_token:", responseText.slice(0, 200));
     return null;
   } catch (err) {
-    console.error("[YouTube] Token refresh exception:", err instanceof Error ? err.message : err);
+    console.error("[YouTube] Token request exception:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -348,52 +348,38 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
   try {
     console.log("[YouTube] getYouTubeStats called for channel:", channelId);
 
-    // ── Resolve auth credentials ──
-    // Priority: 1) OAuth refresh (CLIENT_ID + CLIENT_SECRET + REFRESH_TOKEN)
-    //           2) Direct access token (if manually set)
-    //           3) API key (if available)
+    // Only env vars we have: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
     const clientId = process.env.YOUTUBE_CLIENT_ID;
     const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
-    const refreshToken = process.env.YOUTUBE_REFRESH_TOKEN;
 
-    console.log("[YouTube] Env vars present:");
+    console.log("[YouTube] Env vars check:");
     console.log("[YouTube]   YOUTUBE_CLIENT_ID:", !!clientId);
     console.log("[YouTube]   YOUTUBE_CLIENT_SECRET:", !!clientSecret);
-    console.log("[YouTube]   YOUTUBE_REFRESH_TOKEN:", !!refreshToken);
-    console.log("[YouTube]   YOUTUBE_CHANNEL_ID:", !!process.env.YOUTUBE_CHANNEL_ID);
+    console.log("[YouTube]   YOUTUBE_CHANNEL_ID:", process.env.YOUTUBE_CHANNEL_ID || "(not set)");
 
-    let accessToken: string | undefined | null = null;
-    let authParam = "";
-
-    // 1) Try OAuth refresh first — this is our primary method
-    if (clientId && clientSecret && refreshToken) {
-      console.log("[YouTube] Attempting OAuth token refresh...");
-      accessToken = await refreshYouTubeToken();
-      if (accessToken) {
-        authParam = `access_token=${accessToken}`;
-        console.log("[YouTube] Using refreshed OAuth access token");
-      } else {
-        console.warn("[YouTube] OAuth refresh failed, will try fallbacks...");
-      }
-    }
-
-    // 2) No refresh token — build detailed error about what's missing
-    if (!authParam) {
+    if (!clientId || !clientSecret) {
       const missing: string[] = [];
       if (!clientId) missing.push("YOUTUBE_CLIENT_ID");
       if (!clientSecret) missing.push("YOUTUBE_CLIENT_SECRET");
-      if (!refreshToken) missing.push("YOUTUBE_REFRESH_TOKEN");
-
-      if (missing.length > 0) {
-        throw new Error(
-          `YouTube OAuth incomplete — missing: ${missing.join(", ")}. ` +
-          `Have: ${[clientId && "CLIENT_ID", clientSecret && "CLIENT_SECRET", refreshToken && "REFRESH_TOKEN"].filter(Boolean).join(", ") || "nothing"}. ` +
-          `Need all three: YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET + YOUTUBE_REFRESH_TOKEN in Vercel env vars.`
-        );
-      }
-      // All creds present but refresh failed
-      throw new Error("YouTube OAuth token refresh failed — check YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, and YOUTUBE_REFRESH_TOKEN in Vercel");
+      throw new Error(
+        `YouTube credentials missing in Vercel: ${missing.join(", ")}. ` +
+        `Have: ${[clientId && "YOUTUBE_CLIENT_ID", clientSecret && "YOUTUBE_CLIENT_SECRET"].filter(Boolean).join(", ") || "nothing"}.`
+      );
     }
+
+    // Get access token using CLIENT_ID + CLIENT_SECRET
+    console.log("[YouTube] Requesting access token with CLIENT_ID + CLIENT_SECRET...");
+    const accessToken = await getYouTubeAccessToken();
+
+    if (!accessToken) {
+      throw new Error(
+        "YouTube: have YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET but token request failed. " +
+        "Check Vercel function logs for detailed response. " +
+        "CLIENT_ID: " + clientId.slice(0, 12) + "..."
+      );
+    }
+
+    const authParam = `access_token=${accessToken}`;
 
     // ── Fetch channel stats ──
     console.log("[YouTube] Fetching channel stats for:", channelId);
@@ -402,17 +388,14 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
     );
     if (!channelRes.ok) {
       const errText = await channelRes.text();
-      console.error("[YouTube] Channel fetch failed:", channelRes.status, errText.slice(0, 300));
-      if (channelRes.status === 401 || channelRes.status === 403) {
-        throw new Error(`YouTube API auth failed (${channelRes.status}) — OAuth token may be invalid. Check YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET + YOUTUBE_REFRESH_TOKEN. Response: ${errText.slice(0, 200)}`);
-      }
-      throw new Error(`YouTube API ${channelRes.status}: ${errText.slice(0, 200)}`);
+      console.error("[YouTube] Channel fetch failed:", channelRes.status, errText.slice(0, 400));
+      throw new Error(`YouTube API ${channelRes.status}: ${errText.slice(0, 300)}`);
     }
     const channelData: { items?: Array<{ statistics: { subscriberCount: string; videoCount: string } }> } = await channelRes.json();
     const channel = channelData.items?.[0];
     if (!channel) {
-      console.error("[YouTube] Channel not found. Response items:", JSON.stringify(channelData).slice(0, 200));
-      throw new Error(`Channel ${channelId} not found — check YOUTUBE_CHANNEL_ID is a valid channel ID (starts with UC...)`);
+      console.error("[YouTube] Channel not found. Full response:", JSON.stringify(channelData).slice(0, 300));
+      throw new Error(`Channel "${channelId}" not found — check YOUTUBE_CHANNEL_ID is a valid channel ID (starts with UC...)`);
     }
     console.log("[YouTube] Channel found — subscribers:", channel.statistics.subscriberCount, "videos:", channel.statistics.videoCount);
 
@@ -422,6 +405,9 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
     );
     const videosData: { items?: Array<{ id: { videoId: string }; snippet: { title: string; publishedAt: string } }> } =
       videosRes.ok ? await videosRes.json() : { items: [] };
+    if (!videosRes.ok) {
+      console.warn("[YouTube] Video search failed:", videosRes.status, await videosRes.text().catch(() => ""));
+    }
     console.log("[YouTube] Found", videosData.items?.length || 0, "recent videos");
 
     const videoIds = (videosData.items || []).map((v) => v.id.videoId).join(",");
@@ -478,15 +464,23 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  TikTok — Content Posting API (from AIGlitch, sandboxed/limited)
+//  TikTok — sandboxed (TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET only)
+//  Confirmed Vercel env vars: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET
 // ══════════════════════════════════════════════════════════════════════════
 
-async function refreshTikTokToken(): Promise<string | null> {
+/**
+ * Get TikTok access token using client credentials grant.
+ * Uses TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET — the only vars we have.
+ */
+async function getTikTokAccessToken(): Promise<string | null> {
   const clientKey = process.env.TIKTOK_CLIENT_KEY;
   const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
-  const refreshToken = process.env.TIKTOK_REFRESH_TOKEN;
 
-  if (!clientKey || !clientSecret || !refreshToken) return null;
+  console.log("[TikTok] getTikTokAccessToken called");
+  console.log("[TikTok]   TIKTOK_CLIENT_KEY set:", !!clientKey, clientKey ? `(${clientKey.slice(0, 8)}...)` : "");
+  console.log("[TikTok]   TIKTOK_CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
+
+  if (!clientKey || !clientSecret) return null;
 
   try {
     const res = await fetch("https://open.tiktokapis.com/v2/oauth/token/", {
@@ -495,14 +489,28 @@ async function refreshTikTokToken(): Promise<string | null> {
       body: new URLSearchParams({
         client_key: clientKey,
         client_secret: clientSecret,
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
+        grant_type: "client_credentials",
       }),
     });
-    const data = await res.json() as { access_token?: string };
-    return data.access_token || null;
+
+    const responseText = await res.text();
+    console.log("[TikTok] Token response status:", res.status);
+    console.log("[TikTok] Token response body:", responseText.slice(0, 400));
+
+    if (!res.ok) {
+      console.error("[TikTok] Token request failed:", res.status, responseText.slice(0, 400));
+      return null;
+    }
+
+    const data = JSON.parse(responseText) as { access_token?: string; expires_in?: number };
+    if (data.access_token) {
+      console.log("[TikTok] Got access token, expires_in:", data.expires_in);
+      return data.access_token;
+    }
+    console.error("[TikTok] Token response had no access_token:", responseText.slice(0, 200));
+    return null;
   } catch (err) {
-    console.error("[TikTok] Token refresh error:", err);
+    console.error("[TikTok] Token request exception:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -510,66 +518,47 @@ async function refreshTikTokToken(): Promise<string | null> {
 export async function getTikTokStats(): Promise<SocialStats> {
   try {
     console.log("[TikTok] getTikTokStats called");
-    console.log("[TikTok] Env vars present:", {
-      TIKTOK_ACCESS_TOKEN: !!process.env.TIKTOK_ACCESS_TOKEN,
-      TIKTOK_TOKEN: !!process.env.TIKTOK_TOKEN,
+    console.log("[TikTok] Env vars check:", {
       TIKTOK_CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
       TIKTOK_CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
-      TIKTOK_REFRESH_TOKEN: !!process.env.TIKTOK_REFRESH_TOKEN,
-      TIKTOK_USERNAME: process.env.TIKTOK_USERNAME || "(not set)",
     });
-    let accessToken = process.env.TIKTOK_ACCESS_TOKEN || process.env.TIKTOK_TOKEN;
-    if (!accessToken) {
-      console.log("[TikTok] No direct token, attempting refresh...");
-      accessToken = await refreshTikTokToken() || undefined;
-    }
-    if (!accessToken) {
-      const hasRefreshCreds = !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET && process.env.TIKTOK_REFRESH_TOKEN);
+
+    const clientKey = process.env.TIKTOK_CLIENT_KEY;
+    const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+
+    if (!clientKey || !clientSecret) {
       const missing: string[] = [];
-      if (!process.env.TIKTOK_CLIENT_KEY) missing.push("TIKTOK_CLIENT_KEY");
-      if (!process.env.TIKTOK_CLIENT_SECRET) missing.push("TIKTOK_CLIENT_SECRET");
-      if (!process.env.TIKTOK_REFRESH_TOKEN) missing.push("TIKTOK_REFRESH_TOKEN");
-      if (!process.env.TIKTOK_ACCESS_TOKEN) missing.push("TIKTOK_ACCESS_TOKEN");
+      if (!clientKey) missing.push("TIKTOK_CLIENT_KEY");
+      if (!clientSecret) missing.push("TIKTOK_CLIENT_SECRET");
+      throw new Error(`TikTok credentials missing in Vercel: ${missing.join(", ")}`);
+    }
+
+    // Get access token using client credentials
+    console.log("[TikTok] Requesting access token with CLIENT_KEY + CLIENT_SECRET...");
+    const accessToken = await getTikTokAccessToken();
+    if (!accessToken) {
       throw new Error(
-        hasRefreshCreds
-          ? "TikTok token refresh failed — TIKTOK_REFRESH_TOKEN may be expired, re-authenticate via OAuth"
-          : `TikTok credentials incomplete — missing: ${missing.join(", ")}. Need either TIKTOK_ACCESS_TOKEN or (TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET + TIKTOK_REFRESH_TOKEN) in Vercel`
+        "TikTok: have TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET but token request failed. " +
+        "Check Vercel function logs for detailed response. " +
+        "Note: TikTok sandbox may have limitations."
       );
     }
-    console.log("[TikTok] Got access token, fetching user info...");
 
     // Query user info (sandboxed — may only return own data)
+    console.log("[TikTok] Fetching user info...");
     const userRes = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,display_name", {
       method: "GET",
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!userRes.ok) {
-      // Try token refresh on 401
-      if (userRes.status === 401) {
-        const refreshed = await refreshTikTokToken();
-        if (refreshed) {
-          const retryRes = await fetch("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,display_name", {
-            headers: { Authorization: `Bearer ${refreshed}` },
-          });
-          if (retryRes.ok) {
-            const retryData: { data?: { user?: { follower_count?: number; video_count?: number } } } = await retryRes.json();
-            return {
-              platform: "tiktok",
-              followers: retryData.data?.user?.follower_count || 0,
-              posts: retryData.data?.user?.video_count || 0,
-              engagementRate: 0,
-              recentPosts: [],
-              fetchedAt: new Date().toISOString(),
-            };
-          }
-        }
-        throw new Error("TikTok token expired — refresh failed");
-      }
-      throw new Error(`TikTok API: ${userRes.status}`);
+      const errText = await userRes.text();
+      console.error("[TikTok] User info failed:", userRes.status, errText.slice(0, 400));
+      throw new Error(`TikTok API ${userRes.status}: ${errText.slice(0, 200)}`);
     }
 
     const userData: { data?: { user?: { follower_count?: number; video_count?: number } } } = await userRes.json();
+    console.log("[TikTok] User data:", JSON.stringify(userData).slice(0, 200));
 
     return {
       platform: "tiktok",
@@ -580,10 +569,12 @@ export async function getTikTokStats(): Promise<SocialStats> {
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
+    const errMsg = error instanceof Error ? error.message : "TikTok API error (sandboxed)";
+    console.error("[TikTok] FAILED:", errMsg);
     return {
       platform: "tiktok", followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
       fetchedAt: new Date().toISOString(),
-      error: error instanceof Error ? error.message : "TikTok API error (sandboxed)",
+      error: errMsg,
     };
   }
 }
@@ -732,9 +723,10 @@ export async function getAllSocialStats(config: {
     config.instagramUserId
       ? getInstagramStats(config.instagramUserId)
       : Promise.resolve({ platform: "instagram" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "Instagram coming soon" }),
-    config.tiktokUsername
+    // TikTok uses CLIENT_KEY + CLIENT_SECRET directly — no username needed to trigger
+    (process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET)
       ? getTikTokStats()
-      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok sandboxed — limited API access" }),
+      : Promise.resolve({ platform: "tiktok" as SocialPlatform, followers: 0, posts: 0, engagementRate: 0, recentPosts: [], fetchedAt: new Date().toISOString(), error: "TikTok: TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET not set" }),
   ]);
 
   return results.map((r, i) => {

@@ -25,35 +25,33 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     nodeEnv: process.env.NODE_ENV,
 
+    // Confirmed Vercel env vars: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
     youtube: {
       YOUTUBE_CLIENT_ID: has("YOUTUBE_CLIENT_ID"),
       YOUTUBE_CLIENT_ID_preview: preview("YOUTUBE_CLIENT_ID"),
       YOUTUBE_CLIENT_SECRET: has("YOUTUBE_CLIENT_SECRET"),
-      YOUTUBE_REFRESH_TOKEN: has("YOUTUBE_REFRESH_TOKEN"),
       YOUTUBE_CHANNEL_ID: has("YOUTUBE_CHANNEL_ID"),
       YOUTUBE_CHANNEL_ID_preview: preview("YOUTUBE_CHANNEL_ID"),
-      _auth_method: "OAuth refresh (CLIENT_ID + CLIENT_SECRET + REFRESH_TOKEN)",
     },
 
+    // NEEDS CONFIRMATION: code expects FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID
     facebook: {
       FACEBOOK_ACCESS_TOKEN: has("FACEBOOK_ACCESS_TOKEN"),
       FACEBOOK_PAGE_ID: has("FACEBOOK_PAGE_ID"),
       FACEBOOK_PAGE_ID_preview: preview("FACEBOOK_PAGE_ID"),
     },
 
+    // NEEDS CONFIRMATION: code expects INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID
     instagram: {
       INSTAGRAM_ACCESS_TOKEN: has("INSTAGRAM_ACCESS_TOKEN"),
       INSTAGRAM_USER_ID: has("INSTAGRAM_USER_ID"),
       INSTAGRAM_USER_ID_preview: preview("INSTAGRAM_USER_ID"),
     },
 
+    // Confirmed Vercel env vars: TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET
     tiktok: {
-      TIKTOK_ACCESS_TOKEN: has("TIKTOK_ACCESS_TOKEN"),
-      TIKTOK_TOKEN: has("TIKTOK_TOKEN"),
       TIKTOK_CLIENT_KEY: has("TIKTOK_CLIENT_KEY"),
       TIKTOK_CLIENT_SECRET: has("TIKTOK_CLIENT_SECRET"),
-      TIKTOK_REFRESH_TOKEN: has("TIKTOK_REFRESH_TOKEN"),
-      TIKTOK_USERNAME: has("TIKTOK_USERNAME"),
     },
 
     x: {
