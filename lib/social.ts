@@ -273,6 +273,7 @@ export async function getFacebookStats(pageId: string): Promise<SocialStats> {
       engagementRate: recentPosts.length > 0
         ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
       recentPosts,
+      connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -598,6 +599,7 @@ export async function getTikTokStats(): Promise<SocialStats> {
       posts: userData.data?.user?.video_count || 0,
       engagementRate: 0,
       recentPosts: [],
+      connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
@@ -720,6 +722,7 @@ export async function getInstagramStats(userId?: string): Promise<SocialStats> {
       engagementRate: recentPosts.length > 0
         ? recentPosts.reduce((s, p) => s + p.engagementRate, 0) / recentPosts.length : 0,
       recentPosts,
+      connected: true,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
