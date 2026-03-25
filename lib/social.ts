@@ -682,11 +682,19 @@ export async function getTikTokStats(): Promise<SocialStats> {
       const errText = await userRes.text();
       console.log("[TikTok] User info with fields", fields.split(",")[0], "failed:", userRes.status, errText.slice(0, 200));
 
-      // If 401, token is invalid
+      // If 401, token is stored but rejected by TikTok API
+      // Show as connected (token exists) but with error details
       if (userRes.status === 401) {
-        throw new Error(
-          "TikTok token expired or invalid. Click 'Authorize TikTok' to re-connect your account."
-        );
+        return {
+          platform: "tiktok",
+          followers: 0,
+          posts: 0,
+          engagementRate: 0,
+          recentPosts: [],
+          connected: true,
+          fetchedAt: new Date().toISOString(),
+          error: "TikTok token was rejected (401). This may be a sandbox limitation or the token may need refreshing. Check /api/auth/tiktok/debug for details.",
+        };
       }
 
       // If first attempt failed with scope error, try basic fields
