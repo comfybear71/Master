@@ -93,7 +93,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | X_CONSUMER_KEY + X_CONSUMER_SECRET + X_ACCESS_TOKEN + X_ACCESS_TOKEN_SECRET | ✅ Configured in Vercel |
 | GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET + YOUTUBE_CHANNEL_ID | ✅ Configured in Vercel |
 | FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID | ✅ Configured in Vercel |
-| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ✅ Configured in Vercel |
+| INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID | ✅ Configured in Vercel (username: sfrench71) |
 | TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET | ✅ Configured in Vercel |
 | ANTHROPIC_API_KEY | ✅ Configured in Vercel |
 | GROK_API_KEY | ✅ Configured in Vercel |

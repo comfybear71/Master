@@ -130,7 +130,7 @@ Required env vars (all set in Vercel):
 - `FACEBOOK_ACCESS_TOKEN` — Facebook Graph API token (also used for Instagram)
 - `FACEBOOK_PAGE_ID` — must be a numeric page ID (e.g. `61584376583578`)
 - `INSTAGRAM_ACCESS_TOKEN` — Instagram Content Publishing API token
-- `INSTAGRAM_USER_ID` — must be a numeric Instagram Business Account user ID
+- `INSTAGRAM_USER_ID` — must be a numeric Instagram Business Account user ID (username: sfrench71)
 - `TIKTOK_USERNAME` — TikTok handle
 - `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` — TikTok API credentials
 
