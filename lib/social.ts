@@ -630,49 +630,79 @@ export async function getTikTokStats(): Promise<SocialStats> {
     }
 
     // Query user info with user token
+    // user.info.basic scope: display_name, avatar_url, open_id
+    // user.info.stats scope (NOT yet approved): follower_count, video_count, likes_count
     console.log("[TikTok] Fetching user info with OAuth token...");
-    const userRes = await fetch(
-      "https://open.tiktokapis.com/v2/user/info/?fields=follower_count,following_count,video_count,likes_count,display_name",
-      {
-        method: "GET",
-        headers: { Authorization: `Bearer ${userAuth.token}` },
+
+    // Try stats fields first; if scope isn't approved, fall back to basic
+    let followers = 0;
+    let posts = 0;
+    let likes = 0;
+    let displayName = "";
+    let hasStatsScope = false;
+
+    // Attempt with stats fields (works if user.info.stats scope is approved)
+    const statsFields = "follower_count,following_count,video_count,likes_count,display_name,avatar_url";
+    const basicFields = "display_name,avatar_url";
+
+    for (const fields of [statsFields, basicFields]) {
+      const userRes = await fetch(
+        `https://open.tiktokapis.com/v2/user/info/?fields=${fields}`,
+        {
+          method: "GET",
+          headers: { Authorization: `Bearer ${userAuth.token}` },
+        }
+      );
+
+      if (userRes.ok) {
+        const userData: {
+          data?: {
+            user?: {
+              follower_count?: number;
+              video_count?: number;
+              likes_count?: number;
+              display_name?: string;
+              avatar_url?: string;
+            };
+          };
+        } = await userRes.json();
+        console.log("[TikTok] User data (fields=" + fields.split(",")[0] + "...):", JSON.stringify(userData).slice(0, 300));
+
+        const user = userData.data?.user;
+        displayName = user?.display_name || "";
+        if (user?.follower_count !== undefined) {
+          followers = user.follower_count;
+          posts = user?.video_count || 0;
+          likes = user?.likes_count || 0;
+          hasStatsScope = true;
+        }
+        break;
       }
-    );
 
-    if (!userRes.ok) {
       const errText = await userRes.text();
-      console.error("[TikTok] User info failed:", userRes.status, errText.slice(0, 400));
+      console.log("[TikTok] User info with fields", fields.split(",")[0], "failed:", userRes.status, errText.slice(0, 200));
 
-      // If 401, token might be invalid — clear it
+      // If 401, token is invalid
       if (userRes.status === 401) {
         throw new Error(
           "TikTok token expired or invalid. Click 'Authorize TikTok' to re-connect your account."
         );
       }
+
+      // If first attempt failed with scope error, try basic fields
+      if (fields === statsFields) {
+        console.log("[TikTok] Stats scope not available, falling back to basic...");
+        continue;
+      }
+
+      // Both failed
       throw new Error(`TikTok API ${userRes.status}: ${errText.slice(0, 200)}`);
     }
-
-    const userData: {
-      data?: {
-        user?: {
-          follower_count?: number;
-          video_count?: number;
-          likes_count?: number;
-          display_name?: string;
-        };
-      };
-    } = await userRes.json();
-    console.log("[TikTok] User data:", JSON.stringify(userData).slice(0, 300));
-
-    const user = userData.data?.user;
-    const followers = user?.follower_count || 0;
-    const posts = user?.video_count || 0;
-    const likes = user?.likes_count || 0;
 
     // Engagement rate: total likes / total posts (rough metric)
     const engagementRate = posts > 0 ? Math.round((likes / posts / Math.max(followers, 1)) * 10000) / 100 : 0;
 
-    // Fetch recent videos if video.list scope is available
+    // Fetch recent videos if video.list scope is available (non-fatal if not)
     let recentPosts: SocialStats["recentPosts"] = [];
     try {
       const videosRes = await fetch(
@@ -720,10 +750,15 @@ export async function getTikTokStats(): Promise<SocialStats> {
         }));
         console.log("[TikTok] Fetched", recentPosts.length, "recent videos");
       } else {
-        console.log("[TikTok] Video list not available (may need video.list scope)");
+        console.log("[TikTok] Video list not available (needs video.list scope)");
       }
     } catch (videoErr) {
       console.log("[TikTok] Video list fetch error (non-fatal):", videoErr instanceof Error ? videoErr.message : videoErr);
+    }
+
+    // Note if stats are limited
+    if (!hasStatsScope) {
+      console.log("[TikTok] Connected with basic scope only — add user.info.stats in TikTok Developer Portal for follower/video counts");
     }
 
     return {

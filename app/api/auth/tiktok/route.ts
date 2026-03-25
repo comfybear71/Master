@@ -18,11 +18,13 @@ export async function GET(req: NextRequest) {
   const redirectUri = `${baseUrl}/api/auth/tiktok/callback`;
   const state = crypto.randomBytes(16).toString("hex");
 
-  // Scopes needed for reading user stats + video list
+  // Only request scopes the app actually has approved/in-review
+  // Current: user.info.basic, video.publish, video.upload
+  // TODO: Add user.info.stats + video.list once approved in TikTok Developer Portal
   const scopes = [
     "user.info.basic",
-    "user.info.stats",
-    "video.list",
+    "video.upload",
+    "video.publish",
   ].join(",");
 
   const authUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
