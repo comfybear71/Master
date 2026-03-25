@@ -76,8 +76,8 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({
           envVarsSet: {
             X_USERNAME: !!process.env.X_USERNAME,
-            YOUTUBE_CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
-            YOUTUBE_CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
+            GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+            GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
             YOUTUBE_CHANNEL_ID: !!process.env.YOUTUBE_CHANNEL_ID,
             FACEBOOK_PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
             FACEBOOK_ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
@@ -106,8 +106,8 @@ export async function GET(req: NextRequest) {
           tiktokUsername: config.tiktokUsername ? `${config.tiktokUsername.slice(0, 3)}...` : "(empty)",
         });
         console.log("[Social API] YouTube env vars:", {
-          YOUTUBE_CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
-          YOUTUBE_CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
+          GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+          GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
           YOUTUBE_CHANNEL_ID: process.env.YOUTUBE_CHANNEL_ID || "(not set)",
         });
         console.log("[Social API] Facebook env vars:", {

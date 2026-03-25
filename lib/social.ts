@@ -285,61 +285,92 @@ export async function getFacebookStats(pageId: string): Promise<SocialStats> {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-//  YouTube — Data API v3 (OAuth via YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET)
-//  Confirmed Vercel env vars: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
+//  YouTube — Data API v3 (OAuth via GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET)
+//  Confirmed Vercel env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
+//  Auth flow: User visits /api/auth/google → Google OAuth consent → callback stores
+//  refresh_token in MongoDB oauth_tokens collection (key: "google_youtube").
+//  At runtime: read refresh_token from DB, exchange for fresh access_token.
 // ══════════════════════════════════════════════════════════════════════════
 
+import { getDb } from "./mongodb";
+
 /**
- * Get YouTube OAuth2 access token using CLIENT_ID + CLIENT_SECRET.
- * Uses Google's OAuth2 token endpoint to exchange client credentials.
+ * Get YouTube OAuth2 access token by refreshing the stored token.
+ * Reads refresh_token from MongoDB `oauth_tokens` (provider: "google_youtube"),
+ * then uses GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET to get a fresh access_token.
  */
 async function getYouTubeAccessToken(): Promise<string | null> {
-  const clientId = process.env.YOUTUBE_CLIENT_ID;
-  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
   console.log("[YouTube] getYouTubeAccessToken called");
-  console.log("[YouTube]   YOUTUBE_CLIENT_ID set:", !!clientId, clientId ? `(${clientId.slice(0, 12)}...)` : "");
-  console.log("[YouTube]   YOUTUBE_CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
+  console.log("[YouTube]   GOOGLE_CLIENT_ID set:", !!clientId, clientId ? `(${clientId.slice(0, 12)}...)` : "");
+  console.log("[YouTube]   GOOGLE_CLIENT_SECRET set:", !!clientSecret, clientSecret ? `(${clientSecret.length} chars)` : "");
 
   if (!clientId || !clientSecret) {
     console.error("[YouTube] Missing credentials:", {
-      YOUTUBE_CLIENT_ID: !!clientId,
-      YOUTUBE_CLIENT_SECRET: !!clientSecret,
+      GOOGLE_CLIENT_ID: !!clientId,
+      GOOGLE_CLIENT_SECRET: !!clientSecret,
     });
     return null;
   }
 
   try {
-    // Try OAuth2 token request with client credentials
+    // Read refresh_token from MongoDB oauth_tokens collection
+    const db = await getDb();
+    const tokenDoc = await db.collection("oauth_tokens").findOne({ provider: "google_youtube" });
+
+    if (!tokenDoc?.refresh_token) {
+      console.error("[YouTube] No refresh_token found in oauth_tokens for google_youtube.");
+      console.error("[YouTube] User needs to visit /api/auth/google to authorize YouTube access.");
+      return null;
+    }
+
+    console.log("[YouTube] Found stored refresh_token, exchanging for fresh access_token...");
+
+    // Exchange refresh_token for a fresh access_token
     const res = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        grant_type: "client_credentials",
-        scope: "https://www.googleapis.com/auth/youtube.readonly",
+        refresh_token: tokenDoc.refresh_token,
+        grant_type: "refresh_token",
       }),
     });
 
     const responseText = await res.text();
-    console.log("[YouTube] Token response status:", res.status);
-    console.log("[YouTube] Token response body:", responseText.slice(0, 400));
+    console.log("[YouTube] Token refresh response status:", res.status);
+    console.log("[YouTube] Token refresh response body:", responseText.slice(0, 400));
 
     if (!res.ok) {
-      console.error("[YouTube] Token request failed:", res.status, responseText.slice(0, 400));
+      console.error("[YouTube] Token refresh failed:", res.status, responseText.slice(0, 400));
       return null;
     }
 
     const data = JSON.parse(responseText) as { access_token?: string; expires_in?: number; token_type?: string };
     if (data.access_token) {
-      console.log("[YouTube] Got access token, type:", data.token_type, "expires_in:", data.expires_in);
+      console.log("[YouTube] Got fresh access token, type:", data.token_type, "expires_in:", data.expires_in);
+
+      // Update the stored access_token and expiry
+      await db.collection("oauth_tokens").updateOne(
+        { provider: "google_youtube" },
+        {
+          $set: {
+            access_token: data.access_token,
+            expires_at: new Date(Date.now() + (data.expires_in || 3600) * 1000),
+            updated_at: new Date(),
+          },
+        }
+      );
+
       return data.access_token;
     }
-    console.error("[YouTube] Token response had no access_token:", responseText.slice(0, 200));
+    console.error("[YouTube] Token refresh response had no access_token:", responseText.slice(0, 200));
     return null;
   } catch (err) {
-    console.error("[YouTube] Token request exception:", err instanceof Error ? err.message : err);
+    console.error("[YouTube] Token refresh exception:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -348,33 +379,33 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
   try {
     console.log("[YouTube] getYouTubeStats called for channel:", channelId);
 
-    // Only env vars we have: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
-    const clientId = process.env.YOUTUBE_CLIENT_ID;
-    const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+    // Confirmed Vercel env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
     console.log("[YouTube] Env vars check:");
-    console.log("[YouTube]   YOUTUBE_CLIENT_ID:", !!clientId);
-    console.log("[YouTube]   YOUTUBE_CLIENT_SECRET:", !!clientSecret);
+    console.log("[YouTube]   GOOGLE_CLIENT_ID:", !!clientId);
+    console.log("[YouTube]   GOOGLE_CLIENT_SECRET:", !!clientSecret);
     console.log("[YouTube]   YOUTUBE_CHANNEL_ID:", process.env.YOUTUBE_CHANNEL_ID || "(not set)");
 
     if (!clientId || !clientSecret) {
       const missing: string[] = [];
-      if (!clientId) missing.push("YOUTUBE_CLIENT_ID");
-      if (!clientSecret) missing.push("YOUTUBE_CLIENT_SECRET");
+      if (!clientId) missing.push("GOOGLE_CLIENT_ID");
+      if (!clientSecret) missing.push("GOOGLE_CLIENT_SECRET");
       throw new Error(
         `YouTube credentials missing in Vercel: ${missing.join(", ")}. ` +
-        `Have: ${[clientId && "YOUTUBE_CLIENT_ID", clientSecret && "YOUTUBE_CLIENT_SECRET"].filter(Boolean).join(", ") || "nothing"}.`
+        `Have: ${[clientId && "GOOGLE_CLIENT_ID", clientSecret && "GOOGLE_CLIENT_SECRET"].filter(Boolean).join(", ") || "nothing"}.`
       );
     }
 
-    // Get access token using CLIENT_ID + CLIENT_SECRET
-    console.log("[YouTube] Requesting access token with CLIENT_ID + CLIENT_SECRET...");
+    // Get access token by refreshing stored OAuth token from MongoDB
+    console.log("[YouTube] Requesting access token via refresh_token from MongoDB...");
     const accessToken = await getYouTubeAccessToken();
 
     if (!accessToken) {
       throw new Error(
-        "YouTube: have YOUTUBE_CLIENT_ID + YOUTUBE_CLIENT_SECRET but token request failed. " +
-        "Check Vercel function logs for detailed response. " +
+        "YouTube: have GOOGLE_CLIENT_ID + GOOGLE_CLIENT_SECRET but no valid OAuth token. " +
+        "Visit /api/auth/google to authorize YouTube access. " +
         "CLIENT_ID: " + clientId.slice(0, 12) + "..."
       );
     }

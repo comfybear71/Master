@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getDb } from "@/lib/mongodb";
 
 /**
  * GET /api/debug/env
@@ -21,30 +22,46 @@ export async function GET() {
     return `${val.slice(0, 4)}...${val.slice(-2)} (${val.length} chars)`;
   };
 
+  // Check if YouTube OAuth token is stored in MongoDB
+  let youtubeOAuthStatus = "unknown";
+  try {
+    const db = await getDb();
+    const tokenDoc = await db.collection("oauth_tokens").findOne({ provider: "google_youtube" });
+    if (tokenDoc?.refresh_token) {
+      youtubeOAuthStatus = `stored (updated: ${tokenDoc.updated_at || "unknown"})`;
+    } else {
+      youtubeOAuthStatus = "not stored — visit /api/auth/google to authorize";
+    }
+  } catch {
+    youtubeOAuthStatus = "error checking DB";
+  }
+
   return NextResponse.json({
     timestamp: new Date().toISOString(),
     nodeEnv: process.env.NODE_ENV,
 
-    // Confirmed Vercel env vars: YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
+    // Confirmed Vercel env vars: GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, YOUTUBE_CHANNEL_ID
+    // OAuth refresh_token stored in MongoDB oauth_tokens collection
     youtube: {
-      YOUTUBE_CLIENT_ID: has("YOUTUBE_CLIENT_ID"),
-      YOUTUBE_CLIENT_ID_preview: preview("YOUTUBE_CLIENT_ID"),
-      YOUTUBE_CLIENT_SECRET: has("YOUTUBE_CLIENT_SECRET"),
+      GOOGLE_CLIENT_ID: has("GOOGLE_CLIENT_ID"),
+      GOOGLE_CLIENT_ID_preview: preview("GOOGLE_CLIENT_ID"),
+      GOOGLE_CLIENT_SECRET: has("GOOGLE_CLIENT_SECRET"),
       YOUTUBE_CHANNEL_ID: has("YOUTUBE_CHANNEL_ID"),
       YOUTUBE_CHANNEL_ID_preview: preview("YOUTUBE_CHANNEL_ID"),
+      oauth_refresh_token: youtubeOAuthStatus,
     },
 
-    // NEEDS CONFIRMATION: code expects FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID
+    // NEEDS USER CONFIRMATION: code expects FACEBOOK_ACCESS_TOKEN + FACEBOOK_PAGE_ID
     facebook: {
-      FACEBOOK_ACCESS_TOKEN: has("FACEBOOK_ACCESS_TOKEN"),
-      FACEBOOK_PAGE_ID: has("FACEBOOK_PAGE_ID"),
+      FACEBOOK_ACCESS_TOKEN: has("FACEBOOK_ACCESS_TOKEN"),  // NEEDS USER CONFIRMATION
+      FACEBOOK_PAGE_ID: has("FACEBOOK_PAGE_ID"),            // NEEDS USER CONFIRMATION
       FACEBOOK_PAGE_ID_preview: preview("FACEBOOK_PAGE_ID"),
     },
 
-    // NEEDS CONFIRMATION: code expects INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID
+    // NEEDS USER CONFIRMATION: code expects INSTAGRAM_ACCESS_TOKEN + INSTAGRAM_USER_ID
     instagram: {
-      INSTAGRAM_ACCESS_TOKEN: has("INSTAGRAM_ACCESS_TOKEN"),
-      INSTAGRAM_USER_ID: has("INSTAGRAM_USER_ID"),
+      INSTAGRAM_ACCESS_TOKEN: has("INSTAGRAM_ACCESS_TOKEN"),  // NEEDS USER CONFIRMATION
+      INSTAGRAM_USER_ID: has("INSTAGRAM_USER_ID"),            // NEEDS USER CONFIRMATION
       INSTAGRAM_USER_ID_preview: preview("INSTAGRAM_USER_ID"),
     },
 
