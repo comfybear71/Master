@@ -92,6 +92,35 @@ export async function GET(req: NextRequest) {
       }
       case "stats": {
         const config = await getOrSyncConfig();
+        console.log("[Social API] Fetching stats with config:", {
+          xUsername: config.xUsername ? `${config.xUsername.slice(0, 3)}...` : "(empty)",
+          youtubeChannelId: config.youtubeChannelId || "(empty)",
+          facebookPageId: config.facebookPageId ? `${config.facebookPageId.slice(0, 5)}...` : "(empty)",
+          instagramUserId: config.instagramUserId ? `${config.instagramUserId.slice(0, 3)}...` : "(empty)",
+          tiktokUsername: config.tiktokUsername ? `${config.tiktokUsername.slice(0, 3)}...` : "(empty)",
+        });
+        console.log("[Social API] YouTube env vars:", {
+          CLIENT_ID: !!process.env.YOUTUBE_CLIENT_ID,
+          CLIENT_SECRET: !!process.env.YOUTUBE_CLIENT_SECRET,
+          REFRESH_TOKEN: !!process.env.YOUTUBE_REFRESH_TOKEN,
+          CHANNEL_ID: process.env.YOUTUBE_CHANNEL_ID || "(not set)",
+        });
+        console.log("[Social API] Facebook env vars:", {
+          ACCESS_TOKEN: !!process.env.FACEBOOK_ACCESS_TOKEN,
+          PAGE_ID: !!process.env.FACEBOOK_PAGE_ID,
+        });
+        console.log("[Social API] Instagram env vars:", {
+          ACCESS_TOKEN: !!process.env.INSTAGRAM_ACCESS_TOKEN,
+          USER_ID: !!process.env.INSTAGRAM_USER_ID,
+        });
+        console.log("[Social API] TikTok env vars:", {
+          ACCESS_TOKEN: !!process.env.TIKTOK_ACCESS_TOKEN,
+          TOKEN: !!process.env.TIKTOK_TOKEN,
+          CLIENT_KEY: !!process.env.TIKTOK_CLIENT_KEY,
+          CLIENT_SECRET: !!process.env.TIKTOK_CLIENT_SECRET,
+          REFRESH_TOKEN: !!process.env.TIKTOK_REFRESH_TOKEN,
+          USERNAME: !!process.env.TIKTOK_USERNAME,
+        });
         const stats = await getAllSocialStats({
           xUsername: config.xUsername || searchParams.get("xUsername") || undefined,
           youtubeChannelId: config.youtubeChannelId || searchParams.get("youtubeChannelId") || undefined,

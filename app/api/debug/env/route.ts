@@ -26,14 +26,13 @@ export async function GET() {
     nodeEnv: process.env.NODE_ENV,
 
     youtube: {
-      YOUTUBE_API_KEY: has("YOUTUBE_API_KEY"),
-      YOUTUBE_API_KEY_preview: preview("YOUTUBE_API_KEY"),
-      YOUTUBE_ACCESS_TOKEN: has("YOUTUBE_ACCESS_TOKEN"),
       YOUTUBE_CLIENT_ID: has("YOUTUBE_CLIENT_ID"),
+      YOUTUBE_CLIENT_ID_preview: preview("YOUTUBE_CLIENT_ID"),
       YOUTUBE_CLIENT_SECRET: has("YOUTUBE_CLIENT_SECRET"),
       YOUTUBE_REFRESH_TOKEN: has("YOUTUBE_REFRESH_TOKEN"),
       YOUTUBE_CHANNEL_ID: has("YOUTUBE_CHANNEL_ID"),
       YOUTUBE_CHANNEL_ID_preview: preview("YOUTUBE_CHANNEL_ID"),
+      _auth_method: "OAuth refresh (CLIENT_ID + CLIENT_SECRET + REFRESH_TOKEN)",
     },
 
     facebook: {
