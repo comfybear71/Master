@@ -32,7 +32,7 @@ const platformUrls: Record<SocialPlatform, string> = {
   youtube: "https://www.youtube.com/@frekin31",
   facebook: "https://www.facebook.com/profile.php?id=61584376583578",
   instagram: "https://www.instagram.com/sfrench71",
-  tiktok: "https://www.tiktok.com/@aiglitch",
+  tiktok: "https://www.tiktok.com/@aiglicthed",
 };
 
 type TabType = "overview" | "campaigns" | "viral";
