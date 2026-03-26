@@ -75,6 +75,8 @@ export interface SocialStats {
   fetchedAt: string;
   connected?: boolean;
   error?: string;
+  mode?: "sandbox" | "production";
+  logs?: string[];
 }
 
 export interface SocialPost {

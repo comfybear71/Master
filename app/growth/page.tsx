@@ -27,6 +27,14 @@ const platformColors: Record<SocialPlatform, string> = {
   tiktok: "border-cyan-500/30 bg-cyan-500/5",
 };
 
+const platformUrls: Record<SocialPlatform, string> = {
+  x: "https://x.com/AIGlitch",
+  youtube: "https://www.youtube.com/@AIGlitch",
+  facebook: "https://www.facebook.com/profile.php?id=61584376583578",
+  instagram: "https://www.instagram.com/sfrench71",
+  tiktok: "https://www.tiktok.com/@aiglitch",
+};
+
 type TabType = "overview" | "campaigns" | "viral";
 
 export default function GrowthPage() {
@@ -45,6 +53,11 @@ export default function GrowthPage() {
   const [campaignBrief, setCampaignBrief] = useState("");
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
+
+  // TikTok sandbox/production toggle
+  const [tiktokMode, setTiktokMode] = useState<"sandbox" | "production">("production");
+  const [tiktokLogs, setTiktokLogs] = useState<string[]>([]);
+  const [showTiktokLogs, setShowTiktokLogs] = useState(false);
 
   // TikTok auth status from OAuth callback redirect
   const [tiktokAuthMsg, setTiktokAuthMsg] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -150,7 +163,12 @@ export default function GrowthPage() {
 
     if (statsRes.status === "fulfilled" && statsRes.value.ok) {
       const data = await statsRes.value.json();
-      setStats(Array.isArray(data) ? data : []);
+      const statsArr = Array.isArray(data) ? data : [];
+      setStats(statsArr);
+      // Extract TikTok monitoring logs and mode
+      const tiktokStat = statsArr.find((s: SocialStats) => s.platform === "tiktok");
+      if (tiktokStat?.logs) setTiktokLogs(tiktokStat.logs);
+      if (tiktokStat?.mode) setTiktokMode(tiktokStat.mode);
     }
     if (campaignsRes.status === "fulfilled" && campaignsRes.value.ok) {
       setCampaigns(await campaignsRes.value.json());
@@ -454,20 +472,27 @@ export default function GrowthPage() {
                     <div key={platform} className={`rounded-xl border ${platformColors[platform]} p-5`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{platformIcons[platform]}</span>
-                          <h3 className="font-semibold text-white text-sm">{platformLabels[platform]}</h3>
+                          <a href={platformUrls[platform]} target="_blank" rel="noopener noreferrer" className="text-xl hover:opacity-70 transition-opacity">{platformIcons[platform]}</a>
+                          <a href={platformUrls[platform]} target="_blank" rel="noopener noreferrer" className="font-semibold text-white text-sm hover:text-accent transition-colors">{platformLabels[platform]}</a>
                         </div>
-                        {stat?.connected ? (
-                          <span className="text-xs text-success font-mono">Connected</span>
-                        ) : stat?.error?.includes("coming soon") ? (
-                          <span className="text-xs text-slate-500 font-mono">Coming soon</span>
-                        ) : stat?.error?.includes("sandboxed") ? (
-                          <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
-                        ) : stat?.error?.includes("Authorize TikTok") ? (
-                          <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
-                        ) : stat?.error ? (
-                          <span className="text-xs text-error font-mono">Error</span>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          {platform === "tiktok" && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${tiktokMode === "sandbox" ? "bg-amber-500/20 text-amber-400" : "bg-green-500/20 text-green-400"}`}>
+                              {tiktokMode === "sandbox" ? "SANDBOX" : "LIVE"}
+                            </span>
+                          )}
+                          {stat?.connected ? (
+                            <span className="text-xs text-success font-mono">Connected</span>
+                          ) : stat?.error?.includes("coming soon") ? (
+                            <span className="text-xs text-slate-500 font-mono">Coming soon</span>
+                          ) : stat?.error?.includes("sandboxed") ? (
+                            <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
+                          ) : stat?.error?.includes("Authorize TikTok") ? (
+                            <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
+                          ) : stat?.error ? (
+                            <span className="text-xs text-error font-mono">Error</span>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
@@ -501,10 +526,52 @@ export default function GrowthPage() {
                       {stat?.error && !stat.recentPosts?.length && (
                         <div className="mt-2">
                           <p className="text-xs text-slate-500">{stat.error}</p>
-                          {platform === "tiktok" && stat.error.includes("Authorize") && (
-                            <a href="/api/auth/tiktok" className="inline-block mt-2 px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg text-xs hover:bg-cyan-500/20 transition-colors font-mono">
-                              Authorize TikTok
+                        </div>
+                      )}
+                      {/* TikTok-specific controls */}
+                      {platform === "tiktok" && (
+                        <div className="mt-3 border-t border-slate-800 pt-3 space-y-2">
+                          {/* Sandbox / Live Switch */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const newMode = tiktokMode === "sandbox" ? "production" : "sandbox";
+                                  setTiktokMode(newMode);
+                                  window.location.href = `/api/auth/tiktok?mode=${newMode}`;
+                                }}
+                                className={`relative w-10 h-5 rounded-full transition-colors ${tiktokMode === "sandbox" ? "bg-amber-500/40" : "bg-green-500/40"}`}
+                              >
+                                <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-transform ${tiktokMode === "sandbox" ? "left-0.5 bg-amber-400" : "left-5 bg-green-400"}`} />
+                              </button>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                {tiktokMode === "sandbox" ? "Switch to LIVE" : "Switch to SANDBOX"}
+                              </span>
+                            </div>
+                            <a href={`/api/auth/tiktok?mode=${tiktokMode}`} className="text-[10px] text-cyan-400 font-mono hover:underline">
+                              Re-authorize
                             </a>
+                          </div>
+                          {/* Monitoring Log Toggle */}
+                          <button
+                            onClick={() => setShowTiktokLogs(!showTiktokLogs)}
+                            className="text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors"
+                          >
+                            {showTiktokLogs ? "Hide" : "Show"} API Log ({tiktokLogs.length} entries)
+                          </button>
+                          {showTiktokLogs && tiktokLogs.length > 0 && (
+                            <div className="bg-black/40 rounded-lg p-2 max-h-40 overflow-y-auto border border-slate-800">
+                              {tiktokLogs.map((log, i) => (
+                                <div key={i} className={`text-[10px] font-mono leading-relaxed ${
+                                  log.includes("ERROR") || log.includes("FAILED") ? "text-red-400" :
+                                  log.includes("OK") || log.includes("success") || log.includes("Done") ? "text-green-400" :
+                                  log.includes("Mode:") ? "text-amber-400" :
+                                  "text-slate-400"
+                                }`}>
+                                  {log}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       )}

@@ -6,10 +6,17 @@ import crypto from "crypto";
  * Redirects the user to TikTok's authorization page.
  */
 export async function GET(req: NextRequest) {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const { searchParams } = new URL(req.url);
+  const mode = searchParams.get("mode"); // "sandbox" or null (production)
+  const isSandbox = mode === "sandbox";
+
+  const clientKey = isSandbox
+    ? (process.env.TIKTOK_SANDBOX_CLIENT_KEY || process.env.TIKTOK_CLIENT_KEY)
+    : process.env.TIKTOK_CLIENT_KEY;
+
   if (!clientKey) {
     return NextResponse.json(
-      { error: "TIKTOK_CLIENT_KEY not configured" },
+      { error: `${isSandbox ? "TIKTOK_SANDBOX_CLIENT_KEY" : "TIKTOK_CLIENT_KEY"} not configured` },
       { status: 500 }
     );
   }
@@ -18,13 +25,12 @@ export async function GET(req: NextRequest) {
   const redirectUri = `${baseUrl}/api/auth/tiktok/callback`;
   const state = crypto.randomBytes(16).toString("hex");
 
-  // Only request scopes the app actually has approved/in-review
-  // Current: user.info.basic, video.publish, video.upload
-  // TODO: Add user.info.stats + video.list once approved in TikTok Developer Portal
   const scopes = [
     "user.info.basic",
+    "user.info.stats",
     "video.upload",
     "video.publish",
+    "video.list",
   ].join(",");
 
   const authUrl = new URL("https://www.tiktok.com/v2/auth/authorize/");
@@ -34,15 +40,24 @@ export async function GET(req: NextRequest) {
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", state);
 
-  // Store state in a cookie for CSRF verification
+  // Store state and mode in cookies for CSRF verification and key selection
   const response = NextResponse.redirect(authUrl.toString());
   response.cookies.set("tiktok_oauth_state", state, {
     httpOnly: true,
     secure: true,
     sameSite: "lax",
-    maxAge: 600, // 10 minutes
+    maxAge: 600,
     path: "/",
   });
+  if (isSandbox) {
+    response.cookies.set("tiktok_oauth_mode", "sandbox", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge: 600,
+      path: "/",
+    });
+  }
 
   return response;
 }
