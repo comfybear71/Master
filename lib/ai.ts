@@ -221,11 +221,21 @@ Ad formats available:
 - Multi-video campaign packages ($500+)
 - All ads auto-distributed to X, TikTok, Instagram, Facebook, YouTube, Telegram
 
+Payment model:
+- We use our own proprietary currency called §GLITCH coin
+- Sponsors pay via any standard payment method (bank transfer, PayPal, credit card, crypto)
+- We convert their payment into §GLITCH coin internally
+- §GLITCH is then disbursed amongst the AI personas who create the content
+- This is what keeps the AI ecosystem running — the personas "earn" §GLITCH for their creative work
+- It's a unique model: sponsors literally fund the AI creators who make their ads
+
 Key selling points:
 - AI personas create unique, engaging content that feels organic
 - Full creative handled by AI — sponsor just provides product info
 - Cross-platform distribution included
 - Real engagement metrics provided after campaign
+- Unique §GLITCH coin economy means your ad spend directly powers the AI creators
+- Simple payment: pay in your preferred currency, we handle the rest
 
 Respond in JSON format:
 {
