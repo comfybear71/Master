@@ -11,6 +11,229 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
+    id: "phase4-spec",
+    title: "Phase 4: Command Center",
+    icon: "\u2318",
+    content: `## Phase 4 — Command Center Specification
+
+**Goal:** Turn MasterHQ into the single application to rule all projects. Browse code, ask questions, make changes, fix errors, and document everything — all from one place.
+
+**Status:** Planned — to be built in upcoming sessions
+
+---
+
+### Core Features
+
+#### 1. AI Assistant (Ask Anything)
+
+A chat-like interface where you can ask questions about any registered project:
+
+- **"What does the auth flow look like in AIGlitch?"** — Claude reads the repo and explains
+- **"Why is the TikTok posting failing?"** — Reads error logs + code and diagnoses
+- **"How do I add a new cron job?"** — Reads vercel.json and constants.ts, gives instructions
+- **"Show me all API routes in Togogo"** — Scans the repo and lists them
+
+**How it works:**
+- Select a project from dropdown (or ask about MasterHQ itself)
+- Type a question in natural language
+- Backend reads relevant files via GitHub API
+- Claude API analyzes and responds
+- Conversation history preserved per project
+
+#### 2. Code Browser & Editor
+
+Browse and edit files across all registered projects:
+
+- **File tree sidebar** — browse any repo's folder structure via GitHub API
+- **Code viewer** with syntax highlighting — read any file
+- **Edit mode** — modify files inline with a code editor
+- **Diff preview** — see changes before committing
+- **Commit & push** — saves changes via GitHub API with commit message
+- **Auto-trigger Vercel deploy** after push
+
+**Supported operations:**
+- View any file in any repo
+- Edit single or multiple files
+- Create new files
+- Delete files
+- Create branches for changes
+
+#### 3. AI Fix & Improve
+
+Extend the existing Phase 2 AI error fixer into a general-purpose tool:
+
+- **Fix errors** — detect Vercel build errors, suggest and apply fixes
+- **Improve code** — ask Claude to refactor, optimize, or add features
+- **Review changes** — AI reviews your edits before commit
+- **Bulk operations** — apply the same fix across multiple files/projects
+
+**Workflow:**
+1. Select project → see active errors (from Vercel build logs)
+2. Click "AI Fix" → Claude reads the error + relevant code
+3. Shows proposed fix with diff preview
+4. Click "Apply" → commits and deploys
+5. Monitor build result in real-time
+
+#### 4. Build & Deploy Monitor
+
+Real-time visibility into all Vercel deployments:
+
+- **Live build log streaming** — watch builds as they happen
+- **One-click redeploy** for any project
+- **Rollback** to previous deployment
+- **Environment variable editor** — view/edit Vercel env vars
+- **Build status badges** on all project cards
+
+#### 5. Centralized Documentation Hub
+
+Everything documented in one place (expanding current /docs page):
+
+- **Session logs** — dated entries for every major session (auto-preserved)
+- **Project guides** — auto-read CLAUDE.md and HANDOFF.md from each repo
+- **API references** — generated from scanning route files
+- **Runbooks** — step-by-step guides for common tasks (YouTube quota, TikTok setup, etc.)
+- **Decision log** — why we chose X over Y
+- **Search** across all documentation
+
+#### 6. Cross-Project Dashboard
+
+Enhanced dashboard showing everything at a glance:
+
+- **Health status** per project (build passing, uptime, last deploy)
+- **Recent activity** across all repos (commits, PRs, issues)
+- **Error summary** — active errors across all projects
+- **Social media stats** (already built in Phase 3)
+- **Cost tracking** — AI API costs across all projects
+
+---
+
+### UI Layout
+
+\`\`\`
++--------------------------------------------------+
+| MasterHQ - Command Center                        |
++--------+-----------------------------------------+
+|        |  [Project Selector: AIGlitch v]         |
+| Side   |                                         |
+| bar    |  +-----------------------------------+  |
+|        |  | AI Chat / Question Panel          |  |
+| - Dash |  |                                   |  |
+| - Proj |  | > What routes handle posting?     |  |
+| - Mon  |  |                                   |  |
+| - CI/CD|  | Claude: The posting routes are... |  |
+| - Grow |  +-----------------------------------+  |
+| - Docs |                                         |
+| - CMD  |  +-----------------------------------+  |
+|        |  | Code Editor / File Browser        |  |
+|        |  | [File Tree] | [Editor Panel]      |  |
+|        |  |             | [Diff Preview]      |  |
+|        |  +-----------------------------------+  |
+|        |                                         |
+|        |  +-----------------------------------+  |
+|        |  | Build Log / Deploy Monitor        |  |
+|        |  | [Live streaming build output]     |  |
+|        |  +-----------------------------------+  |
++--------+-----------------------------------------+
+\`\`\`
+
+---
+
+### Technical Implementation
+
+#### API Routes Needed
+
+| Route | Purpose |
+|-------|---------|
+| \`/api/command/ask\` | AI assistant — send question + project, get answer |
+| \`/api/command/files\` | Browse repo file tree via GitHub API |
+| \`/api/command/file\` | Read/write single file via GitHub API |
+| \`/api/command/commit\` | Commit changes to a repo |
+| \`/api/command/diff\` | Generate diff preview before committing |
+| \`/api/command/build-log\` | Stream Vercel build logs |
+| \`/api/command/redeploy\` | Trigger Vercel redeploy |
+| \`/api/command/env-vars\` | Read/edit Vercel environment variables |
+| \`/api/command/errors\` | Get active errors across all projects |
+| \`/api/command/docs\` | Read CLAUDE.md/HANDOFF.md from any project |
+
+#### Key Dependencies
+
+- **GitHub API** — already integrated (read files, commit, push)
+- **Vercel API** — already integrated (deployments, build logs, redeploy)
+- **Claude API** — already integrated (AI analysis, suggestions)
+- **MongoDB** — store conversation history, session logs, cached docs
+- **Monaco Editor** — VS Code's editor component for the browser (or CodeMirror)
+
+#### What We Already Have (Reusable)
+
+- GitHub file reading (\`getRepoFileContent()\`)
+- Vercel build log fetching
+- AI error analysis (Claude API)
+- Auto-commit via GitHub API
+- Project registry in MongoDB
+
+#### New Components Needed
+
+- \`CommandCenter\` page (\`/command\`)
+- \`AIChat\` component — question/answer panel
+- \`FileBrowser\` component — repo file tree
+- \`CodeEditor\` component — syntax-highlighted editor
+- \`DiffViewer\` component — before/after comparison
+- \`BuildLogStream\` component — live build output
+- \`ProjectSelector\` component — dropdown for switching projects
+
+---
+
+### Build Order (Recommended)
+
+**Sprint 1 — AI Assistant**
+- AI chat panel with project selector
+- Reads files from GitHub, sends to Claude, displays answers
+- Conversation history per project
+
+**Sprint 2 — Code Browser**
+- File tree sidebar (GitHub API)
+- Code viewer with syntax highlighting
+- Read-only browsing of any repo
+
+**Sprint 3 — Code Editor**
+- Edit mode on files
+- Diff preview
+- Commit & push via GitHub API
+- Auto-trigger Vercel deploy
+
+**Sprint 4 — Build Monitor**
+- Live build log streaming
+- One-click redeploy
+- Error detection + AI fix suggestions
+
+**Sprint 5 — Documentation Hub**
+- Auto-pull CLAUDE.md/HANDOFF.md from all repos
+- Search across all docs
+- Session log management
+
+---
+
+### What This Replaces
+
+Once Phase 4 is complete, you'll be able to do **almost everything** from masterhq.dev:
+
+| Task | Before | After |
+|------|--------|-------|
+| Read project code | Open GitHub/VS Code | Browse in MasterHQ |
+| Fix errors | Open Claude Code CLI | Ask AI in MasterHQ |
+| Edit files | Clone repo + edit + push | Edit in MasterHQ editor |
+| Check builds | Open Vercel dashboard | View in MasterHQ |
+| Monitor social | Open each platform | Growth page |
+| Read docs | Open repo CLAUDE.md | Docs page |
+| Ask questions | Start new Claude session | AI Chat in MasterHQ |
+
+**What you'll still need external tools for:**
+- Running local tests/builds (no server-side execution)
+- Complex multi-file refactors (better in VS Code/Claude Code)
+- Database management (MongoDB Atlas)
+- Domain/DNS management (Vercel dashboard)`,
+  },
+  {
     id: "session-2026-03-26",
     title: "Session Log: 26 Mar 2026",
     icon: "\u2B50",

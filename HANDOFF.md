@@ -93,6 +93,15 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [x] Social follower counts on main dashboard
 - [x] Social config panel for account IDs
 
+### Phase 4 — Command Center (PLANNED)
+- [ ] AI Assistant — ask questions about any project (Claude reads code via GitHub API)
+- [ ] Code Browser — browse file trees of all registered repos
+- [ ] Code Editor — edit files inline, diff preview, commit & push
+- [ ] Build Monitor — live Vercel build log streaming, one-click redeploy
+- [ ] Documentation Hub — auto-pull CLAUDE.md/HANDOFF.md from all repos, searchable
+- [ ] Cross-project error detection + AI fix from one interface
+- [ ] Full spec at `/docs` → "Phase 4: Command Center"
+
 ---
 
 ## Environment Variables Status
