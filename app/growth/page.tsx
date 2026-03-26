@@ -55,11 +55,12 @@ export default function GrowthPage() {
   const [campaignAudience, setCampaignAudience] = useState("");
 
   // Outreach email form
-  const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string }>>([]);
+  const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string; contactEmail?: string }>>([]);
   const [showOutreachForm, setShowOutreachForm] = useState(false);
   const [outreachCompany, setOutreachCompany] = useState("");
   const [outreachIndustry, setOutreachIndustry] = useState("");
   const [outreachProduct, setOutreachProduct] = useState("");
+  const [outreachEmail, setOutreachEmail] = useState("");
   const [outreachTone, setOutreachTone] = useState<"formal" | "casual" | "bold">("casual");
   const [generatingEmail, setGeneratingEmail] = useState(false);
   // Editable email state
@@ -296,6 +297,7 @@ export default function GrowthPage() {
           industry: outreachIndustry,
           productDescription: outreachProduct,
           tone: outreachTone,
+          contactEmail: outreachEmail,
         }),
       });
       if (res.ok) {
@@ -304,6 +306,7 @@ export default function GrowthPage() {
         setOutreachCompany("");
         setOutreachIndustry("");
         setOutreachProduct("");
+        setOutreachEmail("");
         setActiveTab("outreach");
       }
     } catch {
@@ -771,9 +774,13 @@ export default function GrowthPage() {
                       <label className="text-xs text-slate-400 mb-1 block">Industry *</label>
                       <input value={outreachIndustry} onChange={(e) => setOutreachIndustry(e.target.value)} placeholder="e.g. AI/Tech, Gaming, Crypto" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="text-xs text-slate-400 mb-1 block">What they sell / product description</label>
-                      <input value={outreachProduct} onChange={(e) => setOutreachProduct(e.target.value)} placeholder="e.g. AI-powered code editor for developers" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Contact Email</label>
+                      <input value={outreachEmail} onChange={(e) => setOutreachEmail(e.target.value)} placeholder="e.g. partnerships@company.com" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">What they sell / product</label>
+                      <input value={outreachProduct} onChange={(e) => setOutreachProduct(e.target.value)} placeholder="e.g. Energy drinks, Gaming gear" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
                     </div>
                     <div>
                       <label className="text-xs text-slate-400 mb-1 block">Tone</label>
@@ -811,10 +818,7 @@ export default function GrowthPage() {
                   {outreachEmails.map((email) => {
                     const id = String(email._id);
                     const editable = getEditableEmail(email);
-                    // Find prospect email from prospect data
-                    const prospectEmail = (email as unknown as { prospectId?: string }).prospectId
-                      ? "" // Will need to look up
-                      : "";
+                    const prospectEmail = email.contactEmail || "";
                     return (
                     <div key={id} className="bg-base-card rounded-xl border border-slate-800 p-5">
                       <div className="flex items-start justify-between mb-3">

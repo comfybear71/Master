@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   try {
     if (action === "generate") {
-      const { companyName, industry, productDescription, tone } = await req.json();
+      const { companyName, industry, productDescription, tone, contactEmail } = await req.json();
       if (!companyName || !industry) {
         return NextResponse.json({ error: "Missing companyName or industry" }, { status: 400 });
       }
@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         companyName,
         industry,
         productDescription: productDescription || "",
+        contactEmail: contactEmail || "",
         tone: tone || "casual",
         ...result,
         status: "draft" as const,
