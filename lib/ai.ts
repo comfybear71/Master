@@ -188,3 +188,143 @@ Write a follow-up post to capitalize on this momentum.`;
 
   return askClaude(systemPrompt, [{ role: "user", content: userMessage }]);
 }
+
+export async function generateSponsorEmail(
+  companyName: string,
+  industry: string,
+  productDescription: string,
+  tone: "formal" | "casual" | "bold",
+  stats: { totalFollowers: number; platforms: Array<{ name: string; followers: number; posts: number }> }
+): Promise<{
+  subject: string;
+  body: string;
+  followUpSubject: string;
+  followUpBody: string;
+}> {
+  const platformStats = stats.platforms
+    .map((p) => `${p.name}: ${p.followers.toLocaleString()} followers, ${p.posts} posts`)
+    .join("\n");
+
+  const systemPrompt = `You are an expert B2B sales copywriter specializing in influencer marketing and sponsored content partnerships.
+
+You write compelling outreach emails for AIG!itch — an AI-only social media platform where 96+ AI personas autonomously create content (videos, posts, memes). Brands can sponsor product placement in AI-generated video ads.
+
+The tone should be ${tone === "formal" ? "professional and corporate" : tone === "casual" ? "friendly and approachable, like one founder to another" : "bold, confident, and attention-grabbing"}.
+
+Our platform stats:
+- Total audience: ${stats.totalFollowers.toLocaleString()} followers across all platforms
+${platformStats}
+
+Ad formats available:
+- 10s AI-generated video ads ($50-$100)
+- 30s extended video ads ($250)
+- Multi-video campaign packages ($500+)
+- All ads auto-distributed to X, TikTok, Instagram, Facebook, YouTube, Telegram
+
+Key selling points:
+- AI personas create unique, engaging content that feels organic
+- Full creative handled by AI — sponsor just provides product info
+- Cross-platform distribution included
+- Real engagement metrics provided after campaign
+
+Respond in JSON format:
+{
+  "subject": "Email subject line",
+  "body": "Full email body in plain text (use line breaks for paragraphs)",
+  "followUpSubject": "Follow-up email subject (sent 5 days later if no reply)",
+  "followUpBody": "Follow-up email body"
+}`;
+
+  const userMessage = `Generate a sponsor outreach email for:
+- Company: ${companyName}
+- Industry: ${industry}
+- What they sell: ${productDescription}
+
+Write a personalized pitch explaining why their product would be perfect for AIG!itch's AI-generated ad campaigns.`;
+
+  const response = await askClaude(systemPrompt, [
+    { role: "user", content: userMessage },
+  ]);
+
+  try {
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    return JSON.parse(jsonMatch[0]);
+  } catch {
+    return {
+      subject: `Partnership opportunity: ${companyName} x AIG!itch`,
+      body: `Hi,\n\nI'd love to discuss a sponsored content opportunity between ${companyName} and AIG!itch.\n\nBest regards`,
+      followUpSubject: `Following up: ${companyName} x AIG!itch`,
+      followUpBody: `Hi,\n\nJust following up on my previous email about a potential partnership.\n\nBest regards`,
+    };
+  }
+}
+
+export async function generateCrossProjectCampaign(
+  projects: Array<{ name: string; description: string; url: string }>,
+  brief: string,
+  targetAudience: string
+): Promise<{
+  name: string;
+  strategy: string;
+  posts: CampaignPost[];
+}> {
+  const projectList = projects
+    .map((p) => `- ${p.name}: ${p.description} (${p.url})`)
+    .join("\n");
+
+  const systemPrompt = `You are a growth hacker who specializes in cross-promotion between multiple products owned by the same company.
+
+You create campaigns where each project promotes the others, creating a network effect. Each post should feel natural to its platform while subtly driving traffic between projects.
+
+Respond in JSON format:
+{
+  "name": "Campaign Name",
+  "strategy": "2-3 sentence overview of the cross-promotion strategy",
+  "posts": [
+    {
+      "platform": "x|youtube|facebook|instagram|tiktok",
+      "content": "Post content",
+      "hashtags": ["tag1"],
+      "optimalTime": "HH:MM UTC — Day",
+      "promotesProject": "Which project this post promotes"
+    }
+  ]
+}
+
+Generate 5-10 posts across different platforms, each promoting a different project from the portfolio.`;
+
+  const userMessage = `## Projects to Cross-Promote
+${projectList}
+
+## Campaign Brief
+${brief}
+
+## Target Audience
+${targetAudience}
+
+Generate a cross-project promotional campaign.`;
+
+  const response = await askClaude(systemPrompt, [
+    { role: "user", content: userMessage },
+  ]);
+
+  try {
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    const parsed = JSON.parse(jsonMatch[0]);
+    return {
+      name: parsed.name || "Cross-Project Campaign",
+      strategy: parsed.strategy || "",
+      posts: (parsed.posts || []).map((p: { platform: string; content: string; hashtags?: string[]; optimalTime?: string }) => ({
+        platform: p.platform as SocialPlatform,
+        content: p.content,
+        hashtags: p.hashtags || [],
+        optimalTime: p.optimalTime || "12:00 UTC",
+        status: "pending" as const,
+      })),
+    };
+  } catch {
+    return { name: "Cross-Project Campaign", strategy: "", posts: [] };
+  }
+}

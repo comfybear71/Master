@@ -421,6 +421,35 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
     if (!channelRes.ok) {
       const errText = await channelRes.text();
       console.error("[YouTube] Channel fetch failed:", channelRes.status, errText.slice(0, 400));
+
+      // Quota exceeded — return cached stats instead of error
+      if (channelRes.status === 403 && errText.includes("quota")) {
+        console.log("[YouTube] Quota exceeded — returning cached stats");
+        try {
+          const db = await getDb();
+          const cached = await db.collection("social_stats").findOne({ platform: "youtube" });
+          if (cached) {
+            return {
+              platform: "youtube",
+              followers: cached.followers || 0,
+              posts: cached.posts || 0,
+              engagementRate: cached.engagementRate || 0,
+              recentPosts: cached.recentPosts || [],
+              connected: true,
+              fetchedAt: cached.fetchedAt || new Date().toISOString(),
+              error: "quota_exceeded",
+            };
+          }
+        } catch { /* fall through */ }
+        return {
+          platform: "youtube",
+          followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
+          connected: true,
+          fetchedAt: new Date().toISOString(),
+          error: "quota_exceeded",
+        };
+      }
+
       throw new Error(`YouTube API ${channelRes.status}: ${errText.slice(0, 300)}`);
     }
     const channelData: { items?: Array<{ statistics: { subscriberCount: string; videoCount: string } }> } = await channelRes.json();
@@ -611,41 +640,60 @@ async function refreshTikTokToken(refreshToken: string | null): Promise<{ token:
 }
 
 export async function getTikTokStats(): Promise<SocialStats> {
-  try {
-    console.log("[TikTok] getTikTokStats called");
+  const logs: string[] = [];
+  const log = (msg: string) => { logs.push(`${new Date().toISOString().slice(11, 19)} ${msg}`); console.log(`[TikTok] ${msg}`); };
 
-    const clientKey = process.env.TIKTOK_CLIENT_KEY;
-    const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  try {
+    log("getTikTokStats called");
+
+    // Detect mode from stored OAuth token in MongoDB
+    let storedMode: "sandbox" | "production" = "production";
+    try {
+      const db = await getDb();
+      const oauthDoc = await db.collection("settings").findOne({ key: "tiktok_oauth" });
+      if (oauthDoc?.mode === "sandbox") storedMode = "sandbox";
+    } catch { /* ignore */ }
+
+    const isSandbox = storedMode === "sandbox";
+    const clientKey = isSandbox
+      ? (process.env.TIKTOK_SANDBOX_CLIENT_KEY || process.env.TIKTOK_CLIENT_KEY)
+      : process.env.TIKTOK_CLIENT_KEY;
+    const clientSecret = isSandbox
+      ? (process.env.TIKTOK_SANDBOX_CLIENT_SECRET || process.env.TIKTOK_CLIENT_SECRET)
+      : process.env.TIKTOK_CLIENT_SECRET;
+
+    log(`Mode: ${isSandbox ? "SANDBOX" : "PRODUCTION"}`);
+    log(`Client key: ${clientKey ? clientKey.slice(0, 6) + "..." : "NOT SET"}`);
 
     if (!clientKey || !clientSecret) {
-      throw new Error("TikTok credentials missing: TIKTOK_CLIENT_KEY + TIKTOK_CLIENT_SECRET");
+      log("ERROR: Missing credentials");
+      throw new Error(`TikTok credentials missing: ${isSandbox ? "TIKTOK_SANDBOX_CLIENT_KEY" : "TIKTOK_CLIENT_KEY"}`);
     }
 
     // Get user OAuth token (from DB or env var)
+    log("Fetching OAuth token from DB...");
     const userAuth = await getTikTokUserToken();
     if (!userAuth) {
+      log("ERROR: No OAuth token found — need to authorize");
       throw new Error(
         "TikTok not authorized. Click 'Authorize TikTok' on the Growth page to connect your account."
       );
     }
-
-    // Query user info with user token
-    // user.info.basic scope: display_name, avatar_url, open_id
-    // user.info.stats scope (NOT yet approved): follower_count, video_count, likes_count
-    console.log("[TikTok] Fetching user info with OAuth token...");
+    log(`Token found: ${userAuth.token.slice(0, 8)}...`);
 
     // Try stats fields first; if scope isn't approved, fall back to basic
     let followers = 0;
     let posts = 0;
     let likes = 0;
-    let displayName = "";
     let hasStatsScope = false;
 
-    // Attempt with stats fields (works if user.info.stats scope is approved)
     const statsFields = "follower_count,following_count,video_count,likes_count,display_name,avatar_url";
     const basicFields = "display_name,avatar_url";
 
     for (const fields of [statsFields, basicFields]) {
+      const fieldLabel = fields === statsFields ? "stats+basic" : "basic only";
+      log(`Calling /v2/user/info/ with ${fieldLabel} fields...`);
+
       const userRes = await fetch(
         `https://open.tiktokapis.com/v2/user/info/?fields=${fields}`,
         {
@@ -662,133 +710,106 @@ export async function getTikTokStats(): Promise<SocialStats> {
               video_count?: number;
               likes_count?: number;
               display_name?: string;
-              avatar_url?: string;
             };
           };
         } = await userRes.json();
-        console.log("[TikTok] User data (fields=" + fields.split(",")[0] + "...):", JSON.stringify(userData).slice(0, 300));
 
         const user = userData.data?.user;
-        displayName = user?.display_name || "";
+        log(`OK (${userRes.status}) — display_name: ${user?.display_name || "(none)"}`);
+
         if (user?.follower_count !== undefined) {
           followers = user.follower_count;
           posts = user?.video_count || 0;
           likes = user?.likes_count || 0;
           hasStatsScope = true;
+          log(`Stats: ${followers} followers, ${posts} videos, ${likes} likes`);
+        } else {
+          log("user.info.stats scope not available — only basic fields returned");
         }
         break;
       }
 
       const errText = await userRes.text();
-      console.log("[TikTok] User info with fields", fields.split(",")[0], "failed:", userRes.status, errText.slice(0, 200));
+      log(`FAILED (${userRes.status}): ${errText.slice(0, 150)}`);
 
-      // If 401, token is stored but rejected by TikTok API
-      // Show as connected (token exists) but with error details
       if (userRes.status === 401) {
+        log("Token rejected (401) — may need re-authorization");
         return {
           platform: "tiktok",
-          followers: 0,
-          posts: 0,
-          engagementRate: 0,
-          recentPosts: [],
+          followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
           connected: true,
+          mode: storedMode,
+          logs,
           fetchedAt: new Date().toISOString(),
-          error: "TikTok token was rejected (401). This may be a sandbox limitation or the token may need refreshing. Check /api/auth/tiktok/debug for details.",
+          error: `TikTok token rejected (401) in ${storedMode} mode. Re-authorize via the button above.`,
         };
       }
 
-      // If first attempt failed with scope error, try basic fields
       if (fields === statsFields) {
-        console.log("[TikTok] Stats scope not available, falling back to basic...");
+        log("Falling back to basic fields...");
         continue;
       }
 
-      // Both failed
       throw new Error(`TikTok API ${userRes.status}: ${errText.slice(0, 200)}`);
     }
 
-    // Engagement rate: total likes / total posts (rough metric)
     const engagementRate = posts > 0 ? Math.round((likes / posts / Math.max(followers, 1)) * 10000) / 100 : 0;
 
-    // Fetch recent videos if video.list scope is available (non-fatal if not)
+    // Fetch recent videos
     let recentPosts: SocialStats["recentPosts"] = [];
     try {
+      log("Fetching recent videos via /v2/video/list/...");
       const videosRes = await fetch(
         "https://open.tiktokapis.com/v2/video/list/?fields=id,title,like_count,comment_count,view_count,share_count,create_time",
         {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${userAuth.token}`,
-            "Content-Type": "application/json",
-          },
+          headers: { Authorization: `Bearer ${userAuth.token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ max_count: 5 }),
         }
       );
 
       if (videosRes.ok) {
         const videosData: {
-          data?: {
-            videos?: Array<{
-              id: string;
-              title?: string;
-              like_count?: number;
-              comment_count?: number;
-              view_count?: number;
-              share_count?: number;
-              create_time?: number;
-            }>;
-          };
+          data?: { videos?: Array<{ id: string; title?: string; like_count?: number; comment_count?: number; view_count?: number; share_count?: number; create_time?: number }> };
         } = await videosRes.json();
-
         recentPosts = (videosData.data?.videos || []).map((v) => ({
-          id: v.id,
-          platform: "tiktok" as const,
-          text: v.title || "(no title)",
-          likes: v.like_count || 0,
-          comments: v.comment_count || 0,
-          shares: v.share_count || 0,
-          views: v.view_count || 0,
-          engagementRate: v.view_count && v.view_count > 0
-            ? Math.round(((v.like_count || 0) + (v.comment_count || 0)) / v.view_count * 10000) / 100
-            : 0,
-          createdAt: v.create_time
-            ? new Date(v.create_time * 1000).toISOString()
-            : new Date().toISOString(),
+          id: v.id, platform: "tiktok" as const, text: v.title || "(no title)",
+          likes: v.like_count || 0, comments: v.comment_count || 0, shares: v.share_count || 0, views: v.view_count || 0,
+          engagementRate: v.view_count && v.view_count > 0 ? Math.round(((v.like_count || 0) + (v.comment_count || 0)) / v.view_count * 10000) / 100 : 0,
+          createdAt: v.create_time ? new Date(v.create_time * 1000).toISOString() : new Date().toISOString(),
           url: `https://www.tiktok.com/@/video/${v.id}`,
         }));
-        console.log("[TikTok] Fetched", recentPosts.length, "recent videos");
+        log(`Fetched ${recentPosts.length} recent videos`);
       } else {
-        console.log("[TikTok] Video list not available (needs video.list scope)");
+        const errText = await videosRes.text();
+        log(`Video list failed (${videosRes.status}): ${errText.slice(0, 100)}`);
       }
     } catch (videoErr) {
-      console.log("[TikTok] Video list fetch error (non-fatal):", videoErr instanceof Error ? videoErr.message : videoErr);
+      log(`Video list error (non-fatal): ${videoErr instanceof Error ? videoErr.message : videoErr}`);
     }
 
-    // Note if stats are limited
     if (!hasStatsScope) {
-      console.log("[TikTok] Connected with basic scope only — add user.info.stats in TikTok Developer Portal for follower/video counts");
+      log("Connected with basic scope only — waiting for user.info.stats approval");
     }
 
+    log("Done — success");
     return {
       platform: "tiktok",
-      followers,
-      posts,
-      engagementRate,
-      recentPosts,
+      followers, posts, engagementRate, recentPosts,
       connected: true,
+      mode: storedMode,
+      logs,
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : "TikTok API error";
-    console.error("[TikTok] FAILED:", errMsg);
+    log(`FAILED: ${errMsg}`);
     return {
       platform: "tiktok",
-      followers: 0,
-      posts: 0,
-      engagementRate: 0,
-      recentPosts: [],
+      followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
       fetchedAt: new Date().toISOString(),
       error: errMsg,
+      logs,
     };
   }
 }

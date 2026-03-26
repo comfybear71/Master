@@ -36,8 +36,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const clientKey = process.env.TIKTOK_CLIENT_KEY;
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  const isSandbox = req.cookies.get("tiktok_oauth_mode")?.value === "sandbox";
+  const clientKey = isSandbox
+    ? (process.env.TIKTOK_SANDBOX_CLIENT_KEY || process.env.TIKTOK_CLIENT_KEY)
+    : process.env.TIKTOK_CLIENT_KEY;
+  const clientSecret = isSandbox
+    ? (process.env.TIKTOK_SANDBOX_CLIENT_SECRET || process.env.TIKTOK_CLIENT_SECRET)
+    : process.env.TIKTOK_CLIENT_SECRET;
 
   if (!clientKey || !clientSecret) {
     return NextResponse.redirect(
@@ -108,6 +113,7 @@ export async function GET(req: NextRequest) {
           refreshExpiresIn: tokenData.refresh_expires_in || null,
           scope: tokenData.scope || null,
           tokenType: tokenData.token_type || "Bearer",
+          mode: isSandbox ? "sandbox" : "production",
           authorizedAt: new Date().toISOString(),
           expiresAt: tokenData.expires_in
             ? new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
@@ -120,8 +126,9 @@ export async function GET(req: NextRequest) {
     console.log("[TikTok OAuth] Token stored in MongoDB");
 
     // Clear the state cookie
-    const response = NextResponse.redirect(`${baseUrl}/growth?tiktok_auth=success`);
+    const response = NextResponse.redirect(`${baseUrl}/growth?tiktok_auth=success&mode=${isSandbox ? "sandbox" : "production"}`);
     response.cookies.delete("tiktok_oauth_state");
+    response.cookies.delete("tiktok_oauth_mode");
     return response;
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Unknown error";

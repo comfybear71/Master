@@ -27,7 +27,15 @@ const platformColors: Record<SocialPlatform, string> = {
   tiktok: "border-cyan-500/30 bg-cyan-500/5",
 };
 
-type TabType = "overview" | "campaigns" | "viral";
+const platformUrls: Record<SocialPlatform, string> = {
+  x: "https://x.com/spiritary",
+  youtube: "https://www.youtube.com/@frekin31",
+  facebook: "https://www.facebook.com/profile.php?id=61584376583578",
+  instagram: "https://www.instagram.com/sfrench71",
+  tiktok: "https://www.tiktok.com/@aiglicthed",
+};
+
+type TabType = "overview" | "campaigns" | "viral" | "outreach";
 
 export default function GrowthPage() {
   const [activeTab, setActiveTab] = useState<TabType>("overview");
@@ -45,6 +53,21 @@ export default function GrowthPage() {
   const [campaignBrief, setCampaignBrief] = useState("");
   const [campaignProject, setCampaignProject] = useState("");
   const [campaignAudience, setCampaignAudience] = useState("");
+
+  // Outreach email form
+  const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string }>>([]);
+  const [showOutreachForm, setShowOutreachForm] = useState(false);
+  const [outreachCompany, setOutreachCompany] = useState("");
+  const [outreachIndustry, setOutreachIndustry] = useState("");
+  const [outreachProduct, setOutreachProduct] = useState("");
+  const [outreachTone, setOutreachTone] = useState<"formal" | "casual" | "bold">("casual");
+  const [generatingEmail, setGeneratingEmail] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+
+  // TikTok sandbox/production toggle
+  const [tiktokMode, setTiktokMode] = useState<"sandbox" | "production">("production");
+  const [tiktokLogs, setTiktokLogs] = useState<string[]>([]);
+  const [showTiktokLogs, setShowTiktokLogs] = useState(false);
 
   // TikTok auth status from OAuth callback redirect
   const [tiktokAuthMsg, setTiktokAuthMsg] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -141,16 +164,22 @@ export default function GrowthPage() {
   };
 
   const fetchAll = useCallback(async () => {
-    const [statsRes, campaignsRes, alertsRes, projectsRes] = await Promise.allSettled([
+    const [statsRes, campaignsRes, alertsRes, projectsRes, outreachRes] = await Promise.allSettled([
       fetch("/api/social?action=stats"),
       fetch("/api/campaigns"),
       fetch("/api/viral"),
       fetch("/api/projects"),
+      fetch("/api/outreach"),
     ]);
 
     if (statsRes.status === "fulfilled" && statsRes.value.ok) {
       const data = await statsRes.value.json();
-      setStats(Array.isArray(data) ? data : []);
+      const statsArr = Array.isArray(data) ? data : [];
+      setStats(statsArr);
+      // Extract TikTok monitoring logs and mode
+      const tiktokStat = statsArr.find((s: SocialStats) => s.platform === "tiktok");
+      if (tiktokStat?.logs) setTiktokLogs(tiktokStat.logs);
+      if (tiktokStat?.mode) setTiktokMode(tiktokStat.mode);
     }
     if (campaignsRes.status === "fulfilled" && campaignsRes.value.ok) {
       setCampaigns(await campaignsRes.value.json());
@@ -160,6 +189,10 @@ export default function GrowthPage() {
     }
     if (projectsRes.status === "fulfilled" && projectsRes.value.ok) {
       setProjects(await projectsRes.value.json());
+    }
+    if (outreachRes.status === "fulfilled" && outreachRes.value.ok) {
+      const emailData = await outreachRes.value.json();
+      setOutreachEmails(Array.isArray(emailData) ? emailData : []);
     }
 
     setLastRefresh(new Date());
@@ -250,6 +283,48 @@ export default function GrowthPage() {
     fetchAll();
   };
 
+  const generateOutreachEmail = async () => {
+    setGeneratingEmail(true);
+    try {
+      const res = await fetch("/api/outreach?action=generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: outreachCompany,
+          industry: outreachIndustry,
+          productDescription: outreachProduct,
+          tone: outreachTone,
+        }),
+      });
+      if (res.ok) {
+        await fetchAll();
+        setShowOutreachForm(false);
+        setOutreachCompany("");
+        setOutreachIndustry("");
+        setOutreachProduct("");
+        setActiveTab("outreach");
+      }
+    } catch {
+      // silently fail
+    }
+    setGeneratingEmail(false);
+  };
+
+  const deleteOutreachEmail = async (emailId: string) => {
+    await fetch("/api/outreach?action=delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ emailId }),
+    });
+    fetchAll();
+  };
+
+  const copyToClipboard = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedEmail(id);
+    setTimeout(() => setCopiedEmail(null), 2000);
+  };
+
   const scanViral = async () => {
     await fetch("/api/viral?action=scan", { method: "POST" });
     fetchAll();
@@ -283,6 +358,7 @@ export default function GrowthPage() {
     { key: "overview", label: "Social Overview" },
     { key: "campaigns", label: `Campaigns (${campaigns.length})` },
     { key: "viral", label: `Viral Alerts (${activeAlerts})` },
+    { key: "outreach", label: `Outreach (${outreachEmails.length})` },
   ];
 
   return (
@@ -454,20 +530,29 @@ export default function GrowthPage() {
                     <div key={platform} className={`rounded-xl border ${platformColors[platform]} p-5`}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">{platformIcons[platform]}</span>
-                          <h3 className="font-semibold text-white text-sm">{platformLabels[platform]}</h3>
+                          <a href={platformUrls[platform]} target="_blank" rel="noopener noreferrer" className="text-xl hover:opacity-70 transition-opacity">{platformIcons[platform]}</a>
+                          <a href={platformUrls[platform]} target="_blank" rel="noopener noreferrer" className="font-semibold text-white text-sm hover:text-accent transition-colors">{platformLabels[platform]}</a>
                         </div>
-                        {stat?.connected ? (
-                          <span className="text-xs text-success font-mono">Connected</span>
-                        ) : stat?.error?.includes("coming soon") ? (
-                          <span className="text-xs text-slate-500 font-mono">Coming soon</span>
-                        ) : stat?.error?.includes("sandboxed") ? (
-                          <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
-                        ) : stat?.error?.includes("Authorize TikTok") ? (
-                          <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
-                        ) : stat?.error ? (
-                          <span className="text-xs text-error font-mono">Error</span>
-                        ) : null}
+                        <div className="flex items-center gap-2">
+                          {platform === "tiktok" && (
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${tiktokMode === "sandbox" ? "bg-amber-500/20 text-amber-400" : "bg-green-500/20 text-green-400"}`}>
+                              {tiktokMode === "sandbox" ? "SANDBOX" : "LIVE"}
+                            </span>
+                          )}
+                          {stat?.error === "quota_exceeded" ? (
+                            <span className="text-xs text-amber-400 font-mono">Quota Limit</span>
+                          ) : stat?.connected ? (
+                            <span className="text-xs text-success font-mono">Connected</span>
+                          ) : stat?.error?.includes("coming soon") ? (
+                            <span className="text-xs text-slate-500 font-mono">Coming soon</span>
+                          ) : stat?.error?.includes("sandboxed") ? (
+                            <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
+                          ) : stat?.error?.includes("Authorize TikTok") ? (
+                            <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
+                          ) : stat?.error ? (
+                            <span className="text-xs text-error font-mono">Error</span>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
@@ -498,13 +583,66 @@ export default function GrowthPage() {
                           ))}
                         </div>
                       )}
-                      {stat?.error && !stat.recentPosts?.length && (
+                      {stat?.error === "quota_exceeded" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 bg-amber-500/10 rounded-full h-1.5">
+                            <div className="bg-amber-400 h-1.5 rounded-full w-full" />
+                          </div>
+                          <span className="text-[10px] text-amber-400 font-mono whitespace-nowrap">100% used</span>
+                        </div>
+                      )}
+                      {stat?.error === "quota_exceeded" && (stat?.followers || 0) > 0 && (
+                        <p className="text-[10px] text-slate-600 mt-1">Showing cached data — resets midnight PT</p>
+                      )}
+                      {stat?.error && stat.error !== "quota_exceeded" && !stat.recentPosts?.length && (
                         <div className="mt-2">
                           <p className="text-xs text-slate-500">{stat.error}</p>
-                          {platform === "tiktok" && stat.error.includes("Authorize") && (
-                            <a href="/api/auth/tiktok" className="inline-block mt-2 px-3 py-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg text-xs hover:bg-cyan-500/20 transition-colors font-mono">
-                              Authorize TikTok
+                        </div>
+                      )}
+                      {/* TikTok-specific controls */}
+                      {platform === "tiktok" && (
+                        <div className="mt-3 border-t border-slate-800 pt-3 space-y-2">
+                          {/* Sandbox / Live Switch */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  const newMode = tiktokMode === "sandbox" ? "production" : "sandbox";
+                                  setTiktokMode(newMode);
+                                  window.location.href = `/api/auth/tiktok?mode=${newMode}`;
+                                }}
+                                className={`relative w-10 h-5 rounded-full transition-colors ${tiktokMode === "sandbox" ? "bg-amber-500/40" : "bg-green-500/40"}`}
+                              >
+                                <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-transform ${tiktokMode === "sandbox" ? "left-0.5 bg-amber-400" : "left-5 bg-green-400"}`} />
+                              </button>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                {tiktokMode === "sandbox" ? "Switch to LIVE" : "Switch to SANDBOX"}
+                              </span>
+                            </div>
+                            <a href={`/api/auth/tiktok?mode=${tiktokMode}`} className="text-[10px] text-cyan-400 font-mono hover:underline">
+                              Re-authorize
                             </a>
+                          </div>
+                          {/* Monitoring Log Toggle */}
+                          <button
+                            onClick={() => setShowTiktokLogs(!showTiktokLogs)}
+                            className="text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors"
+                          >
+                            {showTiktokLogs ? "Hide" : "Show"} API Log ({tiktokLogs.length} entries)
+                          </button>
+                          {showTiktokLogs && tiktokLogs.length > 0 && (
+                            <div className="bg-black/40 rounded-lg p-2 max-h-40 overflow-y-auto border border-slate-800">
+                              {tiktokLogs.map((log, i) => (
+                                <div key={i} className={`text-[10px] font-mono leading-relaxed ${
+                                  log.includes("ERROR") || log.includes("FAILED") ? "text-red-400" :
+                                  log.includes("OK") || log.includes("success") || log.includes("Done") ? "text-green-400" :
+                                  log.includes("Mode:") ? "text-amber-400" :
+                                  "text-slate-400"
+                                }`}>
+                                  {log}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       )}
@@ -582,6 +720,109 @@ export default function GrowthPage() {
                       onDelete={() => deleteCampaign(String(campaign._id))}
                       isPublishing={publishing === String(campaign._id)}
                     />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Outreach Tab */}
+          {activeTab === "outreach" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-lg font-semibold text-white">Sponsor Outreach</h2>
+                  <p className="text-xs text-slate-500 mt-1">AI-generated pitch emails for potential advertisers</p>
+                </div>
+                <button onClick={() => setShowOutreachForm(!showOutreachForm)} className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono">
+                  + New Email
+                </button>
+              </div>
+
+              {/* Email Generation Form */}
+              {showOutreachForm && (
+                <div className="bg-base-card rounded-xl border border-accent/20 p-6 mb-6">
+                  <h3 className="text-sm font-semibold text-white mb-4">Generate Sponsor Pitch Email</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Company Name *</label>
+                      <input value={outreachCompany} onChange={(e) => setOutreachCompany(e.target.value)} placeholder="e.g. Acme AI Tools" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Industry *</label>
+                      <input value={outreachIndustry} onChange={(e) => setOutreachIndustry(e.target.value)} placeholder="e.g. AI/Tech, Gaming, Crypto" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-xs text-slate-400 mb-1 block">What they sell / product description</label>
+                      <input value={outreachProduct} onChange={(e) => setOutreachProduct(e.target.value)} placeholder="e.g. AI-powered code editor for developers" className="w-full bg-base border border-slate-700 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">Tone</label>
+                      <div className="flex gap-2">
+                        {(["casual", "formal", "bold"] as const).map((t) => (
+                          <button key={t} onClick={() => setOutreachTone(t)} className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors ${outreachTone === t ? "bg-accent/20 text-accent border border-accent/30" : "bg-slate-800 text-slate-400 border border-slate-700 hover:text-white"}`}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button onClick={generateOutreachEmail} disabled={generatingEmail || !outreachCompany || !outreachIndustry} className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-mono disabled:opacity-50 hover:bg-accent/80 transition-colors">
+                      {generatingEmail ? "Generating..." : "Generate Email"}
+                    </button>
+                    <button onClick={() => setShowOutreachForm(false)} className="px-4 py-2 text-slate-400 text-sm hover:text-white transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Email List */}
+              {outreachEmails.length === 0 && !showOutreachForm ? (
+                <div className="bg-base-card rounded-xl border border-slate-800 p-12 text-center">
+                  <p className="text-slate-400 text-lg mb-2">No outreach emails yet</p>
+                  <p className="text-slate-500 text-sm mb-4">Generate AI-powered pitch emails for potential sponsors and advertisers.</p>
+                  <button onClick={() => setShowOutreachForm(true)} className="px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-sm hover:bg-accent/20 transition-colors font-mono">
+                    Generate Your First Email
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {outreachEmails.map((email) => (
+                    <div key={String(email._id)} className="bg-base-card rounded-xl border border-slate-800 p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
+                          <p className="text-xs text-slate-500">{email.industry} — {new Date(email.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        <button onClick={() => deleteOutreachEmail(String(email._id))} className="text-xs text-danger hover:text-danger/80">Delete</button>
+                      </div>
+
+                      {/* Initial Email */}
+                      <div className="bg-base rounded-lg border border-slate-800 p-4 mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-semibold text-accent">Initial Email</h4>
+                          <button onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`, `initial-${String(email._id)}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `initial-${String(email._id)}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                            {copiedEmail === `initial-${String(email._id)}` ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-1"><span className="text-slate-500">Subject:</span> {email.subject}</p>
+                        <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">{email.body}</p>
+                      </div>
+
+                      {/* Follow-up Email */}
+                      <div className="bg-base rounded-lg border border-slate-800 p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="text-xs font-semibold text-amber-400">Follow-Up (5 days later)</h4>
+                          <button onClick={() => copyToClipboard(`Subject: ${email.followUpSubject}\n\n${email.followUpBody}`, `followup-${String(email._id)}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `followup-${String(email._id)}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                            {copiedEmail === `followup-${String(email._id)}` ? "Copied!" : "Copy"}
+                          </button>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-1"><span className="text-slate-500">Subject:</span> {email.followUpSubject}</p>
+                        <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">{email.followUpBody}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

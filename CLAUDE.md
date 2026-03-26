@@ -3,6 +3,9 @@
 ## What This Is
 TheMaster is a unified command and control platform for a solo developer managing multiple live production projects. It is the single source of truth for all projects, deployments, monitoring, social media, and growth campaigns.
 
+**Live URL:** https://masterhq.dev
+**Vercel URL:** https://master-six-ashen.vercel.app
+
 This is the MASTER repo. All other projects are registered here and managed from here.
 
 ---
@@ -145,7 +148,17 @@ TikTok uses OAuth 2.0 with authorization code flow. Tokens are stored in MongoDB
 
 ### YouTube API Quota
 
-YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacific). Both TheMaster and AIGlitch share the same API key and poll YouTube stats. A 403 "quota exceeded" error does NOT mean auth is broken — it means the daily limit is hit. Do NOT treat this as a reconnect/reauth issue. It auto-resolves at midnight Pacific.
+YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacific). Both TheMaster and AIGlitch share the same API key and poll YouTube stats. A 403 "quota exceeded" error does NOT mean auth is broken — it means the daily limit is hit. Do NOT treat this as a reconnect/reauth issue. It auto-resolves at midnight Pacific. When quota is exceeded, TheMaster shows cached stats with an amber "Quota Limit" badge. **Google Cloud Project Number: 837829119225**. Quota increase to 100,000 units/day submitted 2026-03-26.
+
+### Social Profile URLs
+
+| Platform | URL | Handle |
+|----------|-----|--------|
+| X / Twitter | https://x.com/spiritary | @spiritary |
+| YouTube | https://www.youtube.com/@frekin31 | @frekin31 |
+| Facebook | https://www.facebook.com/profile.php?id=61584376583578 | Page ID: 61584376583578 |
+| Instagram | https://www.instagram.com/sfrench71 | @sfrench71 |
+| TikTok | https://www.tiktok.com/@aiglicthed | @aiglicthed |
 
 ### Social Platform Stats — TheMaster vs AIGlitch
 
@@ -174,6 +187,7 @@ AIGlitch has a fully automated **Ad Campaign system** managed from `/admin/perso
 TheMaster/
 ├── app/
 │   ├── page.tsx                  # Main dashboard
+│   ├── docs/                     # Documentation & guides
 │   ├── projects/                 # Project registry
 │   ├── growth/                   # Campaigns & social
 │   ├── monitoring/               # Errors & uptime
