@@ -28,7 +28,7 @@ const platformColors: Record<SocialPlatform, string> = {
 };
 
 const platformUrls: Record<SocialPlatform, string> = {
-  x: "https://x.com/AIGlitch",
+  x: "https://x.com/spiritary",
   youtube: "https://www.youtube.com/@frekin31",
   facebook: "https://www.facebook.com/profile.php?id=61584376583578",
   instagram: "https://www.instagram.com/sfrench71",
