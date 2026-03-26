@@ -74,6 +74,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
             { href: "/monitoring", label: "Monitoring", icon: "\u25C9" },
             { href: "/cicd", label: "CI/CD", icon: "\u27D0" },
             { href: "/growth", label: "Growth", icon: "\u25B3" },
+            { href: "/docs", label: "Docs", icon: "\u25A1" },
           ].map((item) => (
             <li key={item.href}>
               <a
