@@ -421,6 +421,35 @@ export async function getYouTubeStats(channelId: string): Promise<SocialStats> {
     if (!channelRes.ok) {
       const errText = await channelRes.text();
       console.error("[YouTube] Channel fetch failed:", channelRes.status, errText.slice(0, 400));
+
+      // Quota exceeded — return cached stats instead of error
+      if (channelRes.status === 403 && errText.includes("quota")) {
+        console.log("[YouTube] Quota exceeded — returning cached stats");
+        try {
+          const db = await getDb();
+          const cached = await db.collection("social_stats").findOne({ platform: "youtube" });
+          if (cached) {
+            return {
+              platform: "youtube",
+              followers: cached.followers || 0,
+              posts: cached.posts || 0,
+              engagementRate: cached.engagementRate || 0,
+              recentPosts: cached.recentPosts || [],
+              connected: true,
+              fetchedAt: cached.fetchedAt || new Date().toISOString(),
+              error: "quota_exceeded",
+            };
+          }
+        } catch { /* fall through */ }
+        return {
+          platform: "youtube",
+          followers: 0, posts: 0, engagementRate: 0, recentPosts: [],
+          connected: true,
+          fetchedAt: new Date().toISOString(),
+          error: "quota_exceeded",
+        };
+      }
+
       throw new Error(`YouTube API ${channelRes.status}: ${errText.slice(0, 300)}`);
     }
     const channelData: { items?: Array<{ statistics: { subscriberCount: string; videoCount: string } }> } = await channelRes.json();

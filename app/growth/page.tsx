@@ -481,7 +481,9 @@ export default function GrowthPage() {
                               {tiktokMode === "sandbox" ? "SANDBOX" : "LIVE"}
                             </span>
                           )}
-                          {stat?.connected ? (
+                          {stat?.error === "quota_exceeded" ? (
+                            <span className="text-xs text-amber-400 font-mono">Quota Limit</span>
+                          ) : stat?.connected ? (
                             <span className="text-xs text-success font-mono">Connected</span>
                           ) : stat?.error?.includes("coming soon") ? (
                             <span className="text-xs text-slate-500 font-mono">Coming soon</span>
@@ -523,7 +525,18 @@ export default function GrowthPage() {
                           ))}
                         </div>
                       )}
-                      {stat?.error && !stat.recentPosts?.length && (
+                      {stat?.error === "quota_exceeded" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 bg-amber-500/10 rounded-full h-1.5">
+                            <div className="bg-amber-400 h-1.5 rounded-full w-full" />
+                          </div>
+                          <span className="text-[10px] text-amber-400 font-mono whitespace-nowrap">100% used</span>
+                        </div>
+                      )}
+                      {stat?.error === "quota_exceeded" && (stat?.followers || 0) > 0 && (
+                        <p className="text-[10px] text-slate-600 mt-1">Showing cached data — resets midnight PT</p>
+                      )}
+                      {stat?.error && stat.error !== "quota_exceeded" && !stat.recentPosts?.length && (
                         <div className="mt-2">
                           <p className="text-xs text-slate-500">{stat.error}</p>
                         </div>
