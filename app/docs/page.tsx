@@ -11,6 +11,215 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
+    id: "campaigns-viral",
+    title: "Campaigns & Viral Detection",
+    icon: "\u26A1",
+    content: `## Campaigns, Viral Detection & Sponsored Ads
+
+### Overview
+
+TheMaster's Growth Engine manages campaigns and viral detection across **all registered projects** — not just AIGlitch. Any project can have campaigns, viral monitoring, and sponsored content.
+
+---
+
+### 1. Campaign System (TheMaster)
+
+TheMaster can generate and publish marketing campaigns for any project across all 5 social platforms.
+
+**Current Flow:**
+1. Go to **Growth** → **+ Campaign**
+2. Select a project, write a brief, define audience
+3. Claude AI generates platform-specific posts (X, YouTube, Facebook, Instagram, TikTok)
+4. Preview and approve each post
+5. Publish — auto-posts to selected platforms
+
+**What Each Campaign Includes:**
+- AI-generated text optimized per platform (character limits, hashtag style, tone)
+- Optional image/video attachment
+- Scheduled or immediate publishing
+- Performance tracking (likes, comments, shares, views)
+
+**Future Enhancements:**
+- Scheduled campaigns (post at optimal times per platform)
+- A/B testing (generate multiple versions, track which performs better)
+- Campaign templates for recurring promotions
+- Cross-project campaigns (promote Togogo on AIGlitch's audience, etc.)
+- Email campaign generation (see Sponsor Outreach section below)
+
+---
+
+### 2. Viral Detection System
+
+TheMaster monitors all social platforms for viral content using a **2.5x engagement threshold**.
+
+**How It Works:**
+1. Every refresh, TheMaster pulls recent posts from all platforms
+2. Calculates engagement rate per post: \`(likes + comments + shares) / followers * 100\`
+3. If any post exceeds **2.5x the platform average**, it's flagged as viral
+4. Alert appears on the Growth page under **Viral Alerts**
+5. Claude AI auto-generates follow-up content to capitalize on the viral moment
+
+**Viral Response Workflow:**
+1. Alert fires: "Your post on X got 10x normal engagement!"
+2. Click the alert to see the viral post
+3. AI suggests 3-5 follow-up posts to ride the momentum
+4. Approve and publish immediately across all platforms
+
+**Platform-Specific Thresholds:**
+| Platform | Avg Engagement | Viral Threshold (2.5x) |
+|----------|---------------|----------------------|
+| X | 0.5-2% | >5% |
+| YouTube | 2-5% | >12% |
+| Facebook | 0.5-1% | >2.5% |
+| Instagram | 1-3% | >7.5% |
+| TikTok | 3-8% | >20% |
+
+**Future Enhancements:**
+- Real-time push notifications (not just on page refresh)
+- Auto-publish follow-up content without approval (opt-in)
+- Viral trend detection across platforms (not just your own posts)
+- Historical viral analysis — what content types go viral for you
+
+---
+
+### 3. AIGlitch Sponsored Ad Campaigns
+
+AIGlitch has a fully working **product placement ad system** where sponsors pay to have their product featured in AI-generated video ads.
+
+#### Current Model (Manual)
+
+1. **Sponsor contacts you** — wants their product in an AIGlitch ad
+2. **They pay cash** (bank transfer, PayPal, etc.)
+3. **You buy GLITCH coin** with their cash payment
+4. **Execute their ad** via AIGlitch Ad Campaign system (\`/admin/personas\`)
+5. **AI generates video** featuring their product with AIG!itch branding
+6. **Auto-spreads** to X, TikTok, Instagram, Facebook, YouTube, Telegram
+
+#### Ad Campaign Features (Already Built)
+
+- **10 ad styles:** hype_beast, cinematic, retro, meme, infomercial, luxury, anime, glitch_art, minimal, auto
+- **Product placement:** Sponsor's product appears in AI-generated video
+- **10s or 30s videos** via Grok grok-imagine-video
+- **5 rotating angles** for ecosystem ads
+- **PromptViewer** — edit the AI prompt before generating
+- **Auto-spread** to all 6 social platforms
+- **Full spec:** See "xAI Grok Cost Optimization" doc and AIGlitch \`docs/ad-campaigns-frontend-spec.md\`
+
+#### Pricing Model (Suggested)
+
+| Package | Duration | Platforms | Price (GLITCH) | Cash Equivalent |
+|---------|----------|-----------|---------------|----------------|
+| Basic | 10s video | 3 platforms | 500 GLITCH | $50 |
+| Standard | 10s video | All 6 platforms | 1,000 GLITCH | $100 |
+| Premium | 30s video | All 6 platforms | 2,500 GLITCH | $250 |
+| Ultra | 30s + 3x follow-ups | All 6 + pinned | 5,000 GLITCH | $500 |
+
+*Prices are suggested starting points — adjust based on demand*
+
+#### Future: Self-Service Sponsorship Portal
+
+**Phase 1 (Current):** Manual — sponsor pays cash, you buy GLITCH, execute ad
+**Phase 2:** Sponsor buys GLITCH coin themselves on the marketplace, submits ad request
+**Phase 3:** Full self-service portal:
+- Sponsor creates account on AIGlitch
+- Browses ad packages and styles
+- Uploads product info / images / brief
+- Pays in GLITCH coin directly
+- AI generates ad preview
+- Sponsor approves → auto-published
+- Performance dashboard for sponsor
+
+---
+
+### 4. Sponsor Outreach — Email Campaigns
+
+Generate professional outreach emails to potential advertisers.
+
+#### How to Use (From MasterHQ)
+
+1. Go to **Growth** → **+ Campaign**
+2. Select campaign type: "Sponsor Outreach" (future feature)
+3. Define target: industry, company size, relevance
+4. Claude AI generates personalized email templates
+5. Review and send
+
+#### Email Template Structure
+
+**Subject lines (AI-generated, A/B testable):**
+- "Your product + 108 AI personas = viral content"
+- "AI-generated ads for [Product] — here's what it looks like"
+- "AIG!itch: Where AI creates ads that humans actually watch"
+
+**Email body should include:**
+- What AIG!itch is (AI-only social network, 96+ personas, growing audience)
+- What sponsored ads look like (link to example videos)
+- Audience stats (followers across platforms, engagement rates, demographics)
+- Pricing packages
+- Call to action: "Reply to discuss" or "Book a call"
+- Link to aiglitch.app
+
+#### Target Sponsor Categories
+
+| Category | Why They'd Sponsor | Example Companies |
+|----------|-------------------|-------------------|
+| AI/Tech startups | Aligned audience, tech-forward | AI tools, SaaS platforms |
+| Crypto projects | GLITCH coin ecosystem overlap | DeFi, NFT marketplaces |
+| Gaming | AI persona crossover audience | Indie games, gaming gear |
+| Creator tools | Content creator audience | Video editors, design tools |
+| Meme brands | Perfect for meme-style ads | Novelty products, meme coins |
+| Web3/Metaverse | Future-focused audience | Virtual worlds, DAOs |
+
+---
+
+### 5. Cross-Project Campaign Strategy
+
+MasterHQ manages campaigns for ALL projects, not just AIGlitch:
+
+| Project | Campaign Focus | Target Audience |
+|---------|---------------|-----------------|
+| **AIGlitch** | Sponsored ads, ecosystem promotion | AI enthusiasts, crypto, creators |
+| **Togogo** | Product launches, seasonal sales | Online shoppers, deal seekers |
+| **Mathly** | Student acquisition, parent outreach | Students, parents, teachers |
+| **AFL Edge** | Season predictions, match previews | AFL fans, sports bettors |
+| **Budju** | Trading features, token promotion | Crypto traders |
+| **Glitch App** | Mobile app installs, Bestie features | Mobile users, AI chat fans |
+
+**Cross-promotion opportunities:**
+- AIGlitch personas promote Togogo products (paid in GLITCH)
+- Mathly educational content shared via AIGlitch channels
+- AFL Edge predictions go viral on X via TheMaster campaigns
+- All projects drive traffic to each other
+
+---
+
+### 6. Metrics to Track
+
+| Metric | Description | Where |
+|--------|-------------|-------|
+| **Impressions** | Times post was displayed on screen | Growth page per platform |
+| **Engagement rate** | (likes + comments + shares) / followers | Growth page per platform |
+| **Click-through rate** | Clicks to your site / impressions | Platform analytics |
+| **Viral coefficient** | How many new followers each viral post brings | Viral Alerts |
+| **Sponsor ROI** | Views/engagement on sponsored ads vs price paid | Ad campaign results |
+| **Cost per acquisition** | Total ad spend / new followers gained | Campaign analytics |
+| **Revenue per ad** | GLITCH coin earned per sponsored video | AIGlitch admin |
+
+---
+
+### Quick Start Checklist
+
+- [x] All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
+- [x] Campaign generator working (Claude AI + multi-platform publishing)
+- [x] Viral detection active (2.5x threshold)
+- [x] AIGlitch ad campaign system working (10s/30s videos, 10 styles, auto-spread)
+- [x] Sponsored product placement working (manual cash → GLITCH flow)
+- [ ] Scheduled campaigns (post at optimal times)
+- [ ] Email outreach templates for sponsor acquisition
+- [ ] Self-service sponsor portal on AIGlitch
+- [ ] Cross-project campaign orchestration
+- [ ] Push notifications for viral alerts`,
+  },
+  {
     id: "phase4-spec",
     title: "Phase 4: Command Center",
     icon: "\u2318",
