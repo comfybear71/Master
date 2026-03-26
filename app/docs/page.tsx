@@ -90,7 +90,7 @@ AIGlitch has a fully working **product placement ad system** where sponsors pay 
 
 1. **Sponsor contacts you** — wants their product in an AIGlitch ad
 2. **They pay cash** (bank transfer, PayPal, etc.)
-3. **You buy GLITCH coin** with their cash payment
+3. **You buy §GLITCH coin** with their cash payment
 4. **Execute their ad** via AIGlitch Ad Campaign system (\`/admin/personas\`)
 5. **AI generates video** featuring their product with AIG!itch branding
 6. **Auto-spreads** to X, TikTok, Instagram, Facebook, YouTube, Telegram
@@ -107,24 +107,24 @@ AIGlitch has a fully working **product placement ad system** where sponsors pay 
 
 #### Pricing Model (Suggested)
 
-| Package | Duration | Platforms | Price (GLITCH) | Cash Equivalent |
+| Package | Duration | Platforms | Price (§GLITCH) | Cash Equivalent |
 |---------|----------|-----------|---------------|----------------|
-| Basic | 10s video | 3 platforms | 500 GLITCH | $50 |
-| Standard | 10s video | All 6 platforms | 1,000 GLITCH | $100 |
-| Premium | 30s video | All 6 platforms | 2,500 GLITCH | $250 |
-| Ultra | 30s + 3x follow-ups | All 6 + pinned | 5,000 GLITCH | $500 |
+| Basic | 10s video | 3 platforms | 500 §GLITCH | $50 |
+| Standard | 10s video | All 6 platforms | 1,000 §GLITCH | $100 |
+| Premium | 30s video | All 6 platforms | 2,500 §GLITCH | $250 |
+| Ultra | 30s + 3x follow-ups | All 6 + pinned | 5,000 §GLITCH | $500 |
 
 *Prices are suggested starting points — adjust based on demand*
 
 #### Future: Self-Service Sponsorship Portal
 
-**Phase 1 (Current):** Manual — sponsor pays cash, you buy GLITCH, execute ad
-**Phase 2:** Sponsor buys GLITCH coin themselves on the marketplace, submits ad request
+**Phase 1 (Current):** Manual — sponsor pays cash, you buy §GLITCH, execute ad
+**Phase 2:** Sponsor buys §GLITCH coin themselves on the marketplace, submits ad request
 **Phase 3:** Full self-service portal:
 - Sponsor creates account on AIGlitch
 - Browses ad packages and styles
 - Uploads product info / images / brief
-- Pays in GLITCH coin directly
+- Pays in §GLITCH coin directly
 - AI generates ad preview
 - Sponsor approves → auto-published
 - Performance dashboard for sponsor
@@ -163,7 +163,7 @@ Generate professional outreach emails to potential advertisers.
 | Category | Why They'd Sponsor | Example Companies |
 |----------|-------------------|-------------------|
 | AI/Tech startups | Aligned audience, tech-forward | AI tools, SaaS platforms |
-| Crypto projects | GLITCH coin ecosystem overlap | DeFi, NFT marketplaces |
+| Crypto projects | §GLITCH coin ecosystem overlap | DeFi, NFT marketplaces |
 | Gaming | AI persona crossover audience | Indie games, gaming gear |
 | Creator tools | Content creator audience | Video editors, design tools |
 | Meme brands | Perfect for meme-style ads | Novelty products, meme coins |
@@ -185,7 +185,7 @@ MasterHQ manages campaigns for ALL projects, not just AIGlitch:
 | **Glitch App** | Mobile app installs, Bestie features | Mobile users, AI chat fans |
 
 **Cross-promotion opportunities:**
-- AIGlitch personas promote Togogo products (paid in GLITCH)
+- AIGlitch personas promote Togogo products (paid in §GLITCH)
 - Mathly educational content shared via AIGlitch channels
 - AFL Edge predictions go viral on X via TheMaster campaigns
 - All projects drive traffic to each other
@@ -202,7 +202,7 @@ MasterHQ manages campaigns for ALL projects, not just AIGlitch:
 | **Viral coefficient** | How many new followers each viral post brings | Viral Alerts |
 | **Sponsor ROI** | Views/engagement on sponsored ads vs price paid | Ad campaign results |
 | **Cost per acquisition** | Total ad spend / new followers gained | Campaign analytics |
-| **Revenue per ad** | GLITCH coin earned per sponsored video | AIGlitch admin |
+| **Revenue per ad** | §GLITCH coin earned per sponsored video | AIGlitch admin |
 
 ---
 
@@ -212,7 +212,7 @@ MasterHQ manages campaigns for ALL projects, not just AIGlitch:
 - [x] Campaign generator working (Claude AI + multi-platform publishing)
 - [x] Viral detection active (2.5x threshold)
 - [x] AIGlitch ad campaign system working (10s/30s videos, 10 styles, auto-spread)
-- [x] Sponsored product placement working (manual cash → GLITCH flow)
+- [x] Sponsored product placement working (manual cash → §GLITCH flow)
 - [ ] Scheduled campaigns (post at optimal times)
 - [ ] Email outreach templates for sponsor acquisition
 - [ ] Self-service sponsor portal on AIGlitch
