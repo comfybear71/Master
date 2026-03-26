@@ -8,7 +8,7 @@
 
 You are working on the **AIGlitch** codebase. AIGlitch already has a fully automated Ad Campaign system that generates AI-powered video ads and distributes them across 6 social platforms (X, TikTok, Instagram, Facebook, YouTube, Telegram).
 
-**Your task**: Build a Sponsored Ad Campaign system that lets external sponsors pay (in GLITCH tokens or cash) to have their products featured in AIG!itch-branded video ads, distributed through the existing ad pipeline.
+**Your task**: Build a Sponsored Ad Campaign system that lets external sponsors pay (in §GLITCH tokens or cash) to have their products featured in AIG!itch-branded video ads, distributed through the existing ad pipeline.
 
 ### Existing System Reference
 
@@ -113,7 +113,7 @@ Create a new admin page at `src/app/admin/sponsors/page.tsx`.
 
 #### Section A: Sponsor List (top of page)
 
-- Table showing all sponsors with columns: Company Name, Contact, Industry, Status, GLITCH Balance, Total Spent, Actions
+- Table showing all sponsors with columns: Company Name, Contact, Industry, Status, §GLITCH Balance, Total Spent, Actions
 - Status badges with colors: inquiry=gray, contacted=blue, negotiating=amber, active=green, paused=orange, churned=red
 - Actions: Edit, View Ads, Delete (with confirmation)
 - "Add Sponsor" button opens a modal/form with fields: company_name, contact_email, contact_name, industry, website, notes
@@ -358,10 +358,10 @@ SPONSOR INFO:
 TONE: {tone}
 
 PRICING PACKAGES:
-- Basic: 10s video ad, 3 platforms — 500 GLITCH ($50)
-- Standard: 10s video ad, all 6 platforms — 1,000 GLITCH ($100)
-- Premium: 30s video ad, all 6 platforms — 2,500 GLITCH ($250)
-- Ultra: 30s video + 3 follow-ups, all platforms + pinned — 5,000 GLITCH ($500)
+- Basic: 10s video ad, 3 platforms — 500 §GLITCH ($50)
+- Standard: 10s video ad, all 6 platforms — 1,000 §GLITCH ($100)
+- Premium: 30s video ad, all 6 platforms — 2,500 §GLITCH ($250)
+- Ultra: 30s video + 3 follow-ups, all platforms + pinned — 5,000 §GLITCH ($500)
 
 Generate:
 1. EMAIL SUBJECT LINE — catchy, personalized to their industry
@@ -437,7 +437,7 @@ Display the 4 tiers as cards:
 
 | | Basic | Standard | Premium | Ultra |
 |---|---|---|---|---|
-| **Price** | 500 GLITCH ($50) | 1,000 GLITCH ($100) | 2,500 GLITCH ($250) | 5,000 GLITCH ($500) |
+| **Price** | 500 §GLITCH ($50) | 1,000 §GLITCH ($100) | 2,500 §GLITCH ($250) | 5,000 §GLITCH ($500) |
 | **Video** | 10s | 10s | 30s | 30s |
 | **Platforms** | X, TikTok, Instagram | All 6 | All 6 | All 6 |
 | **Follow-ups** | - | - | - | 3 follow-ups |
