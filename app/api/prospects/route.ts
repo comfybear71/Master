@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { generateSponsorEmail } from "@/lib/ai";
 import { ObjectId } from "mongodb";
-import * as XLSX from "xlsx";
-import * as fs from "fs";
-import * as path from "path";
+import prospectData from "@/lib/prospect-data.json";
 
 export interface Prospect {
   _id?: string;
@@ -32,24 +30,14 @@ export async function GET(req: NextRequest) {
     const db = await getDb();
 
     if (action === "import") {
-      // Import from Excel file
-      const xlsxPath = path.join(process.cwd(), "docs", "aiglitch_prospect_list.xlsx");
-      if (!fs.existsSync(xlsxPath)) {
-        return NextResponse.json({ error: "Prospect list file not found at docs/aiglitch_prospect_list.xlsx" }, { status: 404 });
-      }
-
-      const workbook = XLSX.readFile(xlsxPath);
-      const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<Record<string, string>>(sheet);
-
+      // Import from bundled JSON data (parsed from Excel at build time)
       let imported = 0;
       let skipped = 0;
 
-      for (const row of rows) {
-        const company = (row["Company"] || "").trim();
+      for (const row of prospectData) {
+        const company = (row.company || "").trim();
         if (!company) continue;
 
-        // Check if already exists
         const existing = await db.collection("prospects").findOne({ company });
         if (existing) {
           skipped++;
@@ -58,13 +46,13 @@ export async function GET(req: NextRequest) {
 
         const prospect: Omit<Prospect, "_id"> = {
           company,
-          industry: (row["Industry"] || "").trim(),
-          subCategory: (row["Sub-Category"] || "").trim(),
-          website: (row["Website"] || "").trim(),
-          linkedinTitle: (row["LinkedIn Target Title"] || "").trim(),
-          email: (row["Partnership Email / Contact Page"] || "").trim(),
-          country: (row["HQ Country"] || "").trim(),
-          notes: (row["Notes"] || "").trim(),
+          industry: (row.industry || "").trim(),
+          subCategory: (row.subCategory || "").trim(),
+          website: (row.website || "").trim(),
+          linkedinTitle: (row.linkedinTitle || "").trim(),
+          email: (row.email || "").trim(),
+          country: (row.country || "").trim(),
+          notes: (row.notes || "").trim(),
           status: "new",
           followUpDate: null,
           lastContactedAt: null,
@@ -76,7 +64,7 @@ export async function GET(req: NextRequest) {
         imported++;
       }
 
-      return NextResponse.json({ imported, skipped, total: rows.length });
+      return NextResponse.json({ imported, skipped, total: prospectData.length });
     }
 
     if (action === "stats") {
@@ -176,6 +164,7 @@ export async function POST(req: NextRequest) {
         prospectId: String(prospect._id),
         companyName: prospect.company,
         industry: prospect.industry,
+        contactEmail: prospect.email || "",
         ...result,
         tone: tone || "casual",
         status: "draft",
@@ -235,6 +224,7 @@ export async function POST(req: NextRequest) {
             prospectId: String(prospect._id),
             companyName: prospect.company,
             industry: prospect.industry,
+            contactEmail: prospect.email || "",
             ...result,
             tone: tone || "casual",
             status: "draft",

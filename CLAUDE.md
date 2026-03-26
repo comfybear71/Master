@@ -161,6 +161,11 @@ YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacif
 | Instagram | https://www.instagram.com/sfrench71 | @sfrench71 |
 | TikTok | https://www.tiktok.com/@aiglicthed | @aiglicthed |
 
+### Email
+
+- **Outreach email:** stuart.french@aiglitch.app (Vercel DNS configured, sends directly from MasterHQ)
+- **Advertiser contact:** advertise@aiglitch.app
+
 ### Social Platform Stats — TheMaster vs AIGlitch
 
 TheMaster and AIGlitch show **different numbers** for the same platforms because they measure different things:
