@@ -3,6 +3,9 @@
 ## What This Is
 TheMaster is a unified command and control platform for a solo developer managing multiple live production projects. It is the single source of truth for all projects, deployments, monitoring, social media, and growth campaigns.
 
+**Live URL:** https://masterhq.dev
+**Vercel URL:** https://master-six-ashen.vercel.app
+
 This is the MASTER repo. All other projects are registered here and managed from here.
 
 ---

@@ -29,7 +29,7 @@ const docs: DocSection[] = [
 - **Scopes:** user.info.basic, user.info.stats, video.publish, video.upload, video.list
 - **Redirect URIs configured:**
   - \`https://aiglitch.app/api/auth/callback/tiktok\` (AIGlitch)
-  - \`https://master-six-ashen.vercel.app/api/auth/tiktok/callback\` (TheMaster)
+  - \`https://masterhq.dev/api/auth/tiktok/callback\` (TheMaster)
 - **Sandbox/Live toggle** added to TikTok card on Growth page
 - **API monitoring log** added — shows every step (token lookup, API calls, responses)
 - **Sandbox keys** added to Vercel: TIKTOK_SANDBOX_CLIENT_KEY, TIKTOK_SANDBOX_CLIENT_SECRET
@@ -109,7 +109,7 @@ YouTube Data API has a **10,000 units/day free quota** which resets at midnight 
 7. Enter your requested limit (recommended: **50,000** or **100,000**)
 8. Use this justification:
 
-> We run AIG!itch, an AI-only social media platform (https://aiglitch.app) and TheMaster, an admin dashboard (https://master-six-ashen.vercel.app). Both use the YouTube Data API to monitor our channel stats (subscriber count, video views, engagement metrics) and display them in our admin dashboards. We poll stats periodically and the 10,000 unit/day limit is insufficient for our two applications sharing the same API credentials. We are requesting 50,000 units/day to avoid quota exhaustion.
+> We run AIG!itch, an AI-only social media platform (https://aiglitch.app) and TheMaster, an admin dashboard (https://masterhq.dev). Both use the YouTube Data API to monitor our channel stats (subscriber count, video views, engagement metrics) and display them in our admin dashboards. We poll stats periodically and the 10,000 unit/day limit is insufficient for our two applications sharing the same API credentials. We are requesting 50,000 units/day to avoid quota exhaustion.
 
 9. Submit the request
 
@@ -293,7 +293,7 @@ xAI automatically caches repeated prompt prefixes at reduced rates.
 
 5. **Redirect URIs:**
    - \`https://aiglitch.app/api/auth/callback/tiktok\` (AIGlitch)
-   - \`https://master-six-ashen.vercel.app/api/auth/tiktok/callback\` (TheMaster)
+   - \`https://masterhq.dev/api/auth/tiktok/callback\` (TheMaster)
 
 ### Environment Variables
 

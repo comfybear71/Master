@@ -8,8 +8,9 @@
 
 **Last Updated**: 2026-03-26
 **Current Phase**: Phase 3 — Complete, all phases built
-**Platform Live URL**: Not deployed yet
-**Repo**: github.com/comfybear71/Master  
+**Platform Live URL**: https://masterhq.dev
+**Vercel URL**: https://master-six-ashen.vercel.app
+**Repo**: github.com/comfybear71/Master
 
 ---
 
