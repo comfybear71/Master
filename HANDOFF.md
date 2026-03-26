@@ -6,7 +6,7 @@
 
 ## Current Status: 🟢 ALL PHASES COMPLETE — READY TO DEPLOY
 
-**Last Updated**: 2026-03-25
+**Last Updated**: 2026-03-26
 **Current Phase**: Phase 3 — Complete, all phases built
 **Platform Live URL**: Not deployed yet
 **Repo**: github.com/comfybear71/Master  
@@ -127,18 +127,22 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 **This is NOT an auth issue.** Do NOT reconnect YouTube OAuth when this happens. Quota resets at **midnight Pacific time** daily.
 
-**Mitigation options** (not yet implemented):
-- Increase TheMaster polling interval for YouTube from 60s to 5-10 minutes
-- Cache YouTube stats in MongoDB for longer periods
-- Apply for YouTube API quota increase via Google Cloud Console
+**Mitigations implemented (2026-03-26):**
+- YouTube stats cached in MongoDB — cached data shown when quota exceeded
+- "Quota Limit" amber badge instead of red "Error" on Growth page
+- Quota increase to 100,000 units/day submitted to Google (pending approval)
+- Google Cloud Project Number: 837829119225
 
-### ACTIVE: TikTok OAuth — Token May Be Invalid (2026-03-25)
+**Still TODO:**
+- Increase TheMaster polling interval for YouTube from every-refresh to 5-10 minutes
 
-**Symptom**: TikTok shows "token expired or invalid" after completing OAuth authorization flow.
+### RESOLVED: TikTok OAuth — Working in Sandbox (2026-03-26)
 
-**Status**: OAuth flow completes (token stored in MongoDB `settings.tiktok_oauth`), but the token gets 401 when calling `/v2/user/info/`. Debug endpoint added at `GET /api/auth/tiktok/debug` to diagnose.
+**Previous symptom**: TikTok showed "token expired or invalid" after OAuth — production keys were being used but app was still in sandbox review.
 
-**Possible causes**: Sandbox app limitations, scope mismatch, or very short token expiry. Need to check debug endpoint output on the deployed app.
+**Fix**: Added sandbox/live toggle. Using TIKTOK_SANDBOX_CLIENT_KEY + TIKTOK_SANDBOX_CLIENT_SECRET for sandbox mode. TikTok now shows 31 followers, 27 posts, 0.7% engagement in sandbox.
+
+**Pending**: TikTok production review (new redirect URI + user.info.stats + video.list scopes). Once approved, switch to LIVE mode via Growth page toggle.
 
 ### RESOLVED: Social Media Config — DB Overriding Env Vars (2026-03-24)
 
@@ -175,16 +179,18 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Next Session — Start Here
 
-1. All 3 phases are built and deployed
-2. **Social config uses ONLY Vercel env vars** — DB is NOT consulted for platform IDs
-3. All social env vars confirmed set in Vercel (X, YouTube, Facebook, Instagram, TikTok)
-4. **YouTube 403 = quota limit**, NOT auth failure. Resets at midnight Pacific. Do NOT reconnect OAuth.
-5. **TikTok debug**: Check `GET /api/auth/tiktok/debug` on deployed app to see why token is rejected
-6. **AIGlitch Ad Campaigns**: Full system documented — see AIGlitch section above + `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo
-7. Debug endpoints: `GET /api/social/debug` (social config), `GET /api/auth/tiktok/debug` (TikTok token)
-8. To clear stale DB records: `POST /api/social?action=clear-db`
-9. TheMaster stats vs AIGlitch stats show different numbers — TheMaster = real platform totals, AIGlitch = only posts spread through its system
-10. Future: Increase YouTube polling interval to reduce quota usage, TikTok token refresh flow, growth charts over time
+1. All 3 phases built. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
+2. **TikTok in SANDBOX mode** — switch to LIVE via Growth page toggle once TikTok approves production review
+3. **YouTube quota increase submitted** (100K units/day) — waiting on Google approval (1-3 business days)
+4. **YouTube quota handling**: Shows cached stats + amber "Quota Limit" badge when quota exceeded. Resets midnight Pacific.
+5. **Instagram uses FACEBOOK_ACCESS_TOKEN** — not INSTAGRAM_ACCESS_TOKEN. This is correct for Business API.
+6. **TikTok sandbox/live toggle** on Growth page — switches between TIKTOK_SANDBOX_CLIENT_KEY and TIKTOK_CLIENT_KEY
+7. **TikTok API monitoring log** on Growth page — shows every step for debugging
+8. **Docs page** at `/docs` — YouTube quota guide, xAI Grok cost optimization, TikTok setup, social accounts reference
+9. **Google Cloud Project Number**: 837829119225
+10. **Social profile URLs**: X=@spiritary, YouTube=@frekin31, Facebook=61584376583578, Instagram=@sfrench71, TikTok=@aiglicthed
+11. Debug endpoints: `GET /api/social/debug`, `GET /api/auth/tiktok/debug`
+12. **Pending reviews**: TikTok production (new URI + scopes), YouTube quota increase, TikTok Content Posting API audit
 
 ---
 
@@ -199,6 +205,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | 2026-03-24 | BUG FIX: Social config DB was overriding correct env vars with garbage. Old AIGlitch sync wrote display names ("AIG!itch") as platform IDs into MongoDB. `getOrSyncConfig()` let DB override env vars. Fixed: env vars are now the SOLE source of truth, no DB lookup. Added debug endpoint and clear-db action. |
 | 2026-03-25 | Social media fixes: Fixed YouTube OAuth (GOOGLE_CLIENT_ID/SECRET, not YOUTUBE_), fixed Google OAuth redirect double-slash, added `connected: true` to all social platform responses, added Instagram posting via Content Publishing API (image/video/Reels with 2-step create→publish flow). Confirmed Facebook & Instagram env vars now set in Vercel. | Claude Code |
 | 2026-03-25 | Documented AIGlitch Ad Campaigns system in Master HANDOFF. Created `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo — full frontend spec for the ad campaign feature (API endpoints, styles, platforms, video specs, database tables, social spreading, PromptViewer integration). | Claude Code |
+| 2026-03-26 | Instagram fix: reversed token priority (FACEBOOK_ACCESS_TOKEN first, not INSTAGRAM_ACCESS_TOKEN). TikTok full integration: sandbox/live toggle, API monitoring log, scopes updated (user.info.stats, video.list), helped submit TikTok app review + Content Posting API audit. YouTube: cached stats on quota exceeded, "Quota Limit" badge, submitted quota increase to Google (100K units/day). Created /docs page with 4 guides (YouTube quota, xAI Grok costs, TikTok setup, social accounts). Added social profile links to all Growth page cards. Fixed platform URLs (X=@spiritary, YouTube=@frekin31, TikTok=@aiglicthed). Updated all CLAUDE.md and HANDOFF.md files. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 

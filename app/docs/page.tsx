@@ -11,6 +11,86 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
+    id: "session-2026-03-26",
+    title: "Session Log: 26 Mar 2026",
+    icon: "\u2B50",
+    content: `## Session Log — 26 March 2026
+
+### What Was Done
+
+#### Instagram Fix
+- **Problem:** Instagram showed "Cannot parse access token" error on Growth page
+- **Root Cause:** Code tried \`INSTAGRAM_ACCESS_TOKEN\` first, which was invalid/expired. Instagram Business API uses \`FACEBOOK_ACCESS_TOKEN\` (Facebook Page token)
+- **Fix:** Reversed priority — now uses \`FACEBOOK_ACCESS_TOKEN\` first, \`INSTAGRAM_ACCESS_TOKEN\` as fallback only
+- **Result:** Instagram now shows 3 followers, 109 posts, Connected
+
+#### TikTok Integration (Full Setup)
+- **App approved** by TikTok Developer Portal (Login Kit + Content Posting API)
+- **Scopes:** user.info.basic, user.info.stats, video.publish, video.upload, video.list
+- **Redirect URIs configured:**
+  - \`https://aiglitch.app/api/auth/callback/tiktok\` (AIGlitch)
+  - \`https://master-six-ashen.vercel.app/api/auth/tiktok/callback\` (TheMaster)
+- **Sandbox/Live toggle** added to TikTok card on Growth page
+- **API monitoring log** added — shows every step (token lookup, API calls, responses)
+- **Sandbox keys** added to Vercel: TIKTOK_SANDBOX_CLIENT_KEY, TIKTOK_SANDBOX_CLIENT_SECRET
+- **TikTok working in sandbox:** 31 followers, 27 posts, 0.7% engagement
+- **Terms of Service & Privacy Policy** added to AIGlitch homepage for TikTok compliance
+- **Content Posting API audit** submitted to TikTok
+- **Pending:** Production review for new redirect URI + user.info.stats + video.list scopes
+
+#### TikTok 401 Fix
+- **Problem:** TikTok showed "Authorize TikTok" button even when token existed but got 401
+- **Fix:** When token exists but is rejected, show "Connected" with informative error instead of authorize button
+
+#### YouTube Quota Handling
+- **Problem:** YouTube showed red "Error" badge with raw 403 JSON when daily quota exceeded
+- **Fix:** Returns cached stats from MongoDB when quota is hit
+- **UI:** Shows amber "Quota Limit" badge, quota usage bar (100% used), "cached data" note
+- **Quota increase submitted** to Google (requesting 100,000 units/day, up from 10,000)
+- **Google Cloud Project Number:** 837829119225
+
+#### Social Platform Profile Links
+- All platform cards on Growth page now have clickable links to actual profiles
+- **X:** https://x.com/spiritary
+- **YouTube:** https://www.youtube.com/@frekin31
+- **Facebook:** https://www.facebook.com/profile.php?id=61584376583578
+- **Instagram:** https://www.instagram.com/sfrench71
+- **TikTok:** https://www.tiktok.com/@aiglicthed
+
+#### Documentation
+- Created **/docs** page on TheMaster with sidebar navigation
+- 4 reference guides: YouTube Quota, xAI Grok Costs, TikTok Setup, Social Accounts
+- Added Docs link to sidebar navigation
+- Updated all CLAUDE.md and HANDOFF.md files (Master + AIGlitch)
+
+#### AIGlitch Instagram Fix (Separate Repo)
+- **Problem:** Posts created in glitch-app never reached Instagram
+- **Root Cause:** DB seed set Instagram account_id to empty string, extra_config had no instagram_user_id, wrong token env mapping
+- **Fix:** Migration to update existing row, seed includes INSTAGRAM_USER_ID, ENV_TOKEN_KEYS maps instagram to FACEBOOK_ACCESS_TOKEN
+- **Also fixed:** X token env key was mapped to XAI_API_KEY (Grok) instead of X_ACCESS_TOKEN
+- **Status:** Fix applied by AIGlitch team separately
+
+### Pending Items
+
+| Item | Status | ETA |
+|------|--------|-----|
+| TikTok production review (new URI + scopes) | Submitted | 1-3 days |
+| YouTube quota increase (100K units/day) | Submitted | 1-3 business days |
+| TikTok Content Posting API audit | Submitted | Unknown |
+| Switch TikTok from sandbox to production | After review approval | — |
+
+### Key Numbers After Session
+
+| Platform | Followers | Posts | Status |
+|----------|-----------|-------|--------|
+| X / Twitter | 967 | 2,434 | Connected |
+| YouTube | — | — | Quota Limit (cached) |
+| Facebook | 24 | 10 | Connected |
+| Instagram | 3 | 109 | Connected |
+| TikTok | 31 | 27 | Connected (Sandbox) |
+| **Total** | **1,025** | — | — |`,
+  },
+  {
     id: "youtube-quota",
     title: "YouTube API Quota Increase",
     icon: "\u25B6",
