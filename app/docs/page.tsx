@@ -11,6 +11,125 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
+    id: "email-templates",
+    title: "Sponsor Email Templates",
+    icon: "\u2709",
+    content: `## Sponsor Outreach Email Templates
+
+Three email versions for different situations. Always personalise the [Company] and [First Name] fields.
+
+**Quick Tips:**
+- Attach the media kit PDF (or link to masterhq.dev/media-kit)
+- Find the right person on LinkedIn first (Head of Influencer Marketing or Brand Partnerships Manager)
+- Follow up once, 5-7 days later: "Wanted to make sure this didn't get buried — happy to send examples if useful."
+
+---
+
+### Version 1: Short & Punchy
+
+**Best for:** Cold LinkedIn outreach or brands you know nothing about. Gets in and gets out fast.
+
+**Subject:** Your product. Our AI videos. Zero influencer drama.
+
+> Hi [First Name],
+>
+> I run AIGlitch — a short-form video platform where every piece of content is generated entirely by AI. No human creators. No influencer fees. No brand safety headaches.
+>
+> We're onboarding our first brand partners and I think [Company] would be a natural fit.
+>
+> Here's the pitch in two sentences: your product gets placed naturally inside our AI-generated videos — on a desk, in someone's hand, part of a scene. Viewers see it the way they'd see it in real life, not in a banner or pre-roll.
+>
+> We're offering founding partner pricing (locked in for 12 months) to the first brands through the door.
+>
+> Worth a 20-minute call this week? I can show you live examples.
+>
+> [Your Name]
+> Founder, AIGlitch
+> aiglitch.app
+> advertise@aiglitch.app
+
+---
+
+### Version 2: Data-Led
+
+**Best for:** Marketing managers and performance-focused brands (SaaS, supplements, anyone with a CMO who cares about ROI). Opens with a question that makes them think.
+
+**Subject:** Native AI product placement — founding partner opportunity
+
+> Hi [First Name],
+>
+> Quick question: how much did [Company] spend on influencer marketing last year, and how much of it was truly measurable?
+>
+> I'm the founder of AIGlitch (aiglitch.app) — an AI-only short-form video platform where brands get product placement inside AI-generated content. Think of it as influencer marketing, but the influencer is a machine:
+>
+> - No talent fees or production costs
+> - Every placement tracked and reported
+> - Zero brand safety risk — the AI follows your brief, every time
+> - Scalable from 20 videos to 2,000 without proportional cost increases
+>
+> We're onboarding founding brand partners now at preferential rates, with category exclusivity available for the right fit.
+>
+> I'd love to send over our media kit and show you some examples — would [Day] or [Day] work for a quick call?
+>
+> [Your Name]
+> Founder, AIGlitch
+> aiglitch.app
+
+---
+
+### Version 3: Warm & Conversational
+
+**Best for:** When you've done research on the company and can personalise the second line. Much higher reply rate when you reference something specific.
+
+**Subject:** Spotted [Company] — think AIGlitch could be interesting for you
+
+> Hi [First Name],
+>
+> I've been following [Company] for a while — love what you've been doing with [specific campaign / product launch / social presence].
+>
+> I'm reaching out because I think there's a genuinely interesting fit with what we're building at AIGlitch.
+>
+> In short: we're a short-form video platform where all content is AI-generated, and brands can have their products placed naturally inside the videos — not as ads, as part of the content. It's early days, but the engagement is strong and we're looking for founding brand partners who want to get in before this becomes mainstream.
+>
+> I've attached our media kit. Happy to jump on a call and show you live examples — takes about 20 minutes and I promise it's worth seeing.
+>
+> No pressure either way — just thought it was worth a note.
+>
+> [Your Name]
+> Founder, AIGlitch
+> aiglitch.app
+
+---
+
+### Follow-Up Template (Send 5-7 days later)
+
+**Subject:** Re: [Original Subject]
+
+> Hi [First Name],
+>
+> Wanted to make sure this didn't get buried — happy to send examples if useful.
+>
+> [Your Name]
+
+---
+
+### Who to Contact
+
+| Role | Why |
+|------|-----|
+| **Head of Influencer Marketing** | Directly responsible for creator/placement budgets |
+| **Brand Partnerships Manager** | Evaluates new channels and opportunities |
+| **Performance Marketing Manager** | Cares about measurable ROI |
+
+**Where to find them:** LinkedIn (search company name + role title). Get emails via Hunter.io or Apollo.io.
+
+### Media Kit
+
+Full advertiser media kit available at: **masterhq.dev/media-kit**
+
+Covers: platform overview, ad formats, audience demographics, pricing tiers, and contact info. Can be shared as a link or exported as PDF.`,
+  },
+  {
     id: "sponsor-targets",
     title: "Sponsor Target List & Strategy",
     icon: "\u{1F3AF}",
