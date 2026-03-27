@@ -93,7 +93,9 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [x] Social follower counts on main dashboard
 - [x] Social config panel for account IDs
 
-### Phase 4 — Command Center (PLANNED)
+### Phase 4 — Command Center (IN PROGRESS)
+- [x] SSH Terminal — browser-based terminal via ttyd iframe (iPad-friendly)
+- [ ] §GLITCH Quest Campaign — task-based rewards system
 - [ ] AI Assistant — ask questions about any project (Claude reads code via GitHub API)
 - [ ] Code Browser — browse file trees of all registered repos
 - [ ] Code Editor — edit files inline, diff preview, commit & push
@@ -101,6 +103,11 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [ ] Documentation Hub — auto-pull CLAUDE.md/HANDOFF.md from all repos, searchable
 - [ ] Cross-project error detection + AI fix from one interface
 - [ ] Full spec at `/docs` → "Phase 4: Command Center"
+
+**Terminal setup requires 2 env vars not yet in Vercel:**
+- `TTYD_URL` — URL to ttyd instance on DigitalOcean droplet (e.g. `http://DROPLET_IP:7681`)
+- `TERMINAL_PASSWORD` — password to gate the terminal page
+- Setup guide: `docs/ttyd-setup.md`
 
 ---
 
