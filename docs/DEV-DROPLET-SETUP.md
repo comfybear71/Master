@@ -211,4 +211,85 @@ claude
 | Claude Code auth expired | Run `claude` again — it will re-authenticate |
 | tmux session lost | `tmux ls` to check — if empty, session was killed (reboot?) |
 | Out of memory | Check with `htop` — 2GB should be enough for Claude Code |
-| iframe blocked on masterhq.dev | May need HTTPS — consider Caddy reverse proxy with SSL |
+| iframe blocked on masterhq.dev | Fixed — see SSL Setup section below |
+
+---
+
+## SSL Setup (nginx + Let's Encrypt)
+
+### Why SSL is needed
+
+MasterHQ is served over HTTPS (`https://masterhq.dev`). Browsers block HTTPS pages from loading HTTP iframes (mixed content). Without SSL on ttyd, the terminal iframe won't load.
+
+**Solution:** nginx reverse proxy with Let's Encrypt SSL on `terminal.masterhq.dev`.
+
+### DNS Record
+
+Add an A record in your domain registrar:
+```
+Name: terminal
+Value: 170.64.133.9 (dev droplet IP)
+TTL: 3600
+```
+
+### Install nginx + certbot
+
+```bash
+sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+### nginx Config
+
+```bash
+sudo nano /etc/nginx/sites-available/terminal.masterhq.dev
+```
+
+```nginx
+server {
+    listen 80;
+    server_name terminal.masterhq.dev;
+
+    location / {
+        proxy_pass http://localhost:7681;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/terminal.masterhq.dev /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+sudo ufw allow 80/tcp
+```
+
+### Get SSL Certificate
+
+```bash
+sudo certbot --nginx -d terminal.masterhq.dev
+```
+
+Certbot automatically:
+- Gets the SSL certificate from Let's Encrypt
+- Configures nginx to use HTTPS
+- Redirects HTTP to HTTPS
+- Sets up auto-renewal (every 90 days via cron)
+
+### Update Vercel
+
+Update `TTYD_URL` in Vercel environment variables:
+```
+TTYD_URL = https://terminal.masterhq.dev
+```
+
+Redeploy MasterHQ after updating.
+
+### Verify
+
+Visit `https://terminal.masterhq.dev` — you should see the ttyd terminal over HTTPS.
+Then visit `https://masterhq.dev/terminal` — the iframe should load without mixed content errors.

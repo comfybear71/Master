@@ -104,9 +104,12 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [ ] Cross-project error detection + AI fix from one interface
 - [ ] Full spec at `/docs` → "Phase 4: Command Center"
 
-**Terminal setup requires 2 env vars in Vercel:**
-- `TTYD_URL` — URL to ttyd on the DEV droplet (e.g. `http://DEV_DROPLET_IP:7681`)
+**Terminal setup:**
+- `TTYD_URL` = `https://terminal.masterhq.dev` (nginx + Let's Encrypt SSL)
 - `TERMINAL_PASSWORD` — password to gate the terminal page
+- nginx reverse proxy on droplet: port 80/443 → localhost:7681 (ttyd)
+- SSL via Let's Encrypt (auto-renews every 90 days)
+- DNS: `terminal` A record → 170.64.133.9
 - Setup guide: `docs/DEV-DROPLET-SETUP.md`
 
 ### DigitalOcean Droplet Architecture

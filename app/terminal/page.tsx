@@ -158,7 +158,7 @@ export default function TerminalPage() {
               {connected ? "Connected" : "Disconnected"}
             </span>
           </div>
-          <span className="text-xs text-slate-500 font-mono hidden md:inline">masterhq-dev-syd1 · DigitalOcean Sydney</span>
+          <span className="text-xs text-slate-500 font-mono hidden md:inline">terminal.masterhq.dev</span>
           <button
             onClick={reconnect}
             className="px-3 py-1 bg-slate-800 text-slate-300 rounded text-xs font-mono hover:bg-slate-700 transition-colors"
