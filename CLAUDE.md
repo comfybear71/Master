@@ -93,11 +93,17 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 
 ## File Conventions
 
-Every project repo (including this one) must maintain:
+Every project repo (including this one) must maintain in the **root directory**:
 - `CLAUDE.md` — project context, stack, rules, API keys list (not values)
 - `HANDOFF.md` — current state, what's working, what's broken, next steps
+- `README.md` — project overview, stack, features, setup
 
-TheMaster reads these files via GitHub API to understand every project without needing to open them manually.
+**ALL other .md files** go in the `docs/` folder. This applies to every single repo:
+- Specs, guides, prompts, session logs, feature docs → `docs/`
+- Only CLAUDE.md, HANDOFF.md, and README.md live in root
+- If a new .md file is created that is not one of these three, it goes in `docs/`
+
+TheMaster reads CLAUDE.md and HANDOFF.md via GitHub API to understand every project without needing to open them manually.
 
 ---
 
