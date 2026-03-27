@@ -11,6 +11,207 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
+    id: "glitch-rewards",
+    title: "§GLITCH Rewards Campaign",
+    icon: "\u{1F3C6}",
+    content: `## §GLITCH Rewards Campaign — Full Specification
+
+**Status:** Phase 3 feature — to be built next session
+**Goal:** Drive user acquisition and platform engagement by rewarding users with §GLITCH coin for completing tasks across all social platforms.
+
+---
+
+### Concept
+
+Users complete 10-20 engagement tasks (follow, like, subscribe, download, post) across our platforms. Once all tasks are verified, they receive §GLITCH coin directly to their Phantom wallet. This is shared across all social media channels as a campaign.
+
+---
+
+### Task List (10-20 Tasks)
+
+#### Required (Must Complete All)
+
+| # | Task | Platform | Verification Method |
+|---|------|----------|-------------------|
+| 1 | Download Phantom Wallet | Solana | User provides wallet address |
+| 2 | Visit aiglitch.app | Web | Track via referral link + cookie |
+| 3 | Create AIG!itch account | AIG!itch | Check session_id in DB |
+| 4 | Follow @spiritary on X | X/Twitter | X API — check follower status |
+| 5 | Like 5 posts on X | X/Twitter | X API — check liked tweets |
+| 6 | Retweet 1 post | X/Twitter | X API — check retweets |
+| 7 | Subscribe to YouTube @frekin31 | YouTube | YouTube API — check subscription |
+| 8 | Like 3 YouTube videos | YouTube | YouTube API — check liked videos |
+| 9 | Follow @sfrench71 on Instagram | Instagram | Instagram API / manual verify |
+| 10 | Like 5 Instagram posts | Instagram | Instagram API / manual verify |
+| 11 | Follow AIG!itch Facebook page | Facebook | Graph API — check page followers |
+| 12 | Follow @aiglicthed on TikTok | TikTok | TikTok API / manual verify |
+| 13 | Like 3 TikTok videos | TikTok | TikTok API / manual verify |
+| 14 | Join AIG!itch Telegram | Telegram | Bot API — check membership |
+
+#### Bonus Tasks (Extra §GLITCH)
+
+| # | Task | Platform | Bonus |
+|---|------|----------|-------|
+| 15 | Post about AIG!itch on X (with #AIGlitch) | X | +50 §GLITCH |
+| 16 | Share AIG!itch video on TikTok | TikTok | +50 §GLITCH |
+| 17 | Comment on 3 posts on AIG!itch feed | AIG!itch | +25 §GLITCH |
+| 18 | Download G!itch Bestie mobile app | iOS/Android | +100 §GLITCH |
+| 19 | Refer a friend (who completes tasks) | All | +200 §GLITCH |
+| 20 | Buy an item from AIG!itch Marketplace | AIG!itch | +500 §GLITCH |
+
+---
+
+### Reward Tiers
+
+| Tier | Tasks Completed | §GLITCH Reward |
+|------|----------------|---------------|
+| Bronze | Complete 10 required tasks | 100 §GLITCH |
+| Silver | Complete all 14 required tasks | 250 §GLITCH |
+| Gold | Complete required + 3 bonus tasks | 500 §GLITCH |
+| Diamond | Complete ALL 20 tasks | 1,000 §GLITCH |
+
+---
+
+### Technical Architecture
+
+#### Database Tables (MongoDB for MasterHQ, Postgres for AIGlitch)
+
+**reward_campaigns** (MasterHQ MongoDB)
+- id, name, description, status (active/paused/completed)
+- reward_tiers (JSON), total_budget_glitch, distributed_glitch
+- start_date, end_date, created_at
+
+**reward_participants** (MasterHQ MongoDB)
+- id, campaign_id, wallet_address, session_id
+- tasks_completed (JSON object: { task_1: true, task_5: false, ... })
+- tier_reached (bronze/silver/gold/diamond)
+- glitch_rewarded, rewarded_at
+- referral_code, referred_by
+- created_at, last_activity_at
+
+#### API Endpoints (MasterHQ)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| \`/api/rewards\` | GET | List active campaigns |
+| \`/api/rewards\` | POST action=create | Create new campaign |
+| \`/api/rewards/join\` | POST | User joins with wallet address |
+| \`/api/rewards/verify\` | POST | Verify a specific task completion |
+| \`/api/rewards/status\` | GET | User's progress (all tasks) |
+| \`/api/rewards/claim\` | POST | Claim §GLITCH reward |
+| \`/api/rewards/admin\` | GET | Admin dashboard: all participants, completion rates |
+
+#### Verification Flow
+
+For each task, the system checks completion via API:
+
+1. **X/Twitter tasks** — Use X API to check: is wallet user following @spiritary? Have they liked 5 posts? Have they retweeted?
+2. **YouTube tasks** — YouTube Data API to check subscription status
+3. **Instagram/TikTok/Facebook** — Some can be verified via API, others need screenshot proof or manual admin verification
+4. **AIG!itch tasks** — Direct DB query (account exists, comments made, purchases)
+5. **Telegram** — Bot API checks if user is in the group
+6. **Phantom Wallet** — User provides wallet address, verified on-chain
+
+#### §GLITCH Distribution
+
+1. User completes all required tasks → tier calculated
+2. Admin reviews (or auto-approves if all API-verified)
+3. §GLITCH sent from treasury wallet to user's Phantom wallet
+4. Transaction logged in \`reward_distributions\` collection
+
+---
+
+### Frontend — Campaign Page (MasterHQ)
+
+New page at \`/rewards\` showing:
+- Campaign banner with §GLITCH branding
+- Progress tracker (checklist of all tasks with checkmarks)
+- "Connect Wallet" button (Phantom)
+- Per-task "Verify" button (calls API to check completion)
+- Tier progress bar (Bronze → Silver → Gold → Diamond)
+- "Claim Reward" button when tier reached
+- Referral link generator
+- Leaderboard (top completers)
+
+---
+
+### Social Media Campaign Post
+
+Auto-generated and spread across all platforms:
+
+> **Earn FREE §GLITCH coin!**
+>
+> Complete simple tasks across our platforms and get rewarded:
+> - Follow us on X, YouTube, Instagram, TikTok, Facebook
+> - Like and engage with our content
+> - Download Phantom Wallet
+> - Visit aiglitch.app
+>
+> Rewards: 100-1,000 §GLITCH depending on tasks completed!
+>
+> Start here: masterhq.dev/rewards
+>
+> #AIGlitch #GLITCH #Airdrop #FreeCrypto
+
+---
+
+### Admin Dashboard (MasterHQ)
+
+On the Growth page or a dedicated admin section:
+- Total participants, completion rate per task
+- §GLITCH distributed vs budget
+- Top referrers
+- Task funnel (how many complete task 1 → 2 → 3 → etc.)
+- Pause/resume campaign
+- Manual verify/reject participants
+
+---
+
+### Implementation Order
+
+**Sprint 1 — Backend**
+1. Create \`reward_campaigns\` and \`reward_participants\` collections
+2. Build all API endpoints
+3. X API verification (follow + like checks)
+4. YouTube API verification (subscription check)
+
+**Sprint 2 — Frontend**
+5. Campaign page with task checklist UI
+6. Phantom wallet connection
+7. Progress tracking + tier display
+8. Claim reward flow
+
+**Sprint 3 — Distribution**
+9. §GLITCH distribution via treasury wallet
+10. Transaction logging
+11. Admin dashboard with stats
+
+**Sprint 4 — Social Campaign**
+12. Auto-generate campaign posts for all platforms
+13. Referral system
+14. Leaderboard
+
+---
+
+### What This Needs from AIGlitch
+
+- §GLITCH token transfer endpoint (treasury → user wallet)
+- User account verification endpoint (check if wallet has AIG!itch account)
+- Comment count verification endpoint
+- Marketplace purchase verification endpoint
+- G!itch Bestie app install verification
+
+---
+
+### Key Decisions
+
+- §GLITCH is distributed from the **treasury wallet** (same one used for marketplace)
+- Campaign budget set upfront (e.g. 100,000 §GLITCH for first campaign)
+- Anti-fraud: wallet address can only join once, referral loop detection
+- Auto-verify where API allows, manual verify for screenshots
+- Campaign shared from MasterHQ to all platforms via Growth Engine`,
+  },
+  {
     id: "email-templates",
     title: "Sponsor Email Templates",
     icon: "\u2709",

@@ -6,7 +6,7 @@
 
 ## Current Status: 🟢 ALL PHASES COMPLETE — READY TO DEPLOY
 
-**Last Updated**: 2026-03-26
+**Last Updated**: 2026-03-27
 **Current Phase**: Phase 3 — Complete, all phases built
 **Platform Live URL**: https://masterhq.dev
 **Vercel URL**: https://master-six-ashen.vercel.app
@@ -189,18 +189,31 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Next Session — Start Here
 
-1. All 3 phases built. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
-2. **TikTok in SANDBOX mode** — switch to LIVE via Growth page toggle once TikTok approves production review
-3. **YouTube quota increase submitted** (100K units/day) — waiting on Google approval (1-3 business days)
-4. **YouTube quota handling**: Shows cached stats + amber "Quota Limit" badge when quota exceeded. Resets midnight Pacific.
-5. **Instagram uses FACEBOOK_ACCESS_TOKEN** — not INSTAGRAM_ACCESS_TOKEN. This is correct for Business API.
-6. **TikTok sandbox/live toggle** on Growth page — switches between TIKTOK_SANDBOX_CLIENT_KEY and TIKTOK_CLIENT_KEY
-7. **TikTok API monitoring log** on Growth page — shows every step for debugging
-8. **Docs page** at `/docs` — YouTube quota guide, xAI Grok cost optimization, TikTok setup, social accounts reference
-9. **Google Cloud Project Number**: 837829119225
-10. **Social profile URLs**: X=@spiritary, YouTube=@frekin31, Facebook=61584376583578, Instagram=@sfrench71, TikTok=@aiglicthed
-11. Debug endpoints: `GET /api/social/debug`, `GET /api/auth/tiktok/debug`
-12. **Pending reviews**: TikTok production (new URI + scopes), YouTube quota increase, TikTok Content Posting API audit
+### Priority: Build §GLITCH Rewards Campaign (Phase 3 completion)
+Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks (follow, like, subscribe across all platforms) and earn §GLITCH coin. Needs: campaign page, task verification APIs, wallet connection, admin dashboard.
+
+### Current State
+1. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
+2. **TikTok in SANDBOX** — switch to LIVE once production review approved
+3. **YouTube quota increase submitted** (100K units/day) — check if approved
+4. **Domain:** masterhq.dev (NEXTAUTH_URL updated)
+5. **Email:** stuart.french@aiglitch.app (Vercel DNS configured)
+6. **Prospects page:** 130+ sponsors imported, CRM with status tracking, AI email generation
+7. **Media Kit:** masterhq.dev/media-kit (full advertiser kit)
+8. **Light/dark mode** toggle in sidebar
+9. **Docs:** 12 guides (rewards campaign, email templates, sponsor targets, campaigns, Phase 4 spec, YouTube quota, xAI costs, TikTok setup, social accounts, session logs)
+
+### Pending Reviews
+- TikTok production review (new redirect URI + scopes)
+- YouTube quota increase (100K units/day)
+- TikTok Content Posting API audit
+
+### AIGlitch Prompts Ready (in docs/ folder)
+- `aiglitch-sponsor-prompt.md` — Sponsor management system
+- `aiglitch-cost-optimization.md` — Reduce $1,365/mo → $300-500
+- `aiglitch-30s-video-fix.md` — 30s ads only producing 10s clips
+- `aiglitch-video-stitch-fix.md` — MP4 edts box fix
+- `aiglitch-breaking-news-urgent-fix.md` — Breaking News stitch "Missing required fields"
 
 ---
 
@@ -216,6 +229,7 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 | 2026-03-25 | Social media fixes: Fixed YouTube OAuth (GOOGLE_CLIENT_ID/SECRET, not YOUTUBE_), fixed Google OAuth redirect double-slash, added `connected: true` to all social platform responses, added Instagram posting via Content Publishing API (image/video/Reels with 2-step create→publish flow). Confirmed Facebook & Instagram env vars now set in Vercel. | Claude Code |
 | 2026-03-25 | Documented AIGlitch Ad Campaigns system in Master HANDOFF. Created `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo — full frontend spec for the ad campaign feature (API endpoints, styles, platforms, video specs, database tables, social spreading, PromptViewer integration). | Claude Code |
 | 2026-03-26 | Instagram fix: reversed token priority (FACEBOOK_ACCESS_TOKEN first, not INSTAGRAM_ACCESS_TOKEN). TikTok full integration: sandbox/live toggle, API monitoring log, scopes updated (user.info.stats, video.list), helped submit TikTok app review + Content Posting API audit. YouTube: cached stats on quota exceeded, "Quota Limit" badge, submitted quota increase to Google (100K units/day). Created /docs page with 4 guides (YouTube quota, xAI Grok costs, TikTok setup, social accounts). Added social profile links to all Growth page cards. Fixed platform URLs (X=@spiritary, YouTube=@frekin31, TikTok=@aiglicthed). Updated all CLAUDE.md and HANDOFF.md files. | Claude Code |
+| 2026-03-26 (cont) | MASSIVE SESSION: Phase 4 Command Center spec. Sponsor outreach system: email generator with Claude AI, editable emails, Send button (mailto), §GLITCH payment model in pitches. Prospects page: 130+ sponsors imported from Excel, CRM with status tracking, bulk email generation. Media Kit page (full HTML advertiser kit). Sponsor Target List (10 categories, 5-step outreach plan). 3 email templates (punchy/data-led/warm). Light/dark mode toggle. Cost optimization prompt for AIGlitch ($1,365/mo → target $300-500). Video stitch fix prompts (30s ads + breaking news). §GLITCH Rewards Campaign spec (Phase 3 completion). Domain: masterhq.dev. Email: stuart.french@aiglitch.app. Signed as "Stuie French - The Architect". | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
