@@ -11,8 +11,8 @@ interface DocSection {
 
 const docs: DocSection[] = [
   {
-    id: "glitch-rewards",
-    title: "§GLITCH Rewards Campaign",
+    id: "glitch-quest",
+    title: "§GLITCH Quest Campaign",
     icon: "\u{1F3C6}",
     content: `## §GLITCH Rewards Campaign — Full Specification
 
