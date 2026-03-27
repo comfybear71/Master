@@ -66,6 +66,8 @@ sudo systemctl start ttyd
 
 ```bash
 sudo ufw allow 7681/tcp
+# If using SSL (recommended), also open port 443:
+sudo ufw allow 443/tcp
 ```
 
 ## Step 6: Add to Vercel
