@@ -40,6 +40,8 @@ usermod -aG sudo stuart
 # Set up firewall
 ufw allow OpenSSH
 ufw allow 7681/tcp
+ufw allow 80/tcp
+ufw allow 443/tcp
 ufw enable
 
 # Switch to new user
@@ -101,7 +103,7 @@ After=network.target
 [Service]
 Type=simple
 User=stuart
-ExecStart=/usr/bin/ttyd -p 7681 -t fontSize=16 bash
+ExecStart=/usr/bin/ttyd -p 7681 -W bash -l
 Restart=always
 RestartSec=5
 
@@ -212,6 +214,10 @@ claude
 | tmux session lost | `tmux ls` to check — if empty, session was killed (reboot?) |
 | Out of memory | Check with `htop` — 2GB should be enough for Claude Code |
 | iframe blocked on masterhq.dev | Fixed — see SSL Setup section below |
+| Terminal connects but is read-only | ttyd needs `-W` flag: `ExecStart=/usr/bin/ttyd -p 7681 -W bash -l` |
+| HTTPS not working despite certbot | Port 443 must be open: `sudo ufw allow 443/tcp && sudo ufw reload` |
+| Terminal drops after ~60 seconds | Check: UFW port 443 open, ttyd has -W flag, nginx has proxy_read_timeout 86400 |
+| bash exits immediately on connect | Add `-l` flag for login shell: `ttyd -p 7681 -W bash -l` |
 
 ---
 
@@ -266,7 +272,11 @@ sudo ln -s /etc/nginx/sites-available/terminal.masterhq.dev /etc/nginx/sites-ena
 sudo nginx -t
 sudo systemctl reload nginx
 sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
 ```
+
+**CRITICAL: Port 443 MUST be open in UFW.** Without this, HTTPS will not work even though nginx and certbot are configured correctly. This was the final issue that blocked the terminal from working.
 
 ### Get SSL Certificate
 

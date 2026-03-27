@@ -104,20 +104,32 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [ ] Cross-project error detection + AI fix from one interface
 - [ ] Full spec at `/docs` → "Phase 4: Command Center"
 
-**Terminal setup:**
-- `TTYD_URL` = `https://terminal.masterhq.dev` (nginx + Let's Encrypt SSL)
-- `TERMINAL_PASSWORD` — password to gate the terminal page
-- nginx reverse proxy on droplet: port 80/443 → localhost:7681 (ttyd)
-- SSL via Let's Encrypt (auto-renews every 90 days)
-- DNS: `terminal` A record → 170.64.133.9
+**Terminal Feature — COMPLETE AND WORKING:**
+- `masterhq.dev/terminal` — password protected, full-screen terminal
+- Connects to masterhq-dev-syd1 (170.64.133.9) via `terminal.masterhq.dev`
+- HTTPS via Let's Encrypt SSL (nginx reverse proxy → ttyd on port 7681)
+- Auto-renews every 90 days
+- Works on iPad AND desktop PC (primary use case: iPad when away from PC)
+- **CRITICAL:** Port 443 must be open in UFW — was the final missing piece
+- ttyd runs with `-W` flag (writable mode) — without it terminal is read-only
+- Vercel env vars: `TTYD_URL=https://terminal.masterhq.dev`, `TERMINAL_PASSWORD` set
+- DNS: `terminal` A record → 170.64.133.9 (in Vercel DNS)
 - Setup guide: `docs/DEV-DROPLET-SETUP.md`
+
+**iPad Workflow (recommended):**
+1. Open `masterhq.dev/terminal` on iPad Safari
+2. Enter TERMINAL_PASSWORD
+3. Start tmux: `tmux new -s claude`
+4. Navigate to project: `cd ~/my-project`
+5. Start Claude Code: `claude`
+6. If iPad sleeps → reopen terminal → `tmux attach -t claude` → right back where you left off
 
 ### DigitalOcean Droplet Architecture
 
 | Droplet | Hostname | Spec | Monthly | Purpose |
 |---------|----------|------|---------|---------|
-| **Trading Bot** | budju-syd1 | 512MB RAM | ~$4/mo | Solana trading bot ONLY — never touch from MasterHQ |
-| **Dev Droplet** | masterhq-dev-syd1 | 2GB RAM, 50GB SSD | $12/mo | Claude Code sessions from iPad via masterhq.dev/terminal |
+| **Trading Bot** | budju-syd1 (134.199.149.205) | 512MB RAM | ~$4/mo | Solana trading bot ONLY — DO NOT TOUCH |
+| **Dev Droplet** | masterhq-dev-syd1 (170.64.133.9) | 2GB RAM, 50GB SSD | $12/mo | Claude Code + terminal (terminal.masterhq.dev) |
 
 **CRITICAL:** The Terminal page (`/terminal`) on MasterHQ connects to the DEV droplet, NOT the trading bot droplet. The `TTYD_URL` env var in Vercel MUST point to the dev droplet IP.
 
@@ -251,6 +263,7 @@ Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks
 | 2026-03-25 | Documented AIGlitch Ad Campaigns system in Master HANDOFF. Created `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo — full frontend spec for the ad campaign feature (API endpoints, styles, platforms, video specs, database tables, social spreading, PromptViewer integration). | Claude Code |
 | 2026-03-26 | Instagram fix: reversed token priority (FACEBOOK_ACCESS_TOKEN first, not INSTAGRAM_ACCESS_TOKEN). TikTok full integration: sandbox/live toggle, API monitoring log, scopes updated (user.info.stats, video.list), helped submit TikTok app review + Content Posting API audit. YouTube: cached stats on quota exceeded, "Quota Limit" badge, submitted quota increase to Google (100K units/day). Created /docs page with 4 guides (YouTube quota, xAI Grok costs, TikTok setup, social accounts). Added social profile links to all Growth page cards. Fixed platform URLs (X=@spiritary, YouTube=@frekin31, TikTok=@aiglicthed). Updated all CLAUDE.md and HANDOFF.md files. | Claude Code |
 | 2026-03-26 (cont) | MASSIVE SESSION: Phase 4 Command Center spec. Sponsor outreach system: email generator with Claude AI, editable emails, Send button (mailto), §GLITCH payment model in pitches. Prospects page: 130+ sponsors imported from Excel, CRM with status tracking, bulk email generation. Media Kit page (full HTML advertiser kit). Sponsor Target List (10 categories, 5-step outreach plan). 3 email templates (punchy/data-led/warm). Light/dark mode toggle. Cost optimization prompt for AIGlitch ($1,365/mo → target $300-500). Video stitch fix prompts (30s ads + breaking news). §GLITCH Rewards Campaign spec (Phase 3 completion). Domain: masterhq.dev. Email: stuart.french@aiglitch.app. Signed as "Stuie French - The Architect". | Claude Code |
+| 2026-03-28 | Terminal feature COMPLETE: Created DigitalOcean dev droplet (masterhq-dev-syd1, 170.64.133.9, $12/mo, 2GB RAM). Installed Claude Code v2.1.85, ttyd 1.7.4, tmux, nginx. Set up SSL via Let's Encrypt on terminal.masterhq.dev. Critical fix: port 443 must be open in UFW. ttyd requires -W flag for writable mode. Terminal page on masterhq.dev/terminal working on iPad + desktop. Two-droplet architecture documented (budju trading bot completely isolated). §GLITCH Quest design doc finalized with SQL schemas. iPad workflow documented (tmux + Claude Code). | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
