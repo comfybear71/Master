@@ -40,6 +40,7 @@ export default function TerminalPage() {
       })
         .then((r) => r.json())
         .then((data) => {
+          console.log("[terminal] Auth re-check response:", data);
           if (data.ttydUrl) setTtydUrl(data.ttydUrl);
         })
         .catch(() => {});
@@ -55,6 +56,7 @@ export default function TerminalPage() {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
+      console.log("[terminal] Auth response:", data);
       if (data.success) {
         setAuthenticated(true);
         sessionStorage.setItem("terminal-auth", "true");
@@ -156,7 +158,7 @@ export default function TerminalPage() {
               {connected ? "Connected" : "Disconnected"}
             </span>
           </div>
-          <span className="text-xs text-slate-500 font-mono hidden md:inline">budju-syd1 · DigitalOcean Sydney</span>
+          <span className="text-xs text-slate-500 font-mono hidden md:inline">masterhq-dev-syd1 · DigitalOcean Sydney</span>
           <button
             onClick={reconnect}
             className="px-3 py-1 bg-slate-800 text-slate-300 rounded text-xs font-mono hover:bg-slate-700 transition-colors"
