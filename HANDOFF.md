@@ -104,10 +104,21 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [ ] Cross-project error detection + AI fix from one interface
 - [ ] Full spec at `/docs` → "Phase 4: Command Center"
 
-**Terminal setup requires 2 env vars not yet in Vercel:**
-- `TTYD_URL` — URL to ttyd instance on DigitalOcean droplet (e.g. `http://DROPLET_IP:7681`)
+**Terminal setup requires 2 env vars in Vercel:**
+- `TTYD_URL` — URL to ttyd on the DEV droplet (e.g. `http://DEV_DROPLET_IP:7681`)
 - `TERMINAL_PASSWORD` — password to gate the terminal page
-- Setup guide: `docs/ttyd-setup.md`
+- Setup guide: `docs/DEV-DROPLET-SETUP.md`
+
+### DigitalOcean Droplet Architecture
+
+| Droplet | Hostname | Spec | Monthly | Purpose |
+|---------|----------|------|---------|---------|
+| **Trading Bot** | budju-syd1 | 512MB RAM | ~$4/mo | Solana trading bot ONLY — never touch from MasterHQ |
+| **Dev Droplet** | masterhq-dev-syd1 | 2GB RAM, 50GB SSD | $12/mo | Claude Code sessions from iPad via masterhq.dev/terminal |
+
+**CRITICAL:** The Terminal page (`/terminal`) on MasterHQ connects to the DEV droplet, NOT the trading bot droplet. The `TTYD_URL` env var in Vercel MUST point to the dev droplet IP.
+
+The trading bot droplet is completely isolated. No SSH access from MasterHQ. No ttyd. No changes without explicit user confirmation (CLAUDE.md Rule #10).
 
 ---
 

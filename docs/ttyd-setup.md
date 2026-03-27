@@ -1,5 +1,9 @@
 # ttyd Setup — Browser Terminal on DigitalOcean Droplet
 
+> **NOTE: This guide is for the BUDJU trading bot droplet.**
+> For the Claude Code dev droplet (masterhq-dev-syd1), see **DEV-DROPLET-SETUP.md** instead.
+> The Terminal page on masterhq.dev should point to the DEV droplet, NOT this one.
+
 ## Overview
 
 ttyd is a lightweight tool that shares a terminal over the browser. It runs on your DigitalOcean droplet and serves a full terminal at `http://DROPLET_IP:7681`. MasterHQ embeds this in an iframe at `/terminal`.
