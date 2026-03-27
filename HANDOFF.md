@@ -93,7 +93,9 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [x] Social follower counts on main dashboard
 - [x] Social config panel for account IDs
 
-### Phase 4 — Command Center (PLANNED)
+### Phase 4 — Command Center (IN PROGRESS)
+- [x] SSH Terminal — browser-based terminal via ttyd iframe (iPad-friendly)
+- [ ] §GLITCH Quest Campaign — task-based rewards system
 - [ ] AI Assistant — ask questions about any project (Claude reads code via GitHub API)
 - [ ] Code Browser — browse file trees of all registered repos
 - [ ] Code Editor — edit files inline, diff preview, commit & push
@@ -101,6 +103,22 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [ ] Documentation Hub — auto-pull CLAUDE.md/HANDOFF.md from all repos, searchable
 - [ ] Cross-project error detection + AI fix from one interface
 - [ ] Full spec at `/docs` → "Phase 4: Command Center"
+
+**Terminal setup requires 2 env vars in Vercel:**
+- `TTYD_URL` — URL to ttyd on the DEV droplet (e.g. `http://DEV_DROPLET_IP:7681`)
+- `TERMINAL_PASSWORD` — password to gate the terminal page
+- Setup guide: `docs/DEV-DROPLET-SETUP.md`
+
+### DigitalOcean Droplet Architecture
+
+| Droplet | Hostname | Spec | Monthly | Purpose |
+|---------|----------|------|---------|---------|
+| **Trading Bot** | budju-syd1 | 512MB RAM | ~$4/mo | Solana trading bot ONLY — never touch from MasterHQ |
+| **Dev Droplet** | masterhq-dev-syd1 | 2GB RAM, 50GB SSD | $12/mo | Claude Code sessions from iPad via masterhq.dev/terminal |
+
+**CRITICAL:** The Terminal page (`/terminal`) on MasterHQ connects to the DEV droplet, NOT the trading bot droplet. The `TTYD_URL` env var in Vercel MUST point to the dev droplet IP.
+
+The trading bot droplet is completely isolated. No SSH access from MasterHQ. No ttyd. No changes without explicit user confirmation (CLAUDE.md Rule #10).
 
 ---
 
