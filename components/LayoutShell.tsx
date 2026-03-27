@@ -4,6 +4,27 @@ import { useState, useEffect } from "react";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  // Load theme from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("masterhq-theme");
+    if (saved === "light") {
+      setTheme("light");
+      document.documentElement.classList.add("light");
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem("masterhq-theme", next);
+    if (next === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
+  };
 
   // Close sidebar on route change (clicking a link)
   useEffect(() => {
@@ -89,6 +110,14 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
             </li>
           ))}
         </ul>
+        <button
+          onClick={toggleTheme}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-accent hover:bg-base-card transition-colors mt-2 w-full"
+          title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+        >
+          <span>{theme === "dark" ? "\u2600" : "\u263E"}</span>
+          <span>{theme === "dark" ? "Light Mode" : "Dark Mode"}</span>
+        </button>
         <div className="text-xs text-slate-600 mt-4 font-mono">v1.0.0</div>
       </nav>
 

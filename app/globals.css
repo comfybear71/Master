@@ -4,6 +4,7 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* Dark mode (default) */
 :root {
   --base: #0a0f1e;
   --base-light: #111827;
@@ -12,12 +13,56 @@
   --success: #00ff88;
   --danger: #ff4444;
   --warning: #ffaa00;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #1e293b;
+}
+
+/* Light mode */
+:root.light {
+  --base: #f8fafc;
+  --base-light: #f1f5f9;
+  --base-card: #ffffff;
+  --accent: #0284c7;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #d97706;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --border: #e2e8f0;
 }
 
 body {
   background-color: var(--base);
-  color: #e2e8f0;
+  color: var(--text-primary);
   font-family: 'Inter', sans-serif;
+}
+
+/* Light mode overrides for common Tailwind classes */
+.light .text-white { color: #0f172a !important; }
+.light .text-slate-300 { color: #334155 !important; }
+.light .text-slate-400 { color: #64748b !important; }
+.light .text-slate-500 { color: #94a3b8 !important; }
+.light .text-slate-600 { color: #475569 !important; }
+.light .border-slate-800 { border-color: #e2e8f0 !important; }
+.light .border-slate-700 { border-color: #cbd5e1 !important; }
+.light .bg-base { background-color: var(--base) !important; }
+.light .bg-base-card { background-color: var(--base-card) !important; }
+.light .bg-slate-800 { background-color: #e2e8f0 !important; }
+.light .bg-slate-800\/50 { background-color: rgba(226,232,240,0.5) !important; }
+.light .bg-slate-800\/20 { background-color: rgba(226,232,240,0.2) !important; }
+.light .bg-slate-900\/50 { background-color: rgba(241,245,249,0.5) !important; }
+.light .bg-black\/40 { background-color: rgba(241,245,249,0.6) !important; }
+.light .bg-black\/70 { background-color: rgba(0,0,0,0.3) !important; }
+.light .hover\:bg-base\/50:hover { background-color: rgba(248,250,252,0.5) !important; }
+.light .hover\:bg-slate-800\/50:hover { background-color: rgba(226,232,240,0.5) !important; }
+.light .placeholder-slate-500::placeholder { color: #94a3b8 !important; }
+.light input, .light textarea, .light select {
+  background-color: var(--base-card) !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
 }
 
 /* Scrollbar */
@@ -30,6 +75,12 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #334155;
   border-radius: 3px;
+}
+.light ::-webkit-scrollbar-track {
+  background: var(--base);
+}
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
 }
 
 /* Pulse animation for live indicators */

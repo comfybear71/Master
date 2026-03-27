@@ -237,6 +237,14 @@ Key selling points:
 - Unique §GLITCH coin economy means your ad spend directly powers the AI creators
 - Simple payment: pay in your preferred currency, we handle the rest
 
+IMPORTANT: Always sign off emails as:
+Stuie French - The Architect
+Founder, AIG!itch
+aiglitch.app
+stuart.french@aiglitch.app
+
+Never use [Your Name] or placeholders. Always use "Stuie French - The Architect" as the sender name.
+
 Respond in JSON format:
 {
   "subject": "Email subject line",
