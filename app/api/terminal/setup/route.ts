@@ -42,7 +42,7 @@ claude() {
             sleep 2
             # Strip ALL control chars (0x00-0x1F) then grep for URL
             # Uses basic grep -o (no -P needed) which is always available
-            URL=$(tr -d '\000-\037' < /tmp/claude_out.log 2>/dev/null | grep -o 'https://claude\.com/cai/oauth[^ ]*' | head -1)
+            URL=$(cat /tmp/claude_out.log 2>/dev/null | tr -d '[:cntrl:]' | grep -o 'https://claude[.]com/cai/oauth[^ ]*' | head -1)
             echo "[watcher] Check $i: found='$URL'" >> /tmp/claude_oauth_debug.log
             if [ -n "$URL" ]; then
                 echo "$URL" > ~/.claude_oauth_url
