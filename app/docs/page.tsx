@@ -1247,6 +1247,207 @@ Body: { "max_count": 10 }
 - Debug: \`GET /api/auth/tiktok/debug\``,
   },
   {
+    id: "terminal-guide",
+    title: "Terminal Mastery Guide",
+    icon: "\u{1F4BB}",
+    content: `## Terminal Mastery Guide
+
+**Built for Stuart — iPad + DigitalOcean + Claude Code**
+
+Everything you need to go from zero to confident in the terminal.
+
+---
+
+### 1. Terminal Basics
+
+#### Navigating Folders
+
+| Command | What it does |
+|---------|-------------|
+| \`pwd\` | Show current folder — use when lost |
+| \`ls\` | List files in current folder |
+| \`ls -la\` | List ALL files including hidden with details |
+| \`cd projects\` | Move into a folder |
+| \`cd ..\` | Go up one level |
+| \`cd ~\` | Go to home folder from anywhere |
+
+#### Files and Folders
+
+| Command | What it does |
+|---------|-------------|
+| \`mkdir myfolder\` | Create a new folder |
+| \`touch file.txt\` | Create an empty file |
+| \`cp file.txt copy.txt\` | Copy a file |
+| \`mv file.txt new.txt\` | Rename or move a file |
+| \`rm file.txt\` | Delete a file — NO UNDO, no recycle bin |
+| \`cat file.txt\` | Print file contents to screen |
+
+#### Useful Shortcuts
+
+| Command | What it does |
+|---------|-------------|
+| \`clear\` | Clear the terminal screen |
+| \`history\` | See all previous commands |
+| \`Ctrl+C\` | Stop a running command immediately |
+| \`Tab\` | Auto-complete names — use constantly |
+| \`Up arrow\` | Recall previous command |
+| \`Ctrl+L\` | Clear screen (same as clear) |
+
+---
+
+### 2. tmux — Persistent Sessions for iPad
+
+tmux keeps sessions running when you disconnect. Start a session, disconnect, reconnect hours later — everything is exactly where you left it.
+
+#### Starting and Managing Sessions
+
+| Command | What it does |
+|---------|-------------|
+| \`tmux\` | Start a new session |
+| \`tmux new -s main\` | Start a named session |
+| \`tmux ls\` | List all running sessions |
+| \`tmux attach -t main\` | Reconnect to a session |
+| \`tmux kill-session -t main\` | Kill a session |
+
+**Always name your sessions:** \`tmux new -s aiglitch\` and \`tmux new -s masterhq\`
+
+#### Windows (Ctrl+B is your prefix key)
+
+| Command | What it does |
+|---------|-------------|
+| \`Ctrl+B\` then \`C\` | Create new window |
+| \`Ctrl+B\` then \`N\` | Next window |
+| \`Ctrl+B\` then \`P\` | Previous window |
+| \`Ctrl+B\` then \`0-9\` | Jump to window by number |
+| \`Ctrl+B\` then \`,\` | Rename current window |
+| \`Ctrl+B\` then \`&\` | Close current window |
+
+#### Panes (Split Screen)
+
+| Command | What it does |
+|---------|-------------|
+| \`Ctrl+B\` then \`%\` | Split vertically (side by side) |
+| \`Ctrl+B\` then \`"\` | Split horizontally (top/bottom) |
+| \`Ctrl+B\` then arrow key | Move between panes |
+| \`Ctrl+B\` then \`Z\` | Zoom pane / zoom back |
+| \`Ctrl+B\` then \`X\` | Close current pane |
+| \`Ctrl+B\` then \`D\` | **DETACH** — safely leave without killing session |
+
+**Ctrl+B then D is the safe way to leave.** Your Claude Code session keeps running. Never just close the browser tab.
+
+---
+
+### 3. Claude Code CLI
+
+#### Starting Claude Code
+
+| Command | What it does |
+|---------|-------------|
+| \`claude\` | Start Claude Code in current folder |
+| \`claude --help\` | Show all options |
+| \`claude -p "prompt"\` | Run a single prompt and exit |
+| \`claude --model claude-sonnet-4-6\` | Use a specific model |
+| \`claude --continue\` | Continue last conversation |
+
+**Always \`cd\` into your project folder before running \`claude\`.** It reads files from wherever you start it.
+
+#### Slash Commands Inside a Session
+
+| Command | What it does |
+|---------|-------------|
+| \`/help\` | Show all slash commands |
+| \`/clear\` | Clear history and start fresh |
+| \`/compact\` | Compress history to save context — use in long sessions |
+| \`/cost\` | Show token usage and cost |
+| \`/exit\` | Exit cleanly |
+| \`Ctrl+C\` | Cancel current response |
+
+**Use \`/compact\` regularly** — it keeps Claude focused and saves money. Run after every major feature.
+
+#### CLAUDE.md
+
+Claude Code reads CLAUDE.md automatically every time it starts in a folder. This is where project rules, tech stack, and env var names live. Your files are already set up — never delete them.
+
+---
+
+### 4. Git via Terminal
+
+#### The Core Workflow
+
+Always: **status → add → commit → push**
+
+| Command | What it does |
+|---------|-------------|
+| \`git status\` | See what changed — always run first |
+| \`git add .\` | Stage all changed files |
+| \`git commit -m "message"\` | Save a snapshot with description |
+| \`git push\` | Push to GitHub |
+| \`git pull\` | Pull latest from GitHub |
+| \`git log --oneline\` | See recent commits |
+
+#### Branches
+
+| Command | What it does |
+|---------|-------------|
+| \`git branch\` | List all branches |
+| \`git checkout -b my-feature\` | Create and switch to new branch |
+| \`git checkout main\` | Switch back to main |
+| \`git merge my-feature\` | Merge a branch |
+| \`git branch -d my-feature\` | Delete branch after merging |
+
+#### Fixing Mistakes
+
+| Command | What it does |
+|---------|-------------|
+| \`git diff\` | See exactly what changed |
+| \`git restore file.txt\` | Undo changes to one file |
+| \`git restore .\` | Undo ALL uncommitted changes |
+| \`git stash\` | Temporarily hide changes |
+| \`git stash pop\` | Bring hidden changes back |
+
+**\`git restore .\` is your undo button** — but only works BEFORE you commit.
+
+---
+
+### 5. DigitalOcean — Your Droplet
+
+**Your droplet:** masterhq-dev-syd1 — Sydney — IP: 170.64.133.9
+
+#### Connecting
+
+| Command | What it does |
+|---------|-------------|
+| \`ssh stuart@170.64.133.9\` | Connect to your droplet |
+| \`exit\` | Disconnect cleanly |
+
+#### Server Health
+
+| Command | What it does |
+|---------|-------------|
+| \`df -h\` | Check disk space |
+| \`free -m\` | Check RAM usage |
+| \`htop\` | See running processes (like Task Manager) |
+| \`uptime\` | How long server has been running |
+| \`systemctl status nginx\` | Check if nginx is running |
+
+**Run \`df -h\` and \`free -m\` weekly.** Full disk or low RAM breaks things silently.
+
+#### Services and Logs
+
+| Command | What it does |
+|---------|-------------|
+| \`systemctl restart nginx\` | Restart a service |
+| \`journalctl -f\` | Watch live server logs (Ctrl+C to stop) |
+| \`tail -f /var/log/syslog\` | Watch system log in real time |
+| \`ps aux \\| grep node\` | Find a running process |
+
+**\`journalctl -f\` is like watching your server live.** Run it when something is broken.
+
+---
+
+> You built a browser terminal on an iPad using DigitalOcean — that is not beginner stuff. This guide just gives you the vocabulary to go with the instinct you already have.`,
+  },
+  {
     id: "social-accounts",
     title: "Social Media Accounts",
     icon: "\u2B21",
