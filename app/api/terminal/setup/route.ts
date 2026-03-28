@@ -42,12 +42,16 @@ claude() {
             sleep 2
             # Python extracts clean URL from script log (strips ANSI properly)
             URL=$(python3 -c "
-import re, sys
+import re
 try:
     data = open('/tmp/claude_out.log', 'rb').read().decode('utf-8', errors='ignore')
-    clean = re.sub(r'\x1b\[[0-9;?]*[a-zA-Z]', '', data)
+    clean = re.sub(chr(27) + r'[[0-9;?]*[a-zA-Z]', '', data)
+    clean = clean.replace(chr(13), '').replace(chr(10), '')
     m = re.search(r'https://claude[.]com/cai/oauth/authorize[?][a-zA-Z0-9%_.=&+~:/?-]+', clean)
-    if m: print(m.group())
+    if m:
+        url = m.group()
+        url = re.sub('Paste.*', '', url)
+        print(url)
 except: pass
 " 2>/dev/null)
             echo "[watcher] Check $i: found='$URL'" >> /tmp/claude_oauth_debug.log
