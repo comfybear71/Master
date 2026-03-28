@@ -48,7 +48,7 @@ export default function TerminalPage() {
 
   // Poll for OAuth URL pushed by the droplet watcher
   useEffect(() => {
-    if (!authenticated || !connected || oauthUrl) return;
+    if (!authenticated || !connected) return;
     const termPw = sessionStorage.getItem("terminal-pw") || "";
     const poll = async () => {
       try {
@@ -56,13 +56,13 @@ export default function TerminalPage() {
           `/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`
         );
         const data = await res.json();
-        if (data.url) setOauthUrl(data.url);
+        if (data.url && data.url !== oauthUrl) setOauthUrl(data.url);
       } catch {
         // ignore
       }
     };
     poll();
-    const interval = setInterval(poll, 2000);
+    const interval = setInterval(poll, 3000);
     return () => clearInterval(interval);
   }, [authenticated, connected, oauthUrl]);
 
