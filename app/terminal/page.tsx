@@ -13,6 +13,8 @@ export default function TerminalPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
   const [oauthUrl, setOauthUrl] = useState<string | null>(null);
+  const [showPasteInput, setShowPasteInput] = useState(false);
+  const [pasteValue, setPasteValue] = useState("");
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -44,14 +46,14 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
-  const handlePasteOauthUrl = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text && (text.includes("claude.com/cai/oauth") || text.includes("claude.ai/cai/oauth")) && text.length > 100) {
-        const fixed = text.replace("https://claude.com/", "https://claude.ai/");
-        setOauthUrl(fixed);
-      }
-    } catch {}
+  const handlePasteSubmit = () => {
+    const text = pasteValue.trim();
+    if (text && (text.includes("claude.com/cai/oauth") || text.includes("claude.ai/cai/oauth"))) {
+      const fixed = text.replace("https://claude.com/", "https://claude.ai/");
+      setOauthUrl(fixed);
+      setShowPasteInput(false);
+      setPasteValue("");
+    }
   };
 
   const handleAuth = async () => {
@@ -176,13 +178,44 @@ export default function TerminalPage() {
       )}
 
       {!oauthUrl && connected && (
-        <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2 flex items-center gap-2">
-          <span className="text-slate-500 text-xs font-mono">💡 When Claude Code shows a login URL, type</span>
-          <code className="text-accent text-xs font-mono bg-slate-800 px-2 py-0.5 rounded">c</code>
-          <span className="text-slate-500 text-xs font-mono">to copy it, then tap:</span>
-          <button onClick={handlePasteOauthUrl} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded text-xs font-mono hover:bg-yellow-500/30 transition-colors">
-            Paste Login URL
-          </button>
+        <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2">
+          {!showPasteInput ? (
+            <div className="flex items-center gap-2">
+              <span className="text-slate-500 text-xs font-mono">💡 Claude Code login? Type</span>
+              <code className="text-accent text-xs font-mono bg-slate-800 px-2 py-0.5 rounded">c</code>
+              <span className="text-slate-500 text-xs font-mono">to copy URL, then:</span>
+              <button onClick={() => setShowPasteInput(true)} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded text-xs font-mono hover:bg-yellow-500/30 transition-colors">
+                Paste Login URL
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={pasteValue}
+                onChange={(e) => setPasteValue(e.target.value)}
+                onPaste={(e) => {
+                  const text = e.clipboardData.getData("text");
+                  if (text && (text.includes("claude.com/cai/oauth") || text.includes("claude.ai/cai/oauth"))) {
+                    const fixed = text.replace("https://claude.com/", "https://claude.ai/");
+                    setOauthUrl(fixed);
+                    setShowPasteInput(false);
+                    setPasteValue("");
+                    e.preventDefault();
+                  }
+                }}
+                placeholder="Paste login URL here..."
+                autoFocus
+                className="flex-1 bg-slate-800 border border-yellow-500/30 rounded px-3 py-1.5 text-xs text-white font-mono placeholder-slate-500 focus:border-yellow-400 focus:outline-none"
+              />
+              <button onClick={handlePasteSubmit} className="px-3 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors">
+                Open
+              </button>
+              <button onClick={() => { setShowPasteInput(false); setPasteValue(""); }} className="px-3 py-1.5 bg-slate-700 text-slate-300 rounded text-xs font-mono hover:bg-slate-600 transition-colors">
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
 
