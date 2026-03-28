@@ -5,6 +5,7 @@ import { Project } from "@/lib/types";
 import ProjectCard from "@/components/dashboard/ProjectCard";
 
 const REGISTERED_REPOS = [
+  { repo: "comfybear71/Master", name: "TheMaster", category: "infrastructure" as const, priority: 0, description: "Command & control platform — manages all projects, deployments, monitoring, social, and growth" },
   { repo: "comfybear71/togogo", name: "Togogo", category: "ecommerce" as const, priority: 1, description: "Dropshipping marketplace" },
   { repo: "comfybear71/mathly", name: "Mathly", category: "education" as const, priority: 2, description: "EdTech platform" },
   { repo: "comfybear71/aiglitch", name: "AI Glitch", category: "marketing" as const, priority: 3, description: "AI social platform (backend)" },
