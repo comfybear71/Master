@@ -36,22 +36,31 @@ claude() {
     rm -f ~/.claude_oauth_url /tmp/claude_out.log /tmp/claude_oauth_debug.log
     touch /tmp/claude_out.log
     echo "[watcher] Starting..." > /tmp/claude_oauth_debug.log
-    # Background watcher: finds URL and pushes to MasterHQ
+    # Background watcher: uses Python for reliable ANSI stripping + JSON encoding
     (
         for i in $(seq 1 120); do
             sleep 2
-            # Strip ALL control chars (0x00-0x1F) then grep for URL
-            # Uses basic grep -o (no -P needed) which is always available
-            URL=$(perl -pe 's/\\e\\[[\\d;?]*[a-zA-Z]/ /g; s/[^\\x20-\\x7e]/ /g' /tmp/claude_out.log 2>/dev/null | grep -oE 'https://claude[.]com/cai/oauth/authorize[?][a-zA-Z0-9%_.=&+~/-]+' | head -1)
+            # Python extracts clean URL from script log (strips ANSI properly)
+            URL=$(python3 -c "
+import re, sys
+try:
+    data = open('/tmp/claude_out.log', 'rb').read().decode('utf-8', errors='ignore')
+    clean = re.sub(r'\x1b\[[0-9;?]*[a-zA-Z]', '', data)
+    m = re.search(r'https://claude\.com/cai/oauth/authorize\?[a-zA-Z0-9%_.=&+~:/-]+', clean)
+    if m: print(m.group())
+except: pass
+" 2>/dev/null)
             echo "[watcher] Check $i: found='$URL'" >> /tmp/claude_oauth_debug.log
             if [ -n "$URL" ]; then
                 echo "$URL" > ~/.claude_oauth_url
                 echo "[watcher] URL saved to ~/.claude_oauth_url" >> /tmp/claude_oauth_debug.log
-                # Push to MasterHQ API
-                HTTP_CODE=$(curl -s -o /tmp/claude_oauth_response.log -w '%{http_code}' \
-                    -X POST "https://masterhq.dev/api/terminal/oauth-url" \
-                    -H 'Content-Type: application/json' \
-                    -d "{\"url\":\"$URL\",\"password\":\"$TERMINAL_PASSWORD\"}")
+                # Python constructs safe JSON (handles special chars in URL and password)
+                HTTP_CODE=$(python3 -c "
+import json, sys
+print(json.dumps({'url': sys.argv[1], 'password': sys.argv[2]}))
+" "$URL" "$TERMINAL_PASSWORD" | curl -s -o /tmp/claude_oauth_response.log -w '%{http_code}' \
+                    -X POST 'https://masterhq.dev/api/terminal/oauth-url' \
+                    -H 'Content-Type: application/json' -d @-)
                 echo "[watcher] POST response: HTTP $HTTP_CODE" >> /tmp/claude_oauth_debug.log
                 cat /tmp/claude_oauth_response.log >> /tmp/claude_oauth_debug.log 2>/dev/null
                 echo "" >> /tmp/claude_oauth_debug.log
@@ -70,7 +79,7 @@ echo "Done! Now run:  source ~/.bashrc"
 echo ""
 echo "Then type 'claude'. The login URL will appear"
 echo "automatically in the terminal page."
-echo "(Debug log: cat /tmp/claude_oauth_debug.log)"
+echo "(Debug: cat /tmp/claude_oauth_debug.log)"
 echo ""
 `;
 
