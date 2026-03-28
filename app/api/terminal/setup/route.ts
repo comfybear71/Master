@@ -46,7 +46,7 @@ import re, sys
 try:
     data = open('/tmp/claude_out.log', 'rb').read().decode('utf-8', errors='ignore')
     clean = re.sub(r'\x1b\[[0-9;?]*[a-zA-Z]', '', data)
-    m = re.search(r'https://claude\.com/cai/oauth/authorize\?[a-zA-Z0-9%_.=&+~:/-]+', clean)
+    m = re.search(r'https://claude[.]com/cai/oauth/authorize[?][a-zA-Z0-9%_.=&+~:/?-]+', clean)
     if m: print(m.group())
 except: pass
 " 2>/dev/null)
