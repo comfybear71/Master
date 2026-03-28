@@ -2,6 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
+// Dynamic import types for xterm.js
+let TerminalClass: typeof import("@xterm/xterm").Terminal | null = null;
+let FitAddonClass: typeof import("@xterm/addon-fit").FitAddon | null = null;
+
 export default function TerminalPage() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState("");
@@ -9,12 +13,26 @@ export default function TerminalPage() {
   const [checking, setChecking] = useState(true);
   const [connected, setConnected] = useState(false);
   const [ttydUrl, setTtydUrl] = useState<string | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isMobile, setIsMobile] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
-  const [oauthUrl, setOauthUrl] = useState<string | null>(null);
-  const [pasteValue, setPasteValue] = useState("");
+  const [xtermReady, setXtermReady] = useState(false);
 
+  // xterm refs
+  const termContainerRef = useRef<HTMLDivElement>(null);
+  const xtermRef = useRef<InstanceType<
+    typeof import("@xterm/xterm").Terminal
+  > | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const fitAddonRef = useRef<InstanceType<
+    typeof import("@xterm/addon-fit").FitAddon
+  > | null>(null);
+
+  // OAuth URL detection
+  const [oauthUrl, setOauthUrl] = useState("");
+  const [oauthDetected, setOauthDetected] = useState(false);
+  const oauthFoundRef = useRef(false);
+  const outputBufferRef = useRef("");
+
+  // Check device size
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
@@ -22,6 +40,7 @@ export default function TerminalPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
+  // Check if already authenticated this session
   useEffect(() => {
     const saved = sessionStorage.getItem("terminal-auth");
     if (saved === "true") {
@@ -30,6 +49,7 @@ export default function TerminalPage() {
     setChecking(false);
   }, []);
 
+  // Get TTYD_URL from env
   useEffect(() => {
     if (authenticated) {
       fetch("/api/terminal/auth", {
@@ -47,30 +67,197 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
-  // Poll for OAuth URL from droplet (via helper script)
+  // Load xterm.js dynamically (client-side only)
   useEffect(() => {
-    if (!authenticated || !connected || oauthUrl) return;
-    const poll = async () => {
-      try {
-        const res = await fetch("/api/terminal/oauth");
-        const data = await res.json();
-        if (data.url) setOauthUrl(data.url);
-      } catch {}
-    };
-    const interval = setInterval(poll, 3000);
-    return () => clearInterval(interval);
-  }, [authenticated, connected, oauthUrl]);
+    if (!authenticated || !ttydUrl) return;
+    let cancelled = false;
 
-  const handlePasteSubmit = () => {
-    const text = pasteValue.trim();
-    if (!text) return;
-    // Fix claude.com to claude.ai
-    const fixed = text.replace("https://claude.com/", "https://claude.ai/");
-    if (fixed.startsWith("http")) {
-      setOauthUrl(fixed);
-      setPasteValue("");
+    Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit")]).then(
+      ([xtermModule, fitModule]) => {
+        if (cancelled) return;
+        TerminalClass = xtermModule.Terminal;
+        FitAddonClass = fitModule.FitAddon;
+        setXtermReady(true);
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authenticated, ttydUrl]);
+
+  // Initialize terminal when xterm.js is loaded and container is ready
+  const initTerminal = useCallback(() => {
+    if (
+      !TerminalClass ||
+      !FitAddonClass ||
+      !termContainerRef.current ||
+      !ttydUrl
+    )
+      return;
+
+    // Cleanup previous instance
+    if (xtermRef.current) {
+      xtermRef.current.dispose();
+      xtermRef.current = null;
     }
-  };
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
+    // Create xterm.js instance
+    const term = new TerminalClass({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily:
+        "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, monospace",
+      theme: {
+        background: "#000000",
+        foreground: "#e0e0e0",
+        cursor: "#00d4ff",
+        selectionBackground: "rgba(0, 212, 255, 0.3)",
+      },
+      allowProposedApi: true,
+      scrollback: 5000,
+    });
+
+    const fitAddon = new FitAddonClass();
+    term.loadAddon(fitAddon);
+    term.open(termContainerRef.current);
+
+    // Let DOM settle before fitting
+    setTimeout(() => fitAddon.fit(), 150);
+
+    xtermRef.current = term;
+    fitAddonRef.current = fitAddon;
+
+    // Connect WebSocket to ttyd server
+    const wsUrl = ttydUrl
+      .replace(/^https:\/\//, "wss://")
+      .replace(/^http:\/\//, "ws://");
+    const wsEndpoint =
+      (wsUrl.endsWith("/") ? wsUrl.slice(0, -1) : wsUrl) + "/ws";
+
+    const ws = new WebSocket(wsEndpoint, ["tty"]);
+    ws.binaryType = "arraybuffer";
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      setConnected(true);
+      // Tell ttyd our terminal size
+      const { cols, rows } = term;
+      ws.send("1" + JSON.stringify({ columns: cols, rows: rows }));
+    };
+
+    ws.onmessage = (event: MessageEvent) => {
+      const rawData = event.data as ArrayBuffer;
+      const bytes = new Uint8Array(rawData);
+      if (bytes.length === 0) return;
+
+      const cmd = String.fromCharCode(bytes[0]);
+      const payload = rawData.slice(1);
+
+      switch (cmd) {
+        case "0": {
+          // Terminal output: render in xterm AND scan for OAuth URL
+          const outputBytes = new Uint8Array(payload);
+          term.write(outputBytes);
+
+          // Scan raw output for OAuth URL
+          if (!oauthFoundRef.current) {
+            const text = new TextDecoder().decode(outputBytes);
+            outputBufferRef.current += text;
+
+            // Keep buffer manageable
+            if (outputBufferRef.current.length > 100000) {
+              outputBufferRef.current =
+                outputBufferRef.current.slice(-50000);
+            }
+
+            // Strip all ANSI escape sequences for clean matching
+            const clean = outputBufferRef.current
+              .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, "")
+              .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, "")
+              .replace(/\x1b[()][A-Z0-9]/g, "");
+
+            // Match the full OAuth URL from raw stream (no line wrapping here)
+            const match = clean.match(
+              /https:\/\/claude\.com\/cai\/oauth\/authorize\?[^\s\x00-\x1f]+/
+            );
+            if (match) {
+              oauthFoundRef.current = true;
+              setOauthUrl(match[0]);
+              setOauthDetected(true);
+            }
+          }
+          break;
+        }
+        case "1":
+          // Window title — ignore
+          break;
+        case "2":
+          // Preferences from ttyd
+          break;
+      }
+    };
+
+    // Forward keyboard input to ttyd
+    term.onData((data: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send("0" + data);
+      }
+    });
+
+    // Forward binary input (special keys)
+    term.onBinary((data: string) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const buffer = new Uint8Array(data.length + 1);
+        buffer[0] = 48; // '0'
+        for (let i = 0; i < data.length; i++) {
+          buffer[i + 1] = data.charCodeAt(i);
+        }
+        ws.send(buffer);
+      }
+    });
+
+    // Forward resize events
+    term.onResize(({ cols, rows }: { cols: number; rows: number }) => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send("1" + JSON.stringify({ columns: cols, rows: rows }));
+      }
+    });
+
+    ws.onerror = () => setConnected(false);
+    ws.onclose = () => setConnected(false);
+
+    // Handle window resize
+    const onResize = () => fitAddonRef.current?.fit();
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+    };
+  }, [ttydUrl]);
+
+  // Trigger terminal init when xterm.js is loaded
+  useEffect(() => {
+    if (xtermReady && termContainerRef.current && ttydUrl) {
+      initTerminal();
+    }
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (xtermRef.current) {
+        xtermRef.current.dispose();
+        xtermRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [xtermReady, ttydUrl]);
 
   const handleAuth = async () => {
     setAuthError("");
@@ -96,82 +283,26 @@ export default function TerminalPage() {
 
   const reconnect = useCallback(() => {
     setConnected(false);
-    setIframeKey((k) => k + 1);
     oauthFoundRef.current = false;
     setOauthUrl("");
-    setMonitorStatus("idle");
-    const termPw = sessionStorage.getItem("terminal-pw") || "";
-    fetch(`/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`, {
-      method: "DELETE",
-    }).catch(() => {});
-  }, []);
+    setOauthDetected(false);
+    outputBufferRef.current = "";
+    // Re-init terminal
+    setTimeout(() => initTerminal(), 100);
+  }, [initTerminal]);
 
-  const handleIframeLoad = () => setConnected(true);
-  const handleOauthOpen = () => { if (oauthUrl) window.open(oauthUrl, "_blank"); };
-  const handleOauthDismiss = () => setOauthUrl(null);
-
-  // "Go" button: if no URL yet, try clipboard first
-  const handleGoClick = async () => {
-    let url = oauthUrl;
-    if (!url) {
-      const clipUrl = await readClipboardForUrl();
-      if (clipUrl) {
-        url = clipUrl;
-        setFoundUrl(url);
-      }
-    }
-    if (url) {
-      window.open(url, "_blank", "noopener,noreferrer");
+  // Opens the EXACT URL as detected — no domain substitution
+  const handleGoClick = () => {
+    if (oauthUrl) {
+      window.open(oauthUrl, "_blank", "noopener,noreferrer");
     }
   };
 
-  // "Paste" button: read clipboard with user gesture (works on iPad)
-  const handlePasteClick = async () => {
-    const clipUrl = await readClipboardForUrl();
-    if (clipUrl) {
-      setFoundUrl(clipUrl);
-    } else {
-      // Try reading whatever is in clipboard
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          // Clean up multi-line paste and check for partial URL
-          const cleaned = text.replace(/[\r\n]+/g, "").trim();
-          const url = extractOauthUrl(cleaned);
-          if (url) {
-            setFoundUrl(url);
-          } else {
-            setOauthUrl(cleaned);
-          }
-        }
-      } catch {
-        // Clipboard not available
-      }
-    }
-  };
-
-  const resetOauthMonitor = () => {
+  const resetOauth = () => {
     oauthFoundRef.current = false;
     setOauthUrl("");
-    setMonitorStatus("watching");
-    const termPw = sessionStorage.getItem("terminal-pw") || "";
-    fetch(`/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`, {
-      method: "DELETE",
-    }).catch(() => {});
-  };
-
-  // Smart paste handler for the input field
-  const handleInputPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text");
-    // Join lines — iPad copies single lines from wrapped terminal text
-    const cleaned = pasted.replace(/[\r\n]+/g, "").trim();
-    const url = extractOauthUrl(cleaned);
-    if (url) {
-      setFoundUrl(url);
-    } else {
-      setOauthUrl(cleaned);
-    }
+    setOauthDetected(false);
+    outputBufferRef.current = "";
   };
 
   if (checking) return null;
@@ -186,7 +317,9 @@ export default function TerminalPage() {
           </h1>
           <p className="text-slate-400 text-sm mb-6">
             Open{" "}
-            <span className="text-accent font-mono">masterhq.dev/terminal</span>{" "}
+            <span className="text-accent font-mono">
+              masterhq.dev/terminal
+            </span>{" "}
             on your iPad or computer for the full terminal experience.
           </p>
           <a href="/" className="text-accent text-sm hover:underline">
@@ -208,7 +341,12 @@ export default function TerminalPage() {
               Connect to your droplet from anywhere — including iPad
             </p>
           </div>
-          <form onSubmit={(e) => { e.preventDefault(); handleAuth(); }}>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleAuth();
+            }}
+          >
             <input
               type="password"
               value={password}
@@ -217,21 +355,30 @@ export default function TerminalPage() {
               autoFocus
               className="w-full bg-base border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none font-mono mb-3"
             />
-            {authError && <p className="text-xs text-danger mb-3 font-mono">{authError}</p>}
-            <button type="submit" className="w-full py-3 bg-accent text-black font-bold rounded-lg text-sm hover:bg-accent/80 transition-colors font-mono">
+            {authError && (
+              <p className="text-xs text-danger mb-3 font-mono">{authError}</p>
+            )}
+            <button
+              type="submit"
+              className="w-full py-3 bg-accent text-black font-bold rounded-lg text-sm hover:bg-accent/80 transition-colors font-mono"
+            >
               Connect
             </button>
           </form>
-          <a href="/" className="block text-center text-xs text-slate-500 mt-4 hover:text-slate-300">← Back to Dashboard</a>
+          <a
+            href="/"
+            className="block text-center text-xs text-slate-500 mt-4 hover:text-slate-300"
+          >
+            ← Back to Dashboard
+          </a>
         </div>
       </div>
     );
   }
 
-  const terminalUrl = ttydUrl || "";
-
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-black">
+      {/* Header bar */}
       <div className="flex items-center justify-between px-4 py-2 bg-base-light border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-3">
           <a
@@ -248,86 +395,84 @@ export default function TerminalPage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <div
-              className={`w-2 h-2 rounded-full ${connected ? "bg-success animate-pulse-live" : "bg-danger"}`}
+              className={`w-2 h-2 rounded-full ${
+                connected ? "bg-success animate-pulse-live" : "bg-danger"
+              }`}
             />
             <span
-              className={`text-xs font-mono ${connected ? "text-success" : "text-danger"}`}
+              className={`text-xs font-mono ${
+                connected ? "text-success" : "text-danger"
+              }`}
             >
               {connected ? "Connected" : "Disconnected"}
             </span>
           </div>
-          <span className="text-xs text-slate-500 font-mono hidden md:inline">terminal.masterhq.dev</span>
-          <button onClick={reconnect} className="px-3 py-1 bg-slate-800 text-slate-300 rounded text-xs font-mono hover:bg-slate-700 transition-colors">
+          <span className="text-xs text-slate-500 font-mono hidden md:inline">
+            terminal.masterhq.dev
+          </span>
+          <button
+            onClick={reconnect}
+            className="px-3 py-1 bg-slate-800 text-slate-300 rounded text-xs font-mono hover:bg-slate-700 transition-colors"
+          >
             Reconnect
           </button>
-          {ttydUrl && (
-            <a href={ttydUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-accent/20 text-accent rounded text-xs font-mono hover:bg-accent/30 transition-colors">
-              New Tab
-            </a>
-          )}
         </div>
       </div>
 
-      {oauthUrl && (
-        <div className="shrink-0 bg-yellow-900/80 border-b border-yellow-600 px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-yellow-400 text-lg shrink-0">🔑</span>
-            <div className="min-w-0">
-              <p className="text-yellow-200 text-xs font-mono font-bold">Claude Code login URL ready!</p>
-              <p className="text-yellow-400 text-xs font-mono truncate">{oauthUrl.slice(0, 80)}...</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button onClick={handleOauthOpen} className="px-4 py-2 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors">
-              Open Login →
-            </button>
-            <button onClick={handleOauthDismiss} className="px-3 py-2 bg-slate-700 text-slate-300 rounded text-xs font-mono hover:bg-slate-600 transition-colors">
-              Dismiss
-            </button>
-          </div>
+      {/* OAuth URL bar — auto-populated from the raw terminal data stream */}
+      {oauthDetected ? (
+        <div className="shrink-0 bg-yellow-900/80 border-b border-yellow-600 px-4 py-2 flex items-center gap-3">
+          <span className="text-yellow-400 shrink-0">🔑</span>
+          <input
+            type="text"
+            value={oauthUrl}
+            readOnly
+            className="flex-1 min-w-0 bg-yellow-950 border border-yellow-700 rounded px-3 py-1.5 text-xs text-yellow-100 font-mono truncate"
+          />
+          <button
+            onClick={handleGoClick}
+            className="px-4 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors shrink-0"
+          >
+            Open Login
+          </button>
+          <button
+            onClick={resetOauth}
+            className="px-2 py-1.5 text-yellow-600 hover:text-yellow-400 text-xs font-mono transition-colors shrink-0"
+          >
+            X
+          </button>
         </div>
-      )}
-
-      {!oauthUrl && connected && (
-        <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2 space-y-2">
-          <form onSubmit={(e) => { e.preventDefault(); handlePasteSubmit(); }} className="flex items-center gap-2">
-            <span className="text-yellow-400 text-xs shrink-0">🔑</span>
-            <input
-              type="text"
-              value={pasteValue}
-              onChange={(e) => setPasteValue(e.target.value)}
-              placeholder="Paste or type login URL here..."
-              className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-xs text-white font-mono placeholder-slate-500 focus:border-yellow-400 focus:outline-none"
-            />
-            <button type="submit" disabled={!pasteValue.trim()} className="px-3 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors disabled:opacity-30">
-              Go
-            </button>
-          </form>
-          <p className="text-[10px] text-slate-600 font-mono">
-            💡 iPad: press c in Claude Code, then run: <code className="text-accent">send-url</code> — the login button will appear automatically
-          </p>
-        </div>
-      )}
-
-      {terminalUrl ? (
-        <iframe
-          key={iframeKey}
-          ref={iframeRef}
-          src={terminalUrl}
-          onLoad={handleIframeLoad}
-          className="flex-1 w-full border-0 bg-black"
-          title="Terminal"
-          allow="clipboard-read; clipboard-write"
-        />
       ) : (
-        <div className="flex-1 flex items-center justify-center">
+        connected && (
+          <div className="shrink-0 bg-[#0d1424] border-b border-slate-800 px-4 py-2 flex items-center gap-2">
+            <div
+              className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0"
+              title="Watching terminal output for OAuth URL..."
+            />
+            <span className="text-xs text-slate-500 font-mono">
+              Watching terminal output for OAuth URL...
+            </span>
+          </div>
+        )
+      )}
+
+      {/* Embedded xterm.js terminal — direct WebSocket, same origin */}
+      <div
+        ref={termContainerRef}
+        className="flex-1 w-full"
+        style={{ minHeight: 0 }}
+      />
+
+      {!ttydUrl && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h2 className="text-lg font-bold text-white mb-2">
               TTYD_URL not configured
             </h2>
             <p className="text-sm text-slate-400 max-w-md">
-              Add <code className="text-accent">TTYD_URL</code> to your Vercel environment variables.
+              Add <code className="text-accent">TTYD_URL</code> to your Vercel
+              environment variables.
             </p>
           </div>
         </div>
