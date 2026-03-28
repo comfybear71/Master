@@ -13,9 +13,8 @@ export default function TerminalPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
-  // OAuth URL state
+  // OAuth URL — auto-populated when the droplet pushes it to the API
   const [oauthUrl, setOauthUrl] = useState("");
-  const [fetching, setFetching] = useState(false);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -47,7 +46,7 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
-  // Poll API relay for OAuth URL (works with send-url helper on droplet)
+  // Poll for OAuth URL pushed by the droplet watcher
   useEffect(() => {
     if (!authenticated || !connected || oauthUrl) return;
     const termPw = sessionStorage.getItem("terminal-pw") || "";
@@ -62,6 +61,7 @@ export default function TerminalPage() {
         // ignore
       }
     };
+    poll();
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, [authenticated, connected, oauthUrl]);
@@ -96,57 +96,11 @@ export default function TerminalPage() {
 
   const handleIframeLoad = () => setConnected(true);
 
-  // Get Login URL — runs grep/tmux command on the droplet via server-side API
-  const handleGetUrl = async () => {
-    setFetching(true);
-    try {
-      const termPw = sessionStorage.getItem("terminal-pw") || "";
-      const res = await fetch("/api/terminal/get-url", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: termPw }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        setOauthUrl(data.url);
-      }
-    } catch {
-      // ignore
-    }
-    setFetching(false);
-  };
-
-  // Paste from clipboard
-  const handlePaste = async () => {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (text) {
-        // Strip newlines (iPad may copy single wrapped lines) and clean up
-        const cleaned = text.replace(/[\r\n]+/g, "").trim();
-        // Extract OAuth URL if present
-        const match = cleaned.match(
-          /https:\/\/claude\.com\/cai\/oauth[^\s'">]*/
-        );
-        setOauthUrl(match ? match[0] : cleaned);
-      }
-    } catch {
-      // Clipboard API not available — user can long-press the input to paste manually
-    }
-  };
-
-  // Open the EXACT URL — no domain substitution, no modification
+  // Opens the EXACT URL — no domain substitution
   const handleGo = () => {
     if (oauthUrl) {
       window.open(oauthUrl, "_blank", "noopener,noreferrer");
     }
-  };
-
-  // Handle manual paste into input (strips newlines)
-  const handleInputPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData("text").replace(/[\r\n]+/g, "").trim();
-    const match = text.match(/https:\/\/claude\.com\/cai\/oauth[^\s'">]*/);
-    setOauthUrl(match ? match[0] : text);
   };
 
   if (checking) return null;
@@ -161,9 +115,7 @@ export default function TerminalPage() {
           </h1>
           <p className="text-slate-400 text-sm mb-6">
             Open{" "}
-            <span className="text-accent font-mono">
-              masterhq.dev/terminal
-            </span>{" "}
+            <span className="text-accent font-mono">masterhq.dev/terminal</span>{" "}
             on your iPad or computer.
           </p>
           <a href="/" className="text-accent text-sm hover:underline">
@@ -200,9 +152,7 @@ export default function TerminalPage() {
               className="w-full bg-base border border-slate-700 rounded-lg px-4 py-3 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none font-mono mb-3"
             />
             {authError && (
-              <p className="text-xs text-danger mb-3 font-mono">
-                {authError}
-              </p>
+              <p className="text-xs text-danger mb-3 font-mono">{authError}</p>
             )}
             <button
               type="submit"
@@ -229,10 +179,7 @@ export default function TerminalPage() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 bg-base-light border-b border-slate-800 shrink-0">
         <div className="flex items-center gap-3">
-          <a
-            href="/"
-            className="text-slate-500 hover:text-accent text-xs font-mono"
-          >
+          <a href="/" className="text-slate-500 hover:text-accent text-xs font-mono">
             ← Dashboard
           </a>
           <span className="text-slate-700">|</span>
@@ -267,17 +214,13 @@ export default function TerminalPage() {
         </div>
       </div>
 
-      {/* OAuth URL bar */}
+      {/* OAuth URL bar — auto-populated from API polling */}
       {oauthUrl ? (
-        /* URL found — show Open Login banner */
         <div className="shrink-0 bg-yellow-900/80 border-b border-yellow-600 px-4 py-2 flex items-center gap-3">
           <span className="text-yellow-400 shrink-0">🔑</span>
-          <input
-            type="text"
-            value={oauthUrl}
-            readOnly
-            className="flex-1 min-w-0 bg-yellow-950 border border-yellow-700 rounded px-3 py-1.5 text-xs text-yellow-100 font-mono truncate"
-          />
+          <span className="flex-1 min-w-0 text-xs text-yellow-100 font-mono truncate">
+            {oauthUrl}
+          </span>
           <button
             onClick={handleGo}
             className="px-4 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors shrink-0"
@@ -293,43 +236,16 @@ export default function TerminalPage() {
         </div>
       ) : (
         connected && (
-          /* No URL yet — show Get Login URL button + input + paste */
-          <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleGetUrl}
-                disabled={fetching}
-                className="px-3 py-1.5 bg-accent text-black font-bold rounded text-xs font-mono hover:bg-accent/80 transition-colors shrink-0 disabled:opacity-50"
-              >
-                {fetching ? "Fetching..." : "Get Login URL"}
-              </button>
-              <input
-                type="text"
-                value={oauthUrl}
-                onChange={(e) => setOauthUrl(e.target.value)}
-                onPaste={handleInputPaste}
-                placeholder="URL appears here — or paste manually"
-                className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-xs text-white font-mono placeholder-slate-500 focus:border-yellow-400 focus:outline-none"
-              />
-              <button
-                onClick={handlePaste}
-                className="px-3 py-1.5 bg-slate-700 text-slate-200 rounded text-xs font-bold font-mono hover:bg-slate-600 transition-colors shrink-0"
-              >
-                Paste
-              </button>
-              <button
-                onClick={handleGo}
-                disabled={!oauthUrl}
-                className="px-3 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors shrink-0 disabled:opacity-30"
-              >
-                Go
-              </button>
-            </div>
+          <div className="shrink-0 bg-[#0d1424] border-b border-slate-800 px-4 py-2 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
+            <span className="text-xs text-slate-500 font-mono">
+              Waiting for login URL... (type claude in the terminal)
+            </span>
           </div>
         )
       )}
 
-      {/* Terminal iframe — the proven working approach */}
+      {/* Terminal iframe */}
       {terminalUrl ? (
         <iframe
           key={iframeKey}

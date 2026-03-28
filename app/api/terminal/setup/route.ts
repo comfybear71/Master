@@ -5,85 +5,66 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const script = `#!/bin/bash
 # MasterHQ Terminal — OAuth URL Auto-Capture Setup
-# Run once on the droplet: curl -sL https://masterhq.dev/api/terminal/setup | bash
+# Run once: curl -sL https://masterhq.dev/api/terminal/setup | bash
 
-echo "Setting up OAuth URL auto-capture..."
+echo ""
+echo "=== MasterHQ OAuth URL Auto-Capture ==="
+echo ""
 
-# 1. Add claude wrapper function to ~/.bashrc
+# Get terminal password (needed to push URL to MasterHQ)
+if [ -z "$TERMINAL_PASSWORD" ]; then
+  read -rp "Enter your MasterHQ terminal password: " TERMINAL_PASSWORD
+  echo ""
+fi
+
+# Remove old version if exists
 if grep -q "# masterhq-oauth-capture" ~/.bashrc 2>/dev/null; then
-  echo "Already installed. Updating..."
+  echo "Removing old version..."
   sed -i '/# masterhq-oauth-capture START/,/# masterhq-oauth-capture END/d' ~/.bashrc
 fi
 
+# Install the claude wrapper
 cat >> ~/.bashrc << 'WRAPPER'
 # masterhq-oauth-capture START
 claude() {
     rm -f ~/.claude_oauth_url /tmp/claude_out.log
     touch /tmp/claude_out.log
-    # Background watcher: extracts OAuth URL from script log
+    # Background watcher: extracts OAuth URL and pushes to MasterHQ
     (
         for _ in $(seq 1 120); do
             sleep 2
             URL=$(sed 's/\\x1b\\[[0-9;]*[a-zA-Z]//g' /tmp/claude_out.log 2>/dev/null | tr -d '\\r\\n' | grep -oE 'https://claude\\.com/cai/oauth/authorize\\?[^ ]+' | head -1)
             if [ -n "$URL" ]; then
                 echo "$URL" > ~/.claude_oauth_url
+                # Push to MasterHQ API so the terminal page picks it up
+                curl -s -X POST "https://masterhq.dev/api/terminal/oauth-url" \\
+                    -H 'Content-Type: application/json' \\
+                    -d "{\\"url\\":\\"$URL\\",\\"password\\":\\"$TERMINAL_PASSWORD\\"}" > /dev/null 2>&1 &
                 break
             fi
         done
     ) &
-    local WATCHER_PID=$!
     # script preserves the TTY while logging all output
     script -qfc "command claude $*" /tmp/claude_out.log
     local EXIT_CODE=$?
-    kill $WATCHER_PID 2>/dev/null
-    wait $WATCHER_PID 2>/dev/null
     return $EXIT_CODE
 }
 # masterhq-oauth-capture END
 WRAPPER
 
-# 2. Add nginx endpoint to serve the file (if nginx is installed)
-if command -v nginx &>/dev/null && [ -d /etc/nginx ]; then
-  # Check if the location already exists
-  if ! grep -q "oauth-url" /etc/nginx/sites-enabled/default 2>/dev/null && \
-     ! grep -q "oauth-url" /etc/nginx/conf.d/*.conf 2>/dev/null; then
-    echo "Adding nginx /oauth-url endpoint..."
-    # Find the server block and add the location
-    sudo sed -i '/server_name.*terminal/,/^}/ {
-      /^}/i\\
-    location = /oauth-url {\\
-        default_type text/plain;\\
-        alias /home/'"$USER"'/.claude_oauth_url;\\
-        add_header Access-Control-Allow-Origin *;\\
-        add_header Cache-Control no-cache;\\
-    }
-    }' /etc/nginx/sites-enabled/default 2>/dev/null || \
-    sudo sed -i '/server_name.*terminal/,/^}/ {
-      /^}/i\\
-    location = /oauth-url {\\
-        default_type text/plain;\\
-        alias /home/'"$USER"'/.claude_oauth_url;\\
-        add_header Access-Control-Allow-Origin *;\\
-        add_header Cache-Control no-cache;\\
-    }
-    }' /etc/nginx/conf.d/terminal.conf 2>/dev/null || true
-    sudo nginx -t 2>/dev/null && sudo nginx -s reload 2>/dev/null
-  fi
+# Store TERMINAL_PASSWORD in .bashrc if not already there
+if ! grep -q "export TERMINAL_PASSWORD=" ~/.bashrc 2>/dev/null; then
+  echo "export TERMINAL_PASSWORD='$TERMINAL_PASSWORD'" >> ~/.bashrc
 fi
 
+echo "Done! Now run:  source ~/.bashrc"
 echo ""
-echo "Done! Now run: source ~/.bashrc"
+echo "Then just type 'claude'. The login URL will appear"
+echo "automatically in the MasterHQ terminal page."
 echo ""
-echo "Usage:"
-echo "  1. Type 'claude' in the terminal"
-echo "  2. Wait for the OAuth URL to appear"
-echo "  3. Tap 'Get Login URL' on the MasterHQ terminal page"
-echo "  4. Tap 'Go' to open the login page"
 `;
 
   return new NextResponse(script, {
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-    },
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
   });
 }
