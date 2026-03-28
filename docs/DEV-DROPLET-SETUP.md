@@ -204,6 +204,47 @@ claude
 
 ---
 
+## OAuth URL Helper (for iPad Claude Code login)
+
+On iPad, you can't easily copy the full OAuth URL from the terminal. This helper script sends it to MasterHQ automatically.
+
+### Install the helper
+
+SSH into the droplet and create the script:
+
+```bash
+cat > ~/send-url << 'SCRIPT'
+#!/bin/bash
+# Grab the OAuth URL from Claude Code's clipboard (xclip) or from the log
+URL=$(grep -o 'https://claude[^ ]*' /tmp/claude-output.log 2>/dev/null | tail -1)
+if [ -z "$URL" ]; then
+  echo "No OAuth URL found. Make sure you pressed 'c' in Claude Code first."
+  exit 1
+fi
+# Send to MasterHQ
+curl -s -X POST https://masterhq.dev/api/terminal/oauth \
+  -H "Content-Type: application/json" \
+  -d "{\"url\": \"$URL\"}"
+echo ""
+echo "URL sent to MasterHQ! Check the terminal page for the login button."
+SCRIPT
+chmod +x ~/send-url
+```
+
+### How to use on iPad
+
+1. Start Claude Code: `claude 2>&1 | tee /tmp/claude-output.log`
+2. When OAuth URL appears, press `c` in Claude Code
+3. In the terminal, type: `send-url`
+4. The yellow "Open Login" banner appears automatically on masterhq.dev/terminal
+5. Tap "Open Login →" to authenticate
+
+### Alternative: just type the URL manually
+
+If `send-url` doesn't work, you can also paste or type the URL directly into the input box on the terminal page header and tap "Go".
+
+---
+
 ## Troubleshooting
 
 | Issue | Solution |

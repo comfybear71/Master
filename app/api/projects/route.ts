@@ -21,9 +21,15 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    // Clean repo field — strip full GitHub URL to owner/repo format
+    let repo = (body.repo || "").trim();
+    if (repo.includes("github.com/")) {
+      repo = repo.replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, "").replace(/\.git$/, "");
+    }
+
     const project: Omit<Project, "_id"> = {
       name: body.name,
-      repo: body.repo,
+      repo,
       vercelProjectId: body.vercelProjectId || "",
       stack: body.stack || "",
       category: body.category || "infrastructure",
@@ -55,6 +61,35 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete project";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { id, ...updates } = body;
+    if (!id) {
+      return NextResponse.json({ error: "Missing project id" }, { status: 400 });
+    }
+
+    // Clean repo field — strip full GitHub URL to owner/repo format
+    if (updates.repo && updates.repo.includes("github.com/")) {
+      updates.repo = updates.repo.replace(/^https?:\/\/github\.com\//, "");
+      // Remove trailing slashes or .git
+      updates.repo = updates.repo.replace(/\/$/, "").replace(/\.git$/, "");
+    }
+
+    const db = await getDb();
+    await db.collection("projects").updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updates }
+    );
+
+    const updated = await db.collection("projects").findOne({ _id: new ObjectId(id) });
+    return NextResponse.json(updated);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update project";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
