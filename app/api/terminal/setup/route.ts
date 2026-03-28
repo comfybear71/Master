@@ -11,10 +11,15 @@ echo ""
 echo "=== MasterHQ OAuth URL Auto-Capture ==="
 echo ""
 
-# Get terminal password (needed to push URL to MasterHQ)
+# Get terminal password — read from /dev/tty because stdin is the pipe
 if [ -z "$TERMINAL_PASSWORD" ]; then
-  read -rp "Enter your MasterHQ terminal password: " TERMINAL_PASSWORD
+  read -rp "Enter your MasterHQ terminal password: " TERMINAL_PASSWORD < /dev/tty
   echo ""
+fi
+
+if [ -z "$TERMINAL_PASSWORD" ]; then
+  echo "Error: password is required."
+  exit 1
 fi
 
 # Remove old version if exists
@@ -22,6 +27,12 @@ if grep -q "# masterhq-oauth-capture" ~/.bashrc 2>/dev/null; then
   echo "Removing old version..."
   sed -i '/# masterhq-oauth-capture START/,/# masterhq-oauth-capture END/d' ~/.bashrc
 fi
+
+# Remove old TERMINAL_PASSWORD export if exists
+sed -i "/export TERMINAL_PASSWORD=/d" ~/.bashrc 2>/dev/null
+
+# Store password
+echo "export TERMINAL_PASSWORD='$TERMINAL_PASSWORD'" >> ~/.bashrc
 
 # Install the claude wrapper
 cat >> ~/.bashrc << 'WRAPPER'
@@ -33,13 +44,14 @@ claude() {
     (
         for _ in $(seq 1 120); do
             sleep 2
-            URL=$(sed 's/\\x1b\\[[0-9;]*[a-zA-Z]//g' /tmp/claude_out.log 2>/dev/null | tr -d '\\r\\n' | grep -oE 'https://claude\\.com/cai/oauth/authorize\\?[^ ]+' | head -1)
+            # grep -aoP works on raw script logs (binary-safe, Perl regex)
+            URL=$(grep -aoP 'https://claude\\.com/cai/oauth/authorize\\?\\S+' /tmp/claude_out.log 2>/dev/null | head -1)
             if [ -n "$URL" ]; then
                 echo "$URL" > ~/.claude_oauth_url
-                # Push to MasterHQ API so the terminal page picks it up
-                curl -s -X POST "https://masterhq.dev/api/terminal/oauth-url" \\
-                    -H 'Content-Type: application/json' \\
-                    -d "{\\"url\\":\\"$URL\\",\\"password\\":\\"$TERMINAL_PASSWORD\\"}" > /dev/null 2>&1 &
+                # Push to MasterHQ API
+                curl -s -X POST "https://masterhq.dev/api/terminal/oauth-url" \
+                    -H 'Content-Type: application/json' \
+                    -d "{\"url\":\"$URL\",\"password\":\"$TERMINAL_PASSWORD\"}" > /dev/null 2>&1 &
                 break
             fi
         done
@@ -52,11 +64,7 @@ claude() {
 # masterhq-oauth-capture END
 WRAPPER
 
-# Store TERMINAL_PASSWORD in .bashrc if not already there
-if ! grep -q "export TERMINAL_PASSWORD=" ~/.bashrc 2>/dev/null; then
-  echo "export TERMINAL_PASSWORD='$TERMINAL_PASSWORD'" >> ~/.bashrc
-fi
-
+echo ""
 echo "Done! Now run:  source ~/.bashrc"
 echo ""
 echo "Then just type 'claude'. The login URL will appear"
