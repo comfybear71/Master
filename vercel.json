@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/topics?action=generate",
+      "schedule": "0 0,6,12,18 * * *"
+    }
+  ],
+  "functions": {
+    "app/api/terminal/auth/route.ts": {
+      "maxDuration": 10
+    },
+    "app/api/topics/route.ts": {
+      "maxDuration": 120
+    }
+  }
+}

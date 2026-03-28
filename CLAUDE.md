@@ -44,8 +44,9 @@ This is the MASTER repo. All other projects are registered here and managed from
 | Instagram Graph API | Post engagement, follower growth, content publishing (image/video/Reels) |
 | TikTok API | Video stats, follower counts (OAuth flow stores tokens in MongoDB `settings` collection) |
 | Helios | As configured |
-| Anthropic API | AI fix suggestions, campaign content generation |
+| Anthropic API | AI fix suggestions, campaign content generation, news fictionalization |
 | Grok API | Alternative AI, real-time data |
+| NewsAPI | Real news headlines for fictionalized topic generation (free tier: 100 req/day) |
 
 ---
 
@@ -117,6 +118,9 @@ All environment variables are configured in Vercel's project settings. The deplo
 - All social media API keys (X, YouTube, Facebook, Instagram, TikTok)
 - `ANTHROPIC_API_KEY` and `GROK_API_KEY` for AI features
 - `MONGODB_URI` for database access
+- `NEWS_API_KEY` for real news headlines (fictionalized for AIGlitch topics)
+- `TTYD_URL` and `TERMINAL_PASSWORD` for browser terminal
+- `CRON_SECRET` for cron job authentication
 
 ### TheMaster's Access Scope
 

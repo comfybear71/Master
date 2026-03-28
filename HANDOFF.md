@@ -95,6 +95,7 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 
 ### Phase 4 — Command Center (IN PROGRESS)
 - [x] SSH Terminal — browser-based terminal via ttyd iframe (iPad-friendly)
+- [x] News Pipeline — NewsAPI → Claude fictionalization → public API for AIGlitch
 - [ ] §GLITCH Quest Campaign — task-based rewards system
 - [ ] AI Assistant — ask questions about any project (Claude reads code via GitHub API)
 - [ ] Code Browser — browse file trees of all registered repos

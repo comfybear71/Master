@@ -140,6 +140,16 @@ MasterHQ is a unified command and control platform for managing multiple live pr
 | `?action=mark-contacted` | POST | Mark prospect as contacted (increment counter) |
 | `?action=bulk-generate` | POST | Generate emails for multiple prospects (max 10) |
 
+### Topics / News Pipeline (`/api/topics`)
+| Action | Method | Purpose |
+|--------|--------|---------|
+| (none) | GET | Public endpoint — returns fictionalized news topics for AIGlitch (CORS enabled) |
+| `?action=generate` | POST | Cron trigger — fetch real news, fictionalize with Claude, store in DB |
+
+**Pipeline:** NewsAPI (real headlines) → Claude (fictionalize names/places) → MongoDB → Public API → AIGlitch reads
+**Cron:** Runs every 6 hours (0:00, 6:00, 12:00, 18:00 UTC)
+**Topics expire** after 8 hours (with overlap between runs)
+
 ### TikTok Auth (`/api/auth/tiktok`)
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
@@ -210,7 +220,7 @@ Publish content to a specific platform (X auto-publish, Instagram Content Publis
 Main layout with sidebar navigation and light/dark mode toggle.
 
 **Sidebar Links:**
-- Dashboard, Projects, Monitoring, CI/CD, Growth, Prospects, Docs, Media Kit
+- Dashboard, Projects, Monitoring, CI/CD, Growth, Prospects, Terminal, Docs, Media Kit
 
 **Features:**
 - Mobile-responsive (hamburger menu)
@@ -250,13 +260,16 @@ All configured in Vercel project settings:
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Project context (copy from root) |
-| `HANDOFF.md` | Session logs + current state (copy from root) |
 | `masterhq-features.md` | **THIS FILE** — complete feature reference |
-| `aiglitch-sponsor-prompt.md` | Sponsor management system prompt for AIGlitch |
-| `aiglitch-cost-optimization.md` | Cost reduction guide ($1,365→$300-500/mo) |
-| `aiglitch-30s-video-fix.md` | Fix: 30s ads only producing 10s clips |
-| `aiglitch-video-stitch-fix.md` | Fix: MP4 edts box causing 10s playback |
-| `aiglitch-breaking-news-fix.md` | Fix: Breaking News stitch debug guide |
-| `aiglitch-breaking-news-urgent-fix.md` | Fix: Breaking News field name mismatch |
+| `DEV-DROPLET-SETUP.md` | Dev droplet setup guide (Claude Code, ttyd, SSL) |
+| `ttyd-setup.md` | ttyd setup for budju droplet (reference only) |
+| `glitch-quest-design.md` | §GLITCH Quest Campaign design document |
+| `aiglitch-news-topics-client.md` | AIGlitch prompt: connect to MasterHQ news API |
+| `aiglitch-sponsor-prompt.md` | AIGlitch prompt: sponsor management system |
+| `aiglitch-cost-optimization.md` | AIGlitch prompt: cost reduction ($1,365→$300-500/mo) |
+| `aiglitch-30s-video-fix.md` | AIGlitch fix: 30s ads only producing 10s clips |
+| `aiglitch-video-stitch-fix.md` | AIGlitch fix: MP4 edts box causing 10s playback |
+| `aiglitch-breaking-news-fix.md` | AIGlitch fix: Breaking News stitch debug |
+| `aiglitch-breaking-news-urgent-fix.md` | AIGlitch fix: Breaking News field name mismatch |
 | `aiglitch_prospect_list.xlsx` | 130+ sponsor prospects spreadsheet |
+| `CLAUDE_CODE_PROMPT.md` | Original Claude Code session prompt |
