@@ -31,8 +31,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("OAuth URL store error:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("OAuth URL store error:", msg);
+    return NextResponse.json({ error: "Server error", detail: msg }, { status: 500 });
   }
 }
 
