@@ -154,6 +154,11 @@ export default function TerminalPage() {
           <button onClick={reconnect} className="px-3 py-1 bg-slate-800 text-slate-300 rounded text-xs font-mono hover:bg-slate-700 transition-colors">
             Reconnect
           </button>
+          {ttydUrl && (
+            <a href={ttydUrl} target="_blank" rel="noopener noreferrer" className="px-3 py-1 bg-accent/20 text-accent rounded text-xs font-mono hover:bg-accent/30 transition-colors">
+              New Tab
+            </a>
+          )}
         </div>
       </div>
 
