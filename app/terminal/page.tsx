@@ -214,35 +214,42 @@ export default function TerminalPage() {
         </div>
       </div>
 
-      {/* OAuth URL bar — auto-populated from API polling */}
-      {oauthUrl ? (
-        <div className="shrink-0 bg-yellow-900/80 border-b border-yellow-600 px-4 py-2 flex items-center gap-3">
-          <span className="text-yellow-400 shrink-0">🔑</span>
-          <span className="flex-1 min-w-0 text-xs text-yellow-100 font-mono truncate">
-            {oauthUrl}
-          </span>
+      {/* OAuth URL bar — paste the URL or it auto-appears */}
+      {connected && (
+        <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-3 py-2 flex items-center gap-2">
+          <input
+            type="text"
+            value={oauthUrl}
+            onChange={(e) => setOauthUrl(e.target.value)}
+            onPaste={(e) => {
+              e.preventDefault();
+              const text = e.clipboardData.getData("text").replace(/[\r\n]+/g, "").trim();
+              const match = text.match(/https:\/\/claude\.com\/cai\/oauth[^\s]*/);
+              setOauthUrl(match ? match[0] : text);
+            }}
+            placeholder="Paste login URL here (press c in Claude, then long-press here to paste)"
+            className="flex-1 min-w-0 bg-slate-800 border border-slate-700 rounded px-3 py-2 text-xs text-white font-mono placeholder-slate-500 focus:border-accent focus:outline-none"
+          />
           <button
             onClick={handleGo}
-            className="px-4 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors shrink-0"
+            disabled={!oauthUrl}
+            className={`px-4 py-2 rounded text-xs font-bold font-mono transition-colors shrink-0 ${
+              oauthUrl
+                ? "bg-accent text-black hover:bg-accent/80"
+                : "bg-slate-800 text-slate-500"
+            }`}
           >
-            Open Login
+            Go
           </button>
-          <button
-            onClick={() => setOauthUrl("")}
-            className="px-2 py-1.5 text-yellow-700 hover:text-yellow-400 text-xs font-mono shrink-0"
-          >
-            X
-          </button>
+          {oauthUrl && (
+            <button
+              onClick={() => setOauthUrl("")}
+              className="px-2 py-2 text-slate-500 hover:text-white text-xs font-mono shrink-0"
+            >
+              X
+            </button>
+          )}
         </div>
-      ) : (
-        connected && (
-          <div className="shrink-0 bg-[#0d1424] border-b border-slate-800 px-4 py-2 flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />
-            <span className="text-xs text-slate-500 font-mono">
-              Waiting for login URL... (type claude in the terminal)
-            </span>
-          </div>
-        )
       )}
 
       {/* Terminal iframe */}
