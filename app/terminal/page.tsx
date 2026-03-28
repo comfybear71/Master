@@ -45,6 +45,20 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
+  // Poll for OAuth URL from droplet (via helper script)
+  useEffect(() => {
+    if (!authenticated || !connected || oauthUrl) return;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/terminal/oauth");
+        const data = await res.json();
+        if (data.url) setOauthUrl(data.url);
+      } catch {}
+    };
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, [authenticated, connected, oauthUrl]);
+
   const handlePasteSubmit = () => {
     const text = pasteValue.trim();
     if (!text) return;
@@ -183,19 +197,24 @@ export default function TerminalPage() {
       )}
 
       {!oauthUrl && connected && (
-        <form onSubmit={(e) => { e.preventDefault(); handlePasteSubmit(); }} className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2 flex items-center gap-2">
-          <span className="text-yellow-400 text-xs shrink-0">🔑</span>
-          <input
-            type="text"
-            value={pasteValue}
-            onChange={(e) => setPasteValue(e.target.value)}
-            placeholder="Paste Claude Code login URL here and hit Enter..."
-            className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-xs text-white font-mono placeholder-slate-500 focus:border-yellow-400 focus:outline-none"
-          />
-          <button type="submit" disabled={!pasteValue.trim()} className="px-3 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors disabled:opacity-30">
-            Open
-          </button>
-        </form>
+        <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2 space-y-2">
+          <form onSubmit={(e) => { e.preventDefault(); handlePasteSubmit(); }} className="flex items-center gap-2">
+            <span className="text-yellow-400 text-xs shrink-0">🔑</span>
+            <input
+              type="text"
+              value={pasteValue}
+              onChange={(e) => setPasteValue(e.target.value)}
+              placeholder="Paste or type login URL here..."
+              className="flex-1 bg-slate-800 border border-slate-700 rounded px-3 py-1.5 text-xs text-white font-mono placeholder-slate-500 focus:border-yellow-400 focus:outline-none"
+            />
+            <button type="submit" disabled={!pasteValue.trim()} className="px-3 py-1.5 bg-yellow-500 text-black font-bold rounded text-xs font-mono hover:bg-yellow-400 transition-colors disabled:opacity-30">
+              Go
+            </button>
+          </form>
+          <p className="text-[10px] text-slate-600 font-mono">
+            💡 iPad: press c in Claude Code, then run: <code className="text-accent">send-url</code> — the login button will appear automatically
+          </p>
+        </div>
       )}
 
       {terminalUrl ? (
