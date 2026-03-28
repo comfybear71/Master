@@ -13,6 +13,14 @@ export default function TerminalPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
+  // OAuth URL auto-detection
+  const [oauthUrl, setOauthUrl] = useState("");
+  const [monitorStatus, setMonitorStatus] = useState<"idle" | "connecting" | "watching" | "found">("idle");
+  const monitorWsRef = useRef<WebSocket | null>(null);
+  const monitorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const outputBufferRef = useRef("");
+  const oauthFoundRef = useRef(false);
+
   // Check device size
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -40,12 +48,123 @@ export default function TerminalPage() {
       })
         .then((r) => r.json())
         .then((data) => {
-          console.log("[terminal] Auth re-check response:", data);
           if (data.ttydUrl) setTtydUrl(data.ttydUrl);
         })
         .catch(() => {});
     }
   }, [authenticated]);
+
+  // Monitor ttyd via a second WebSocket for OAuth URLs
+  useEffect(() => {
+    if (!ttydUrl || !connected || oauthFoundRef.current) return;
+
+    // Build WebSocket URL from ttyd HTTPS URL
+    const wsUrl = ttydUrl.replace(/^https:\/\//, "wss://").replace(/^http:\/\//, "ws://");
+    const wsEndpoint = (wsUrl.endsWith("/") ? wsUrl.slice(0, -1) : wsUrl) + "/ws";
+
+    let ws: WebSocket;
+    let shellReady = false;
+    let destroyed = false;
+
+    const sendCheck = () => {
+      if (ws.readyState === WebSocket.OPEN && !oauthFoundRef.current) {
+        outputBufferRef.current = "";
+        // Check all tmux sessions for OAuth URL, with scrollback history
+        ws.send(
+          "0" +
+            "tmux capture-pane -p -S -3000 -t claude 2>/dev/null | grep -oE 'https://claude\\.com/cai/oauth[^ ]+' | tail -1\r"
+        );
+      }
+    };
+
+    const parseOutput = (text: string) => {
+      // Strip ANSI escape codes
+      const clean = text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+      outputBufferRef.current += clean;
+
+      // Look for OAuth URL in accumulated output
+      const match = outputBufferRef.current.match(
+        /https:\/\/claude\.com\/cai\/oauth[^\s'">]+/
+      );
+      if (match) {
+        const url = match[0];
+        setOauthUrl(url);
+        setMonitorStatus("found");
+        oauthFoundRef.current = true;
+        // Stop polling
+        if (monitorIntervalRef.current) {
+          clearInterval(monitorIntervalRef.current);
+          monitorIntervalRef.current = null;
+        }
+        // Clean up: exit the monitoring shell and close
+        try {
+          ws.send("0exit\r");
+        } catch {
+          // ignore
+        }
+        setTimeout(() => {
+          try { ws.close(); } catch { /* ignore */ }
+        }, 500);
+      }
+    };
+
+    try {
+      setMonitorStatus("connecting");
+      ws = new WebSocket(wsEndpoint);
+      monitorWsRef.current = ws;
+      ws.binaryType = "arraybuffer";
+
+      ws.onopen = () => {
+        if (destroyed) { ws.close(); return; }
+        setMonitorStatus("watching");
+        // Wait for shell prompt to be ready
+        setTimeout(() => {
+          if (destroyed || oauthFoundRef.current) return;
+          shellReady = true;
+          sendCheck();
+          // Poll every 3 seconds
+          monitorIntervalRef.current = setInterval(() => {
+            if (!oauthFoundRef.current) sendCheck();
+          }, 3000);
+        }, 2000);
+      };
+
+      ws.onmessage = (event: MessageEvent) => {
+        if (!shellReady || oauthFoundRef.current || destroyed) return;
+        const data = event.data;
+        if (data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(data);
+          // ttyd protocol: first byte 0x30 ('0') = terminal output
+          if (bytes[0] === 0x30 && bytes.length > 1) {
+            const text = new TextDecoder().decode(bytes.slice(1));
+            parseOutput(text);
+          }
+        }
+      };
+
+      ws.onerror = () => {
+        if (!oauthFoundRef.current) setMonitorStatus("idle");
+      };
+
+      ws.onclose = () => {
+        if (!oauthFoundRef.current && !destroyed) setMonitorStatus("idle");
+      };
+    } catch {
+      setMonitorStatus("idle");
+    }
+
+    return () => {
+      destroyed = true;
+      if (monitorIntervalRef.current) {
+        clearInterval(monitorIntervalRef.current);
+        monitorIntervalRef.current = null;
+      }
+      if (monitorWsRef.current) {
+        try { monitorWsRef.current.close(); } catch { /* ignore */ }
+        monitorWsRef.current = null;
+      }
+    };
+  }, [ttydUrl, connected]);
 
   const handleAuth = async () => {
     setAuthError("");
@@ -56,7 +175,6 @@ export default function TerminalPage() {
         body: JSON.stringify({ password }),
       });
       const data = await res.json();
-      console.log("[terminal] Auth response:", data);
       if (data.success) {
         setAuthenticated(true);
         sessionStorage.setItem("terminal-auth", "true");
@@ -73,10 +191,26 @@ export default function TerminalPage() {
   const reconnect = useCallback(() => {
     setConnected(false);
     setIframeKey((k) => k + 1);
+    // Reset OAuth monitoring
+    oauthFoundRef.current = false;
+    setOauthUrl("");
+    setMonitorStatus("idle");
   }, []);
 
   const handleIframeLoad = () => {
     setConnected(true);
+  };
+
+  const handleGoClick = () => {
+    if (oauthUrl) {
+      window.open(oauthUrl, "_blank", "noopener,noreferrer");
+    }
+  };
+
+  const resetOauthMonitor = () => {
+    oauthFoundRef.current = false;
+    setOauthUrl("");
+    setMonitorStatus("idle");
   };
 
   if (checking) return null;
@@ -166,6 +300,54 @@ export default function TerminalPage() {
             Reconnect
           </button>
         </div>
+      </div>
+
+      {/* OAuth URL bar — auto-detects OAuth URLs from Claude Code in the terminal */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-[#0d1424] border-b border-slate-800 shrink-0">
+        <div className="flex items-center gap-2 flex-1">
+          {monitorStatus === "watching" && (
+            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="Watching for OAuth URL..." />
+          )}
+          {monitorStatus === "found" && (
+            <div className="w-2 h-2 rounded-full bg-success shrink-0" title="OAuth URL detected" />
+          )}
+          {monitorStatus === "idle" && connected && (
+            <div className="w-2 h-2 rounded-full bg-slate-600 shrink-0" title="Monitor idle" />
+          )}
+          <input
+            type="text"
+            value={oauthUrl}
+            onChange={(e) => setOauthUrl(e.target.value)}
+            placeholder={
+              monitorStatus === "watching"
+                ? "Watching for OAuth URL from Claude Code..."
+                : monitorStatus === "connecting"
+                ? "Connecting monitor..."
+                : "OAuth URL will appear here automatically"
+            }
+            className="flex-1 bg-[#111827] border border-slate-700 rounded px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none font-mono"
+          />
+        </div>
+        <button
+          onClick={handleGoClick}
+          disabled={!oauthUrl}
+          className={`px-4 py-1.5 rounded text-sm font-bold font-mono transition-colors shrink-0 ${
+            oauthUrl
+              ? "bg-accent text-black hover:bg-accent/80 cursor-pointer"
+              : "bg-slate-800 text-slate-500 cursor-not-allowed"
+          }`}
+        >
+          Go
+        </button>
+        {oauthUrl && (
+          <button
+            onClick={resetOauthMonitor}
+            className="px-2 py-1.5 text-slate-500 hover:text-slate-300 text-xs font-mono transition-colors shrink-0"
+            title="Clear and re-watch"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {/* Terminal iframe */}
