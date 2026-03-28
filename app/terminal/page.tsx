@@ -44,20 +44,15 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
-  useEffect(() => {
-    if (!authenticated) return;
-    const checkClipboard = async () => {
-      try {
-        const text = await navigator.clipboard.readText();
-        if (text && (text.includes("claude.com/cai/oauth") || text.includes("claude.ai/cai/oauth")) && text.length > 100) {
-          const fixed = text.replace("https://claude.com/", "https://claude.ai/");
-          setOauthUrl(fixed);
-        }
-      } catch {}
-    };
-    const interval = setInterval(checkClipboard, 2000);
-    return () => clearInterval(interval);
-  }, [authenticated]);
+  const handlePasteOauthUrl = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && (text.includes("claude.com/cai/oauth") || text.includes("claude.ai/cai/oauth")) && text.length > 100) {
+        const fixed = text.replace("https://claude.com/", "https://claude.ai/");
+        setOauthUrl(fixed);
+      }
+    } catch {}
+  };
 
   const handleAuth = async () => {
     setAuthError("");
@@ -182,9 +177,12 @@ export default function TerminalPage() {
 
       {!oauthUrl && connected && (
         <div className="shrink-0 bg-slate-900 border-b border-slate-700 px-4 py-2 flex items-center gap-2">
-          <span className="text-slate-500 text-xs font-mono">💡 Tip: When Claude Code shows a login URL, type</span>
+          <span className="text-slate-500 text-xs font-mono">💡 When Claude Code shows a login URL, type</span>
           <code className="text-accent text-xs font-mono bg-slate-800 px-2 py-0.5 rounded">c</code>
-          <span className="text-slate-500 text-xs font-mono">to copy it — a button will appear here automatically.</span>
+          <span className="text-slate-500 text-xs font-mono">to copy it, then tap:</span>
+          <button onClick={handlePasteOauthUrl} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded text-xs font-mono hover:bg-yellow-500/30 transition-colors">
+            Paste Login URL
+          </button>
         </div>
       )}
 
