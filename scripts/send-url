@@ -1,0 +1,44 @@
+#!/bin/bash
+# send-url — Captures OAuth URL from tmux and sends it to MasterHQ terminal page
+# Install on droplet: copy to /usr/local/bin/send-url && chmod +x /usr/local/bin/send-url
+# Usage: just type "send-url" in any terminal on the droplet
+#
+# Requires: TERMINAL_PASSWORD env var (add to ~/.bashrc: export TERMINAL_PASSWORD="yourpass")
+# Target: https://masterhq.dev/api/terminal/oauth-url
+
+MASTER_URL="${MASTER_URL:-https://masterhq.dev}"
+
+if [ -z "$TERMINAL_PASSWORD" ]; then
+  echo "Error: TERMINAL_PASSWORD not set. Add to ~/.bashrc: export TERMINAL_PASSWORD=\"yourpass\""
+  exit 1
+fi
+
+# Capture ALL tmux panes, join wrapped lines (-J), include scrollback (-S -500)
+URL=""
+for pane in $(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}' 2>/dev/null); do
+  CONTENT=$(tmux capture-pane -p -J -S -500 -t "$pane" 2>/dev/null)
+  FOUND=$(echo "$CONTENT" | grep -oE 'https://claude\.com/cai/oauth[^ ]+' | tail -1)
+  if [ -n "$FOUND" ]; then
+    URL="$FOUND"
+    break
+  fi
+done
+
+if [ -z "$URL" ]; then
+  echo "No OAuth URL found in any tmux pane."
+  echo "Make sure Claude Code is showing the OAuth URL in a tmux session."
+  exit 1
+fi
+
+# Send to MasterHQ
+RESPONSE=$(curl -s -X POST "$MASTER_URL/api/terminal/oauth-url" \
+  -H 'Content-Type: application/json' \
+  -d "{\"url\":\"$URL\",\"password\":\"$TERMINAL_PASSWORD\"}")
+
+if echo "$RESPONSE" | grep -q '"success":true'; then
+  echo "OAuth URL sent to MasterHQ terminal page."
+  echo "Hit Go in the browser to open it."
+else
+  echo "Failed to send URL: $RESPONSE"
+  exit 1
+fi

@@ -13,13 +13,18 @@ export default function TerminalPage() {
   const [isMobile, setIsMobile] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
-  // OAuth URL auto-detection
+  // OAuth URL detection state
   const [oauthUrl, setOauthUrl] = useState("");
   const [monitorStatus, setMonitorStatus] = useState<"idle" | "connecting" | "watching" | "found">("idle");
+  const oauthFoundRef = useRef(false);
+
+  // WebSocket monitor refs
   const monitorWsRef = useRef<WebSocket | null>(null);
   const monitorIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const outputBufferRef = useRef("");
-  const oauthFoundRef = useRef(false);
+
+  // API polling ref
+  const apiPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Check device size
   useEffect(() => {
@@ -38,7 +43,7 @@ export default function TerminalPage() {
     setChecking(false);
   }, []);
 
-  // Get TTYD_URL from env (via a simple check)
+  // Get TTYD_URL from env
   useEffect(() => {
     if (authenticated) {
       fetch("/api/terminal/auth", {
@@ -54,11 +59,36 @@ export default function TerminalPage() {
     }
   }, [authenticated]);
 
-  // Monitor ttyd via a second WebSocket for OAuth URLs
+  // Helper: set the found URL
+  const setFoundUrl = useCallback((url: string) => {
+    if (oauthFoundRef.current) return;
+    oauthFoundRef.current = true;
+    setOauthUrl(url);
+    setMonitorStatus("found");
+    // Stop WebSocket monitor
+    if (monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current);
+      monitorIntervalRef.current = null;
+    }
+    if (monitorWsRef.current) {
+      try {
+        monitorWsRef.current.send("0exit\r");
+      } catch { /* ignore */ }
+      setTimeout(() => {
+        try { monitorWsRef.current?.close(); } catch { /* ignore */ }
+      }, 300);
+    }
+    // Stop API polling
+    if (apiPollRef.current) {
+      clearInterval(apiPollRef.current);
+      apiPollRef.current = null;
+    }
+  }, []);
+
+  // === METHOD 1: Monitor ttyd via a second WebSocket ===
   useEffect(() => {
     if (!ttydUrl || !connected || oauthFoundRef.current) return;
 
-    // Build WebSocket URL from ttyd HTTPS URL
     const wsUrl = ttydUrl.replace(/^https:\/\//, "wss://").replace(/^http:\/\//, "ws://");
     const wsEndpoint = (wsUrl.endsWith("/") ? wsUrl.slice(0, -1) : wsUrl) + "/ws";
 
@@ -66,45 +96,32 @@ export default function TerminalPage() {
     let shellReady = false;
     let destroyed = false;
 
+    // Command: scan ALL tmux panes with -J (join wrapped lines) and -S -500 (scrollback)
+    const captureCmd =
+      "for p in $(tmux list-panes -a -F '#{session_name}:#{window_index}.#{pane_index}' 2>/dev/null); do " +
+      "tmux capture-pane -pJ -S -500 -t \"$p\" 2>/dev/null; " +
+      "done | grep -oE 'https://claude\\.com/cai/oauth[^ ]+' | tail -1\r";
+
     const sendCheck = () => {
       if (ws.readyState === WebSocket.OPEN && !oauthFoundRef.current) {
         outputBufferRef.current = "";
-        // Check all tmux sessions for OAuth URL, with scrollback history
-        ws.send(
-          "0" +
-            "tmux capture-pane -p -S -3000 -t claude 2>/dev/null | grep -oE 'https://claude\\.com/cai/oauth[^ ]+' | tail -1\r"
-        );
+        ws.send("0" + captureCmd);
       }
     };
 
     const parseOutput = (text: string) => {
-      // Strip ANSI escape codes
-      const clean = text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "").replace(/\x1b\][^\x07]*\x07/g, "");
+      // Strip ANSI escape codes and OSC sequences
+      const clean = text
+        .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, "")
+        .replace(/\x1b\][^\x07]*\x07/g, "")
+        .replace(/\x1b\[[\?]?[0-9;]*[a-zA-Z]/g, "");
       outputBufferRef.current += clean;
 
-      // Look for OAuth URL in accumulated output
       const match = outputBufferRef.current.match(
-        /https:\/\/claude\.com\/cai\/oauth[^\s'">]+/
+        /https:\/\/claude\.com\/cai\/oauth\/authorize\?[^\s'">]+/
       );
       if (match) {
-        const url = match[0];
-        setOauthUrl(url);
-        setMonitorStatus("found");
-        oauthFoundRef.current = true;
-        // Stop polling
-        if (monitorIntervalRef.current) {
-          clearInterval(monitorIntervalRef.current);
-          monitorIntervalRef.current = null;
-        }
-        // Clean up: exit the monitoring shell and close
-        try {
-          ws.send("0exit\r");
-        } catch {
-          // ignore
-        }
-        setTimeout(() => {
-          try { ws.close(); } catch { /* ignore */ }
-        }, 500);
+        setFoundUrl(match[0]);
       }
     };
 
@@ -117,12 +134,10 @@ export default function TerminalPage() {
       ws.onopen = () => {
         if (destroyed) { ws.close(); return; }
         setMonitorStatus("watching");
-        // Wait for shell prompt to be ready
         setTimeout(() => {
           if (destroyed || oauthFoundRef.current) return;
           shellReady = true;
           sendCheck();
-          // Poll every 3 seconds
           monitorIntervalRef.current = setInterval(() => {
             if (!oauthFoundRef.current) sendCheck();
           }, 3000);
@@ -134,23 +149,25 @@ export default function TerminalPage() {
         const data = event.data;
         if (data instanceof ArrayBuffer) {
           const bytes = new Uint8Array(data);
-          // ttyd protocol: first byte 0x30 ('0') = terminal output
           if (bytes[0] === 0x30 && bytes.length > 1) {
             const text = new TextDecoder().decode(bytes.slice(1));
             parseOutput(text);
           }
+        } else if (typeof data === "string" && data.length > 1 && data[0] === "0") {
+          // Some ttyd versions send text frames
+          parseOutput(data.slice(1));
         }
       };
 
       ws.onerror = () => {
-        if (!oauthFoundRef.current) setMonitorStatus("idle");
+        if (!oauthFoundRef.current) setMonitorStatus("watching");
       };
 
       ws.onclose = () => {
-        if (!oauthFoundRef.current && !destroyed) setMonitorStatus("idle");
+        if (!oauthFoundRef.current && !destroyed) setMonitorStatus("watching");
       };
     } catch {
-      setMonitorStatus("idle");
+      // WebSocket failed — API polling is the fallback
     }
 
     return () => {
@@ -164,7 +181,40 @@ export default function TerminalPage() {
         monitorWsRef.current = null;
       }
     };
-  }, [ttydUrl, connected]);
+  }, [ttydUrl, connected, setFoundUrl]);
+
+  // === METHOD 2: Poll API endpoint (backup — works with send-url script) ===
+  useEffect(() => {
+    if (!authenticated || !connected || oauthFoundRef.current) return;
+
+    const termPw = sessionStorage.getItem("terminal-pw") || "";
+
+    const poll = async () => {
+      if (oauthFoundRef.current) return;
+      try {
+        const res = await fetch(
+          `/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`
+        );
+        const data = await res.json();
+        if (data.url && data.url.startsWith("https://claude.com/cai/oauth")) {
+          setFoundUrl(data.url);
+        }
+      } catch {
+        // Silently ignore — WebSocket monitor is primary
+      }
+    };
+
+    // Poll every 2 seconds
+    poll();
+    apiPollRef.current = setInterval(poll, 2000);
+
+    return () => {
+      if (apiPollRef.current) {
+        clearInterval(apiPollRef.current);
+        apiPollRef.current = null;
+      }
+    };
+  }, [authenticated, connected, setFoundUrl]);
 
   const handleAuth = async () => {
     setAuthError("");
@@ -191,10 +241,14 @@ export default function TerminalPage() {
   const reconnect = useCallback(() => {
     setConnected(false);
     setIframeKey((k) => k + 1);
-    // Reset OAuth monitoring
     oauthFoundRef.current = false;
     setOauthUrl("");
     setMonitorStatus("idle");
+    // Clear stored URL via API
+    const termPw = sessionStorage.getItem("terminal-pw") || "";
+    fetch(`/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`, {
+      method: "DELETE",
+    }).catch(() => {});
   }, []);
 
   const handleIframeLoad = () => {
@@ -210,7 +264,34 @@ export default function TerminalPage() {
   const resetOauthMonitor = () => {
     oauthFoundRef.current = false;
     setOauthUrl("");
-    setMonitorStatus("idle");
+    setMonitorStatus("watching");
+    // Clear stored URL via API
+    const termPw = sessionStorage.getItem("terminal-pw") || "";
+    fetch(`/api/terminal/oauth-url?password=${encodeURIComponent(termPw)}`, {
+      method: "DELETE",
+    }).catch(() => {});
+  };
+
+  // Smart paste handler: strip newlines, clean up wrapped URLs
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text");
+    // Join lines (iPad copies single lines from wrapped terminal text)
+    const cleaned = pasted.replace(/[\r\n]+/g, "").trim();
+
+    // If it looks like an OAuth URL (even partial), use it
+    if (cleaned.includes("claude.com/cai/oauth")) {
+      // Extract the full URL from the cleaned text
+      const match = cleaned.match(/https:\/\/claude\.com\/cai\/oauth[^\s'">]*/);
+      if (match) {
+        setOauthUrl(match[0]);
+        setMonitorStatus("found");
+        oauthFoundRef.current = true;
+        return;
+      }
+    }
+    // Otherwise just set whatever was pasted
+    setOauthUrl(cleaned);
   };
 
   if (checking) return null;
@@ -302,30 +383,29 @@ export default function TerminalPage() {
         </div>
       </div>
 
-      {/* OAuth URL bar — auto-detects OAuth URLs from Claude Code in the terminal */}
+      {/* OAuth URL bar */}
       <div className="flex items-center gap-2 px-4 py-2 bg-[#0d1424] border-b border-slate-800 shrink-0">
-        <div className="flex items-center gap-2 flex-1">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {monitorStatus === "watching" && (
             <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" title="Watching for OAuth URL..." />
           )}
           {monitorStatus === "found" && (
             <div className="w-2 h-2 rounded-full bg-success shrink-0" title="OAuth URL detected" />
           )}
-          {monitorStatus === "idle" && connected && (
-            <div className="w-2 h-2 rounded-full bg-slate-600 shrink-0" title="Monitor idle" />
+          {(monitorStatus === "idle" || monitorStatus === "connecting") && connected && (
+            <div className="w-2 h-2 rounded-full bg-slate-600 shrink-0" title="Starting monitor..." />
           )}
           <input
             type="text"
             value={oauthUrl}
             onChange={(e) => setOauthUrl(e.target.value)}
+            onPaste={handlePaste}
             placeholder={
               monitorStatus === "watching"
-                ? "Watching for OAuth URL from Claude Code..."
-                : monitorStatus === "connecting"
-                ? "Connecting monitor..."
+                ? "Watching for OAuth URL... (or type send-url in another tmux pane)"
                 : "OAuth URL will appear here automatically"
             }
-            className="flex-1 bg-[#111827] border border-slate-700 rounded px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none font-mono"
+            className="flex-1 min-w-0 bg-[#111827] border border-slate-700 rounded px-3 py-1.5 text-sm text-white placeholder-slate-500 focus:border-accent focus:outline-none font-mono truncate"
           />
         </div>
         <button
