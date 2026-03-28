@@ -22,13 +22,8 @@ if [ -z "$TERMINAL_PASSWORD" ]; then
   exit 1
 fi
 
-# Remove old version if exists
-if grep -q "# masterhq-oauth-capture" ~/.bashrc 2>/dev/null; then
-  echo "Removing old version..."
-  sed -i '/# masterhq-oauth-capture START/,/# masterhq-oauth-capture END/d' ~/.bashrc
-fi
-
-# Remove old TERMINAL_PASSWORD export if exists
+# Remove old version
+sed -i '/# masterhq-oauth-capture START/,/# masterhq-oauth-capture END/d' ~/.bashrc 2>/dev/null
 sed -i "/export TERMINAL_PASSWORD=/d" ~/.bashrc 2>/dev/null
 
 # Store password
@@ -38,37 +33,44 @@ echo "export TERMINAL_PASSWORD='$TERMINAL_PASSWORD'" >> ~/.bashrc
 cat >> ~/.bashrc << 'WRAPPER'
 # masterhq-oauth-capture START
 claude() {
-    rm -f ~/.claude_oauth_url /tmp/claude_out.log
+    rm -f ~/.claude_oauth_url /tmp/claude_out.log /tmp/claude_oauth_debug.log
     touch /tmp/claude_out.log
-    # Background watcher: extracts OAuth URL and pushes to MasterHQ
+    echo "[watcher] Starting..." > /tmp/claude_oauth_debug.log
+    # Background watcher: finds URL and pushes to MasterHQ
     (
-        for _ in $(seq 1 120); do
+        for i in $(seq 1 120); do
             sleep 2
-            # grep -aoP works on raw script logs (binary-safe, Perl regex)
-            URL=$(grep -aoP 'https://claude\\.com/cai/oauth/authorize\\?\\S+' /tmp/claude_out.log 2>/dev/null | head -1)
+            # Strip ALL control chars (0x00-0x1F) then grep for URL
+            # Uses basic grep -o (no -P needed) which is always available
+            URL=$(tr -d '\000-\037' < /tmp/claude_out.log 2>/dev/null | grep -o 'https://claude\.com/cai/oauth[^ ]*' | head -1)
+            echo "[watcher] Check $i: found='$URL'" >> /tmp/claude_oauth_debug.log
             if [ -n "$URL" ]; then
                 echo "$URL" > ~/.claude_oauth_url
+                echo "[watcher] URL saved to ~/.claude_oauth_url" >> /tmp/claude_oauth_debug.log
                 # Push to MasterHQ API
-                curl -s -X POST "https://masterhq.dev/api/terminal/oauth-url" \
+                HTTP_CODE=$(curl -s -o /tmp/claude_oauth_response.log -w '%{http_code}' \
+                    -X POST "https://masterhq.dev/api/terminal/oauth-url" \
                     -H 'Content-Type: application/json' \
-                    -d "{\"url\":\"$URL\",\"password\":\"$TERMINAL_PASSWORD\"}" > /dev/null 2>&1 &
+                    -d "{\"url\":\"$URL\",\"password\":\"$TERMINAL_PASSWORD\"}")
+                echo "[watcher] POST response: HTTP $HTTP_CODE" >> /tmp/claude_oauth_debug.log
+                cat /tmp/claude_oauth_response.log >> /tmp/claude_oauth_debug.log 2>/dev/null
+                echo "" >> /tmp/claude_oauth_debug.log
                 break
             fi
         done
+        echo "[watcher] Done." >> /tmp/claude_oauth_debug.log
     ) &
-    # script preserves the TTY while logging all output
+    # script preserves TTY while logging output
     script -qfc "command claude $*" /tmp/claude_out.log
-    local EXIT_CODE=$?
-    return $EXIT_CODE
 }
 # masterhq-oauth-capture END
 WRAPPER
 
-echo ""
 echo "Done! Now run:  source ~/.bashrc"
 echo ""
-echo "Then just type 'claude'. The login URL will appear"
-echo "automatically in the MasterHQ terminal page."
+echo "Then type 'claude'. The login URL will appear"
+echo "automatically in the terminal page."
+echo "(Debug log: cat /tmp/claude_oauth_debug.log)"
 echo ""
 `;
 
