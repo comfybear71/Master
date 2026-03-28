@@ -116,13 +116,29 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - DNS: `terminal` A record → 170.64.133.9 (in Vercel DNS)
 - Setup guide: `docs/DEV-DROPLET-SETUP.md`
 
+**OAuth URL Auto-Capture — COMPLETE AND WORKING (2026-03-29):**
+- When Claude Code needs OAuth login, the URL auto-appears in the terminal page's input bar
+- User just taps "Go" to open the login page — no manual copy needed
+- Works via: `script` log capture → Python ANSI stripping → API relay → page polling
+- One-time setup on droplet: `curl -sL https://masterhq.dev/api/terminal/setup | bash`
+- Full technical deep dive: `docs/oauth-url-auto-capture.md`
+- APIs: `/api/terminal/oauth-url` (POST/GET/DELETE), `/api/terminal/setup` (install script)
+- Debug: `cat /tmp/claude_oauth_debug.log` on the droplet
+
+**Approaches that FAILED (documented in `docs/oauth-url-auto-capture.md`):**
+1. Monitoring WebSocket + tmux capture-pane — user doesn't use tmux
+2. Embedded xterm.js replacing iframe — ttyd auth token required, disconnects on input
+3. Clipboard API / OSC 52 paste — iPad Safari truncates to first visual line
+4. Server-side WebSocket from Vercel — firewall blocks Vercel → droplet connection
+5. Shell `tee` pipe — breaks Claude Code's TUI (isatty detection)
+
 **iPad Workflow (recommended):**
 1. Open `masterhq.dev/terminal` on iPad Safari
 2. Enter TERMINAL_PASSWORD
-3. Start tmux: `tmux new -s claude`
-4. Navigate to project: `cd ~/my-project`
-5. Start Claude Code: `claude`
-6. If iPad sleeps → reopen terminal → `tmux attach -t claude` → right back where you left off
+3. Type `claude` (the wrapper captures OAuth URLs automatically)
+4. If OAuth needed → URL appears in the input bar → tap Go → authorize → paste code back
+5. Navigate to project: `cd ~/my-project`
+6. If iPad sleeps → reopen terminal → `tmux attach -t claude` (if using tmux) → right back where you left off
 
 ### DigitalOcean Droplet Architecture
 
