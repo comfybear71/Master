@@ -36,6 +36,8 @@ export default function ProjectsPage() {
   const [onboardResult, setOnboardResult] = useState<OnboardResult | null>(null);
   const [onboardError, setOnboardError] = useState("");
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
+  const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [editData, setEditData] = useState<Partial<Project>>({});
   const [projectDocs, setProjectDocs] = useState<{ claudeMd: string; handoffMd: string } | null>(null);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
@@ -103,6 +105,25 @@ export default function ProjectsPage() {
   const deleteProject = async (id: string) => {
     const res = await fetch(`/api/projects?id=${id}`, { method: "DELETE" });
     if (res.ok) fetchProjects();
+  };
+
+  const startEdit = (p: Project) => {
+    setEditingProject(String(p._id));
+    setEditData({ name: p.name, repo: p.repo, category: p.category, description: p.description, liveUrl: p.liveUrl });
+  };
+
+  const saveEdit = async () => {
+    if (!editingProject) return;
+    const res = await fetch("/api/projects", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: editingProject, ...editData }),
+    });
+    if (res.ok) {
+      setEditingProject(null);
+      setEditData({});
+      fetchProjects();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -324,15 +345,36 @@ export default function ProjectsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {projects.map((p) => (
               <div key={String(p._id)} className="relative group">
-                <div onClick={() => viewProjectDocs(p)} className="cursor-pointer">
-                  <ProjectCard project={p} />
-                </div>
-                <button
-                  onClick={() => deleteProject(String(p._id))}
-                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-danger text-xs bg-base-card px-2 py-1 rounded border border-danger/20 hover:bg-danger/10 transition-all"
-                >
-                  Remove
-                </button>
+                {editingProject === String(p._id) ? (
+                  <div className="bg-base-card rounded-xl border border-accent/30 p-4 space-y-3">
+                    <input value={editData.name || ""} onChange={(e) => setEditData({ ...editData, name: e.target.value })} placeholder="Name" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" />
+                    <input value={editData.repo || ""} onChange={(e) => setEditData({ ...editData, repo: e.target.value })} placeholder="Repo (owner/repo)" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" />
+                    <select value={editData.category || "infrastructure"} onChange={(e) => setEditData({ ...editData, category: e.target.value as Project["category"] })} className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none">
+                      <option value="ecommerce">E-commerce</option>
+                      <option value="education">Education</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="trading">Trading</option>
+                      <option value="infrastructure">Infrastructure</option>
+                      <option value="finance">Finance</option>
+                    </select>
+                    <input value={editData.description || ""} onChange={(e) => setEditData({ ...editData, description: e.target.value })} placeholder="Description" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" />
+                    <input value={editData.liveUrl || ""} onChange={(e) => setEditData({ ...editData, liveUrl: e.target.value })} placeholder="Live URL" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" />
+                    <div className="flex gap-2">
+                      <button onClick={saveEdit} className="px-3 py-1.5 bg-accent text-black text-xs font-bold rounded hover:bg-accent/80">Save</button>
+                      <button onClick={() => setEditingProject(null)} className="px-3 py-1.5 text-slate-400 text-xs hover:text-white">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div onClick={() => viewProjectDocs(p)} className="cursor-pointer">
+                      <ProjectCard project={p} />
+                    </div>
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 transition-all">
+                      <button onClick={() => startEdit(p)} className="text-accent text-xs bg-base-card px-2 py-1 rounded border border-accent/20 hover:bg-accent/10">Edit</button>
+                      <button onClick={() => deleteProject(String(p._id))} className="text-danger text-xs bg-base-card px-2 py-1 rounded border border-danger/20 hover:bg-danger/10">Remove</button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
