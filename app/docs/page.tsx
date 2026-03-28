@@ -1445,7 +1445,29 @@ Always: **status → add → commit → push**
 
 ---
 
-> You built a browser terminal on an iPad using DigitalOcean — that is not beginner stuff. This guide just gives you the vocabulary to go with the instinct you already have.`,
+> You built a browser terminal on an iPad using DigitalOcean — that is not beginner stuff. This guide just gives you the vocabulary to go with the instinct you already have.
+
+---
+
+### Coming Soon (as you learn)
+
+This guide grows with you. Future sections to be added as needed:
+
+- **npm / Node.js** — install, run dev, npx, package.json
+- **Vercel CLI** — deploy, env vars, logs from terminal
+- **MongoDB** — mongosh, queries, backups
+- **Solana CLI** — balance, transfer, SPL token commands
+- **SSH Keys** — generating, adding to GitHub/DigitalOcean
+- **Cron Jobs** — crontab, scheduling, debugging
+- **nginx** — config editing, SSL renewal, logs
+- **File Permissions** — chmod, chown, common issues
+- **Environment Variables** — .env files, export, printenv
+- **Process Management** — pm2, systemctl, background jobs
+- **Network Debugging** — curl, ping, netstat, ufw
+- **Text Editing** — nano shortcuts, vim basics
+- **Docker** — containers, images, compose (if needed)
+
+*Every session where you learn something new in the terminal, it gets added here.*`,
   },
   {
     id: "social-accounts",
