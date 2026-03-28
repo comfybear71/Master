@@ -150,6 +150,26 @@ Required env vars (all set in Vercel):
 
 **Rule: NEVER let DB values override env vars for API credentials or platform IDs.**
 
+### Terminal OAuth URL Auto-Capture
+
+When Claude Code starts on the droplet and needs OAuth login, the URL is automatically captured and displayed in the MasterHQ terminal page's input bar. This solves the iPad problem where multi-line URLs cannot be copied from ttyd.
+
+**Architecture:** `script` log capture → Python ANSI stripping → POST to `/api/terminal/oauth-url` → page polls GET → auto-populates input → user taps Go.
+
+**Droplet setup (one-time):** `curl -sL https://masterhq.dev/api/terminal/setup | bash`
+
+**API endpoints:**
+- `POST /api/terminal/oauth-url` — Store OAuth URL (called from droplet watcher, auth via TERMINAL_PASSWORD)
+- `GET /api/terminal/oauth-url?password=...` — Retrieve stored URL (polled by terminal page every 3s)
+- `DELETE /api/terminal/oauth-url?password=...` — Clear stored URL
+- `GET /api/terminal/setup` — Serves the droplet install script
+
+**MongoDB:** URLs stored in `settings` collection, key `terminal_oauth_url`, 10-minute TTL.
+
+**JS template literal escaping rule:** When embedding shell/Python code in Next.js API route template literals, NEVER use backslash escapes (`\.`, `\?`, `\x1b`, `\r`, `\n`). JS consumes them. Use `[.]`, `[?]`, `chr(27)`, `chr(13)`, `chr(10)` instead.
+
+**Full technical docs:** `docs/oauth-url-auto-capture.md`
+
 ### TikTok OAuth
 
 TikTok uses OAuth 2.0 with authorization code flow. Tokens are stored in MongoDB `settings` collection (key: `tiktok_oauth`). Endpoints:

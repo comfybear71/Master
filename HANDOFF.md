@@ -31,6 +31,7 @@ A unified platform for one solo developer to:
 
 | Project | Category | Repo | Vercel | Status |
 |---|---|---|---|---|
+| **TheMaster** | Infrastructure | comfybear71/Master | master | active |
 | Togogo | E-commerce | comfybear71/togogo | TBD | active |
 | Mathly | Education | comfybear71/mathly | TBD | active |
 | AI Glitch | Marketing | comfybear71/aiglitch | TBD | active |
@@ -116,13 +117,29 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - DNS: `terminal` A record → 170.64.133.9 (in Vercel DNS)
 - Setup guide: `docs/DEV-DROPLET-SETUP.md`
 
+**OAuth URL Auto-Capture — COMPLETE AND WORKING (2026-03-29):**
+- When Claude Code needs OAuth login, the URL auto-appears in the terminal page's input bar
+- User just taps "Go" to open the login page — no manual copy needed
+- Works via: `script` log capture → Python ANSI stripping → API relay → page polling
+- One-time setup on droplet: `curl -sL https://masterhq.dev/api/terminal/setup | bash`
+- Full technical deep dive: `docs/oauth-url-auto-capture.md`
+- APIs: `/api/terminal/oauth-url` (POST/GET/DELETE), `/api/terminal/setup` (install script)
+- Debug: `cat /tmp/claude_oauth_debug.log` on the droplet
+
+**Approaches that FAILED (documented in `docs/oauth-url-auto-capture.md`):**
+1. Monitoring WebSocket + tmux capture-pane — user doesn't use tmux
+2. Embedded xterm.js replacing iframe — ttyd auth token required, disconnects on input
+3. Clipboard API / OSC 52 paste — iPad Safari truncates to first visual line
+4. Server-side WebSocket from Vercel — firewall blocks Vercel → droplet connection
+5. Shell `tee` pipe — breaks Claude Code's TUI (isatty detection)
+
 **iPad Workflow (recommended):**
 1. Open `masterhq.dev/terminal` on iPad Safari
 2. Enter TERMINAL_PASSWORD
-3. Start tmux: `tmux new -s claude`
-4. Navigate to project: `cd ~/my-project`
-5. Start Claude Code: `claude`
-6. If iPad sleeps → reopen terminal → `tmux attach -t claude` → right back where you left off
+3. Type `claude` (the wrapper captures OAuth URLs automatically)
+4. If OAuth needed → URL appears in the input bar → tap Go → authorize → paste code back
+5. Navigate to project: `cd ~/my-project`
+6. If iPad sleeps → reopen terminal → `tmux attach -t claude` (if using tmux) → right back where you left off
 
 ### DigitalOcean Droplet Architecture
 
@@ -264,6 +281,7 @@ Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks
 | 2026-03-26 | Instagram fix: reversed token priority (FACEBOOK_ACCESS_TOKEN first, not INSTAGRAM_ACCESS_TOKEN). TikTok full integration: sandbox/live toggle, API monitoring log, scopes updated (user.info.stats, video.list), helped submit TikTok app review + Content Posting API audit. YouTube: cached stats on quota exceeded, "Quota Limit" badge, submitted quota increase to Google (100K units/day). Created /docs page with 4 guides (YouTube quota, xAI Grok costs, TikTok setup, social accounts). Added social profile links to all Growth page cards. Fixed platform URLs (X=@spiritary, YouTube=@frekin31, TikTok=@aiglicthed). Updated all CLAUDE.md and HANDOFF.md files. | Claude Code |
 | 2026-03-26 (cont) | MASSIVE SESSION: Phase 4 Command Center spec. Sponsor outreach system: email generator with Claude AI, editable emails, Send button (mailto), §GLITCH payment model in pitches. Prospects page: 130+ sponsors imported from Excel, CRM with status tracking, bulk email generation. Media Kit page (full HTML advertiser kit). Sponsor Target List (10 categories, 5-step outreach plan). 3 email templates (punchy/data-led/warm). Light/dark mode toggle. Cost optimization prompt for AIGlitch ($1,365/mo → target $300-500). Video stitch fix prompts (30s ads + breaking news). §GLITCH Rewards Campaign spec (Phase 3 completion). Domain: masterhq.dev. Email: stuart.french@aiglitch.app. Signed as "Stuie French - The Architect". | Claude Code |
 | 2026-03-28 | Terminal feature COMPLETE: Created DigitalOcean dev droplet (masterhq-dev-syd1, 170.64.133.9, $12/mo, 2GB RAM). Installed Claude Code v2.1.85, ttyd 1.7.4, tmux, nginx. Set up SSL via Let's Encrypt on terminal.masterhq.dev. Critical fix: port 443 must be open in UFW. ttyd requires -W flag for writable mode. Terminal page on masterhq.dev/terminal working on iPad + desktop. Two-droplet architecture documented (budju trading bot completely isolated). §GLITCH Quest design doc finalized with SQL schemas. iPad workflow documented (tmux + Claude Code). | Claude Code |
+| 2026-03-29 | MARATHON SESSION (4hrs, 14 commits): OAuth URL auto-copy for iPad terminal. Tried 5 approaches that failed (monitoring WebSocket, embedded xterm.js, clipboard API, server-side WebSocket from Vercel, shell tee pipe) before succeeding with: `script` log capture → Python ANSI stripping → curl POST to MasterHQ API → page polls → auto-populates URL bar → user taps Go. Fixed 7+ JS template escaping bugs (use `[.]` not `\.`, `chr(27)` not `\x1b`). APIs: `/api/terminal/oauth-url`, `/api/terminal/setup`, `/api/terminal/get-url`, `/api/terminal/token`. Added TheMaster to its own project registry. Full session log: `docs/session-2026-03-29-oauth-autocapture.md`. Full technical docs: `docs/oauth-url-auto-capture.md`. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
