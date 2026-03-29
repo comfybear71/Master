@@ -42,35 +42,43 @@ export default function CostsPage() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  // Initialize services
+  // Initialize services and load editable costs from MongoDB
   useEffect(() => {
-    // Load Claude Max cost from localStorage
-    const savedClaudeMax = localStorage.getItem("masterhq-claudemax-cost");
-    const claudeMaxCost = savedClaudeMax ? parseFloat(savedClaudeMax) : 100.0;
+    const init = async () => {
+      // Fetch saved editable costs from MongoDB
+      let savedCosts: Record<string, number> = {};
+      try {
+        const res = await fetch("/api/costs/settings");
+        savedCosts = await res.json();
+      } catch {
+        // Use defaults
+      }
 
-    const initial: ServiceCost[] = [
-      ...LIVE_SERVICES.map((s) => ({
-        name: s.name,
-        key: s.key,
-        cost: null,
-        error: null,
-        loading: true,
-        lastFetched: null,
-        type: "live" as const,
-        apiRoute: s.apiRoute,
-      })),
-      ...FIXED_SERVICES.map((s) => ({
-        name: s.name,
-        key: s.key,
-        cost: s.key === "claudemax" ? claudeMaxCost : s.cost,
-        error: null,
-        loading: false,
-        lastFetched: null,
-        type: "fixed" as const,
-        editable: s.editable,
-      })),
-    ];
-    setServices(initial);
+      const initial: ServiceCost[] = [
+        ...LIVE_SERVICES.map((s) => ({
+          name: s.name,
+          key: s.key,
+          cost: null,
+          error: null,
+          loading: true,
+          lastFetched: null,
+          type: "live" as const,
+          apiRoute: s.apiRoute,
+        })),
+        ...FIXED_SERVICES.map((s) => ({
+          name: s.name,
+          key: s.key,
+          cost: savedCosts[s.key] ?? s.cost,
+          error: null,
+          loading: false,
+          lastFetched: null,
+          type: "fixed" as const,
+          editable: s.editable,
+        })),
+      ];
+      setServices(initial);
+    };
+    init();
   }, []);
 
   const fetchService = useCallback(async (key: string, apiRoute: string) => {
@@ -125,13 +133,22 @@ export default function CostsPage() {
       });
   };
 
-  const handleEditSave = (key: string) => {
+  const handleEditSave = async (key: string) => {
     const val = parseFloat(editValue);
     if (!isNaN(val) && val >= 0) {
       setServices((prev) =>
         prev.map((s) => (s.key === key ? { ...s, cost: val } : s))
       );
-      localStorage.setItem(`masterhq-${key}-cost`, val.toString());
+      // Persist to MongoDB
+      try {
+        await fetch("/api/costs/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ service: key, cost: val }),
+        });
+      } catch {
+        // Optimistic update — already applied to UI
+      }
     }
     setEditingKey(null);
     setEditValue("");
