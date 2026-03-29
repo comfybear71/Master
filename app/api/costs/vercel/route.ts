@@ -9,56 +9,77 @@ export async function GET() {
   }
 
   try {
-    const now = new Date();
-    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const from = firstOfMonth.toISOString();
-    const to = now.toISOString();
-
-    const url = teamId
-      ? `https://api.vercel.com/v1/billing/charges?teamId=${teamId}&from=${from}&to=${to}`
-      : `https://api.vercel.com/v1/billing/charges?from=${from}&to=${to}`;
-
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      return NextResponse.json({ error: `Vercel API error: ${res.status} ${text}` }, { status: 200 });
-    }
-
-    const text = await res.text();
-
-    // Response may be JSONL (one JSON object per line) or a JSON array
-    let totalCost = 0;
-    try {
-      // Try parsing as JSON array first
-      const arr = JSON.parse(text);
-      if (Array.isArray(arr)) {
-        totalCost = arr.reduce((sum: number, item: { BilledCost?: number; billedCost?: number; amount?: number }) => {
-          return sum + (item.BilledCost ?? item.billedCost ?? item.amount ?? 0);
-        }, 0);
+    // Try the usage endpoint first (simpler, more reliable)
+    const teamParam = teamId ? `?teamId=${teamId}` : "";
+    const usageRes = await fetch(
+      `https://api.vercel.com/v1/usage${teamParam}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
       }
-    } catch {
-      // Parse as JSONL — each line is a separate JSON object
-      const lines = text.split("\n").filter((l) => l.trim());
-      for (const line of lines) {
-        try {
-          const obj = JSON.parse(line);
-          totalCost += obj.BilledCost ?? obj.billedCost ?? obj.amount ?? 0;
-        } catch {
-          // Skip unparseable lines
-        }
+    );
+
+    if (usageRes.ok) {
+      const data = await usageRes.json();
+      if (typeof data.amount === "number") {
+        return NextResponse.json({
+          cost: data.amount / 100, // cents to dollars
+          currency: "USD",
+          lastFetched: new Date().toISOString(),
+        });
       }
     }
 
-    return NextResponse.json({
-      cost: Math.abs(totalCost),
-      currency: "USD",
-      lastFetched: new Date().toISOString(),
-    });
+    // Fallback: try the billing invoices endpoint for current period
+    const invoiceRes = await fetch(
+      `https://api.vercel.com/v4/billing/invoices${teamParam}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+
+    if (invoiceRes.ok) {
+      const data = await invoiceRes.json();
+      // Get the most recent/current invoice
+      const invoices = Array.isArray(data.invoices) ? data.invoices : Array.isArray(data) ? data : [];
+      if (invoices.length > 0) {
+        const current = invoices[0];
+        const amount = current.total ?? current.amount ?? current.subtotal ?? 0;
+        return NextResponse.json({
+          cost: typeof amount === "number" && amount > 100 ? amount / 100 : amount,
+          currency: "USD",
+          lastFetched: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Last fallback: subscription endpoint
+    const subRes = await fetch(
+      `https://api.vercel.com/v3/billing/plan${teamParam}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(15000),
+      }
+    );
+
+    if (subRes.ok) {
+      const data = await subRes.json();
+      const cost = data.cost ?? data.price ?? data.amount ?? 0;
+      return NextResponse.json({
+        cost: typeof cost === "number" && cost > 100 ? cost / 100 : cost,
+        currency: "USD",
+        lastFetched: new Date().toISOString(),
+      });
+    }
+
+    return NextResponse.json(
+      { error: "Vercel billing API — check costs at vercel.com/dashboard" },
+      { status: 200 }
+    );
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: `Vercel fetch failed: ${msg}` }, { status: 200 });
