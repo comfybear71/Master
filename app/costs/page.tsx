@@ -13,6 +13,129 @@ interface ServiceCost {
   apiRoute?: string;
 }
 
+interface Strategy {
+  title: string;
+  service: string;
+  currentCost: string;
+  targetCost: string;
+  savings: string;
+  effort: "Easy" | "Medium" | "Hard";
+  priority: number;
+  description: string;
+  steps: string[];
+}
+
+const STRATEGIES: Strategy[] = [
+  {
+    title: "Switch TheMaster API to Claude Haiku",
+    service: "Anthropic",
+    currentCost: "~$1,280/mo",
+    targetCost: "~$200-400/mo",
+    savings: "$800-1,000/mo",
+    effort: "Easy",
+    priority: 1,
+    description:
+      "TheMaster uses claude-sonnet-4 for all API calls (error analysis, campaigns, emails). Most of these tasks don't need Sonnet — Haiku is 10-20x cheaper and fast enough for structured JSON responses.",
+    steps: [
+      "Change model in lib/ai.ts from 'claude-sonnet-4-20250514' to 'claude-haiku-4-5-20251001' for routine tasks",
+      "Keep Sonnet only for complex error analysis (confidence-critical)",
+      "Add model tiering: askClaude() accepts a 'tier' param — haiku (default) vs sonnet (complex only)",
+      "Reduce max_tokens from 4096 → 1024 for campaigns, 512 for emails, 2048 for error analysis",
+    ],
+  },
+  {
+    title: "Drop Claude Max subscription",
+    service: "Claude Max",
+    currentCost: "$100/mo",
+    targetCost: "$0/mo",
+    savings: "$100/mo",
+    effort: "Easy",
+    priority: 2,
+    description:
+      "You're already paying for Anthropic API usage ($1,281.80/mo). Claude Max is a separate subscription for the web chat. Consider if you actually need both — Claude Code uses the API key, not the Max subscription.",
+    steps: [
+      "Audit: Do you use claude.ai/chat regularly, or do you do everything via Claude Code?",
+      "If Claude Code covers your needs, cancel the Max subscription at console.anthropic.com",
+      "Alternative: Downgrade to Claude Pro ($20/mo) if you still want some web chat access",
+    ],
+  },
+  {
+    title: "Optimize AIGlitch Grok cron jobs",
+    service: "xAI (Grok)",
+    currentCost: "$215/mo",
+    targetCost: "$50-100/mo",
+    savings: "$115-165/mo",
+    effort: "Medium",
+    priority: 3,
+    description:
+      "AIGlitch runs 18 cron jobs generating content via Grok. Switching to grok-3-fast, reducing frequencies, and enabling prompt caching can cut costs 50-75%. Full optimization guide exists in docs/aiglitch-cost-optimization.md.",
+    steps: [
+      "Switch to grok-3-fast for 80% of content generation (routine posts, topics)",
+      "Halve cron frequencies in AIGlitch vercel.json (e.g. every 15min → 30min)",
+      "Add x-grok-conv-id headers for prompt caching (stable IDs per task type)",
+      "Set max_tokens limits: posts 300, topics 500, screenplays 2000",
+      "Enable Data Sharing on console.x.ai for $150/mo credit",
+    ],
+  },
+  {
+    title: "Downgrade X (Twitter) plan",
+    service: "X (Twitter)",
+    currentCost: "$50/mo",
+    targetCost: "$0-10/mo",
+    savings: "$40-50/mo",
+    effort: "Easy",
+    priority: 4,
+    description:
+      "The $50/mo X Basic API plan gives 10K tweet reads + 500 writes. If you're posting less than 100 tweets/month, the Free tier (1,500 tweets/mo write-only) or Basic ($100/year = $8.33/mo) may be enough.",
+    steps: [
+      "Check X API usage: how many reads vs writes per month?",
+      "If mostly writes (posting): Free tier allows 1,500 tweets/mo",
+      "If you need reads (analytics): Basic annual plan is $100/year ($8.33/mo) instead of $50/mo",
+      "Note: Free tier has no read access — Growth page follower counts would need a workaround",
+    ],
+  },
+  {
+    title: "Consolidate Vercel projects",
+    service: "Vercel",
+    currentCost: "$38/mo",
+    targetCost: "$20/mo",
+    savings: "$18/mo",
+    effort: "Hard",
+    priority: 5,
+    description:
+      "Vercel Pro is $20/mo base + on-demand usage. The $38 means ~$18 in overages (serverless function execution, bandwidth). Reducing unnecessary API polling and optimizing serverless function duration can cut overages.",
+    steps: [
+      "Audit which projects are consuming the most serverless function hours",
+      "Increase polling intervals on TheMaster dashboard (60s → 120s or 300s)",
+      "Add stale-while-revalidate caching to API routes that don't need real-time data",
+      "Consider moving low-traffic projects to Vercel Hobby (free) if they don't need Pro features",
+    ],
+  },
+  {
+    title: "Use prompt caching in TheMaster API calls",
+    service: "Anthropic",
+    currentCost: "Included above",
+    targetCost: "30-50% less per call",
+    savings: "$50-100/mo",
+    effort: "Medium",
+    priority: 6,
+    description:
+      "Anthropic supports prompt caching — repeated system prompts are charged at 90% discount on cache hits. TheMaster's system prompts in lib/ai.ts are static and identical across calls, perfect for caching.",
+    steps: [
+      "Add 'anthropic-beta: prompt-caching-2024-07-31' header to API calls in lib/ai.ts",
+      "Mark system prompts with cache_control: { type: 'ephemeral' } in the messages array",
+      "Restructure prompts: static instructions FIRST, dynamic content LAST",
+      "Monitor cache hit rates via Anthropic dashboard",
+    ],
+  },
+];
+
+const EFFORT_COLORS: Record<string, string> = {
+  Easy: "text-success border-success/20 bg-success/10",
+  Medium: "text-warning border-warning/20 bg-warning/10",
+  Hard: "text-error border-error/20 bg-error/10",
+};
+
 const FIXED_SERVICES: { name: string; key: string; cost: number }[] = [
   { name: "ImprovMX", key: "improvmx", cost: 9.0 },
   { name: "X (Twitter)", key: "twitter", cost: 50.0 },
@@ -163,6 +286,14 @@ export default function CostsPage() {
   const fixedTotal = fixedServices.reduce((sum, s) => sum + (s.cost ?? 0), 0);
   const grandTotal = liveTotal + fixedTotal;
   const anyLoading = services.some((s) => s.loading);
+
+  const [showStrategies, setShowStrategies] = useState(false);
+  const [expandedStrategy, setExpandedStrategy] = useState<number | null>(null);
+
+  const totalPotentialSavings = STRATEGIES.reduce((sum, s) => {
+    const match = s.savings.match(/\$(\d[\d,]*)/);
+    return sum + (match ? parseInt(match[1].replace(",", "")) : 0);
+  }, 0);
 
   const now = new Date();
   const monthYear = now.toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -331,6 +462,133 @@ export default function CostsPage() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Cost Saving Strategies */}
+      <div className="mt-10">
+        <button
+          onClick={() => setShowStrategies(!showStrategies)}
+          className="w-full flex items-center justify-between bg-base-card rounded-xl border border-slate-800 p-5 hover:border-accent/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">💡</span>
+            <div className="text-left">
+              <h2 className="text-lg font-bold text-white">Cost Saving Strategies</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {STRATEGIES.length} strategies — potential savings up to ${totalPotentialSavings.toLocaleString()}+/mo
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-mono text-accent bg-accent/10 px-3 py-1 rounded-full border border-accent/20">
+              Target: ~$400/mo
+            </span>
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={`text-slate-500 transition-transform ${showStrategies ? "rotate-180" : ""}`}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+        </button>
+
+        {showStrategies && (
+          <div className="mt-4 space-y-3">
+            {/* Summary bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <div className="bg-base-card rounded-xl border border-slate-800 p-4">
+                <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">Current Monthly</p>
+                <p className="text-2xl font-bold text-error mt-1">${grandTotal.toFixed(2)}</p>
+              </div>
+              <div className="bg-base-card rounded-xl border border-slate-800 p-4">
+                <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">Target Monthly</p>
+                <p className="text-2xl font-bold text-success mt-1">~$400</p>
+              </div>
+              <div className="bg-base-card rounded-xl border border-slate-800 p-4">
+                <p className="text-xs text-slate-500 font-mono uppercase tracking-wider">Potential Savings</p>
+                <p className="text-2xl font-bold text-accent mt-1">${totalPotentialSavings.toLocaleString()}+/mo</p>
+              </div>
+            </div>
+
+            {/* Strategy cards */}
+            {STRATEGIES.sort((a, b) => a.priority - b.priority).map((strategy, idx) => (
+              <div
+                key={idx}
+                className="bg-base-card rounded-xl border border-slate-800 overflow-hidden"
+              >
+                <button
+                  onClick={() => setExpandedStrategy(expandedStrategy === idx ? null : idx)}
+                  className="w-full p-5 flex items-start justify-between text-left hover:bg-slate-800/30 transition-colors"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-xs font-mono text-slate-600">#{strategy.priority}</span>
+                      <h3 className="text-sm font-bold text-white">{strategy.title}</h3>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-mono border ${EFFORT_COLORS[strategy.effort]}`}>
+                        {strategy.effort}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 mt-2 text-xs font-mono">
+                      <span className="text-slate-500">{strategy.service}</span>
+                      <span className="text-error">{strategy.currentCost}</span>
+                      <span className="text-slate-600">→</span>
+                      <span className="text-success">{strategy.targetCost}</span>
+                      <span className="text-accent font-bold">Save {strategy.savings}</span>
+                    </div>
+                  </div>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`text-slate-500 transition-transform ml-4 mt-1 flex-shrink-0 ${expandedStrategy === idx ? "rotate-180" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {expandedStrategy === idx && (
+                  <div className="px-5 pb-5 border-t border-slate-800">
+                    <p className="text-sm text-slate-400 mt-4 leading-relaxed">
+                      {strategy.description}
+                    </p>
+                    <div className="mt-4">
+                      <p className="text-xs text-slate-500 font-mono uppercase tracking-wider mb-2">Action Steps</p>
+                      <ol className="space-y-2">
+                        {strategy.steps.map((step, stepIdx) => (
+                          <li key={stepIdx} className="flex items-start gap-2 text-sm text-slate-300">
+                            <span className="text-accent font-mono text-xs mt-0.5 flex-shrink-0">{stepIdx + 1}.</span>
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Bottom note */}
+            <div className="bg-accent/5 rounded-xl border border-accent/10 p-4 mt-4">
+              <p className="text-xs text-slate-400 leading-relaxed">
+                <span className="text-accent font-bold">Priority order:</span> Start with #1 and #2 — they&apos;re the easiest wins with the biggest impact.
+                Switching to Haiku for API calls and dropping Claude Max could save ~$1,100/mo alone.
+                The full AIGlitch Grok optimization guide is at <span className="font-mono text-accent">docs/aiglitch-cost-optimization.md</span>.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
