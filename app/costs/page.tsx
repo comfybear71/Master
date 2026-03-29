@@ -262,8 +262,8 @@ export default function CostsPage() {
                 </div>
               ) : service.error ? (
                 <div>
-                  <p className="text-xs text-danger font-mono truncate" title={service.error}>
-                    {service.error.length > 40 ? "Not configured" : service.error}
+                  <p className="text-xs text-danger font-mono break-words" title={service.error}>
+                    {service.error}
                   </p>
                 </div>
               ) : editingKey === service.key ? (
