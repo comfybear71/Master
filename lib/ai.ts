@@ -2,6 +2,26 @@ import { CampaignPost, SocialPlatform } from "./types";
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || "";
 
+// ─── Model Tiering ────────────────────────────────────────
+// Haiku is the default for all TheMaster API calls (10-20x cheaper than Sonnet).
+// Sonnet is available for complex tasks that need higher reasoning.
+// All tasks in TheMaster produce structured JSON — Haiku handles this well.
+export const CLAUDE_MODELS = {
+  haiku: "claude-haiku-4-5-20251001",   // Default — cheapest, fast, great for JSON
+  sonnet: "claude-sonnet-4-20250514",    // Complex error analysis, nuanced content
+} as const;
+
+export type ClaudeTier = keyof typeof CLAUDE_MODELS;
+
+// Max tokens per task type — avoid wasting tokens on short outputs
+const MAX_TOKENS: Record<string, number> = {
+  campaign: 1024,
+  email: 1024,
+  viral: 512,
+  error: 2048,
+  default: 1024,
+};
+
 interface ClaudeMessage {
   role: "user" | "assistant";
   content: string;
@@ -13,11 +33,15 @@ interface ClaudeResponse {
 
 export async function askClaude(
   systemPrompt: string,
-  messages: ClaudeMessage[]
+  messages: ClaudeMessage[],
+  options?: { tier?: ClaudeTier; task?: string }
 ): Promise<string> {
   if (!ANTHROPIC_API_KEY) {
     throw new Error("ANTHROPIC_API_KEY not set");
   }
+
+  const model = CLAUDE_MODELS[options?.tier || "haiku"];
+  const maxTokens = MAX_TOKENS[options?.task || "default"] || MAX_TOKENS.default;
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
@@ -27,8 +51,8 @@ export async function askClaude(
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 4096,
+      model,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages,
     }),
@@ -80,9 +104,11 @@ ${filePath ? `## Suspected File: ${filePath}` : ""}
 
 Analyze this error and provide a fix in JSON format.`;
 
-  const response = await askClaude(systemPrompt, [
-    { role: "user", content: userMessage },
-  ]);
+  const response = await askClaude(
+    systemPrompt,
+    [{ role: "user", content: userMessage }],
+    { tier: "sonnet", task: "error" }
+  );
 
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -143,9 +169,11 @@ ${projectContext ? `## Project Context\n${projectContext}` : ""}
 
 Generate a complete multi-platform campaign in JSON format.`;
 
-  const response = await askClaude(systemPrompt, [
-    { role: "user", content: userMessage },
-  ]);
+  const response = await askClaude(
+    systemPrompt,
+    [{ role: "user", content: userMessage }],
+    { tier: "haiku", task: "campaign" }
+  );
 
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -186,7 +214,11 @@ Performance data: ${engagementData}
 
 Write a follow-up post to capitalize on this momentum.`;
 
-  return askClaude(systemPrompt, [{ role: "user", content: userMessage }]);
+  return askClaude(
+    systemPrompt,
+    [{ role: "user", content: userMessage }],
+    { tier: "haiku", task: "viral" }
+  );
 }
 
 export async function generateSponsorEmail(
@@ -260,9 +292,11 @@ Respond in JSON format:
 
 Write a personalized pitch explaining why their product would be perfect for AIG!itch's AI-generated ad campaigns.`;
 
-  const response = await askClaude(systemPrompt, [
-    { role: "user", content: userMessage },
-  ]);
+  const response = await askClaude(
+    systemPrompt,
+    [{ role: "user", content: userMessage }],
+    { tier: "haiku", task: "email" }
+  );
 
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);
@@ -323,9 +357,11 @@ ${targetAudience}
 
 Generate a cross-project promotional campaign.`;
 
-  const response = await askClaude(systemPrompt, [
-    { role: "user", content: userMessage },
-  ]);
+  const response = await askClaude(
+    systemPrompt,
+    [{ role: "user", content: userMessage }],
+    { tier: "haiku", task: "campaign" }
+  );
 
   try {
     const jsonMatch = response.match(/\{[\s\S]*\}/);

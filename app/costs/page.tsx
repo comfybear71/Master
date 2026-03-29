@@ -27,20 +27,20 @@ interface Strategy {
 
 const STRATEGIES: Strategy[] = [
   {
-    title: "Switch TheMaster API to Claude Haiku",
+    title: "Use Sonnet as default Claude Code model",
     service: "Anthropic",
     currentCost: "~$1,280/mo",
-    targetCost: "~$200-400/mo",
+    targetCost: "~$250-400/mo",
     savings: "$800-1,000/mo",
     effort: "Easy",
     priority: 1,
     description:
-      "TheMaster uses claude-sonnet-4 for all API calls (error analysis, campaigns, emails). Most of these tasks don't need Sonnet — Haiku is 10-20x cheaper and fast enough for structured JSON responses.",
+      "Most of the $1,281 Anthropic bill is from Claude Code sessions (coding on all projects — TheMaster, AIGlitch, Glitch App, etc). Opus is ~5x more expensive than Sonnet. Sonnet handles 90% of coding tasks equally well. Use /model in Claude Code to switch. This applies across ALL your projects.",
     steps: [
-      "Change model in lib/ai.ts from 'claude-sonnet-4-20250514' to 'claude-haiku-4-5-20251001' for routine tasks",
-      "Keep Sonnet only for complex error analysis (confidence-critical)",
-      "Add model tiering: askClaude() accepts a 'tier' param — haiku (default) vs sonnet (complex only)",
-      "Reduce max_tokens from 4096 → 1024 for campaigns, 512 for emails, 2048 for error analysis",
+      "Start every Claude Code session with: /model claude-sonnet-4-6 (5x cheaper than Opus)",
+      "Only switch to Opus (/model claude-opus-4-6) for complex architecture or hard debugging",
+      "Use Haiku (/model claude-haiku-4-5-20251001) for simple tasks: commits, file edits, HANDOFF updates",
+      "TheMaster website API already switched to Haiku (lib/ai.ts) — Sonnet only for error analysis",
     ],
   },
   {
@@ -52,7 +52,7 @@ const STRATEGIES: Strategy[] = [
     effort: "Easy",
     priority: 2,
     description:
-      "You're already paying for Anthropic API usage ($1,281.80/mo). Claude Max is a separate subscription for the web chat. Consider if you actually need both — Claude Code uses the API key, not the Max subscription.",
+      "You're paying $100/mo for Claude Max (web chat) AND $1,281/mo for API usage (Claude Code). Claude Code is where all the real work happens. If you don't use claude.ai/chat regularly, this is $100/mo saved instantly.",
     steps: [
       "Audit: Do you use claude.ai/chat regularly, or do you do everything via Claude Code?",
       "If Claude Code covers your needs, cancel the Max subscription at console.anthropic.com",
