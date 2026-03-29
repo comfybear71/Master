@@ -11,13 +11,12 @@ interface ServiceCost {
   lastFetched: string | null;
   type: "live" | "fixed";
   apiRoute?: string;
-  editable?: boolean;
 }
 
-const FIXED_SERVICES: { name: string; key: string; cost: number; editable?: boolean }[] = [
+const FIXED_SERVICES: { name: string; key: string; cost: number }[] = [
   { name: "ImprovMX", key: "improvmx", cost: 9.0 },
   { name: "X (Twitter)", key: "twitter", cost: 50.0 },
-  { name: "Claude Max", key: "claudemax", cost: 100.0, editable: true },
+  { name: "Claude Max", key: "claudemax", cost: 100.0 },
 ];
 
 const LIVE_SERVICES: { name: string; key: string; apiRoute: string }[] = [
@@ -29,14 +28,14 @@ const LIVE_SERVICES: { name: string; key: string; apiRoute: string }[] = [
 ];
 
 const SERVICE_ICONS: Record<string, string> = {
-  digitalocean: "\u{1F4A7}",  // droplet
-  vercel: "\u25B2",            // triangle
-  anthropic: "\u{1F9E0}",     // brain
-  xai: "\u26A1",               // lightning
-  mongodb: "\u{1F343}",        // leaf (MongoDB logo)
-  improvmx: "\u2709",          // envelope
-  twitter: "\u{1D54F}",        // X
-  claudemax: "\u2728",         // sparkles
+  digitalocean: "\u{1F4A7}",
+  vercel: "\u25B2",
+  anthropic: "\u{1F9E0}",
+  xai: "\u26A1",
+  mongodb: "\u{1F343}",
+  improvmx: "\u2709",
+  twitter: "\u{1D54F}",
+  claudemax: "\u2728",
 };
 
 export default function CostsPage() {
@@ -44,10 +43,9 @@ export default function CostsPage() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
-  // Initialize services and load editable costs from MongoDB
+  // Initialize services and load saved overrides from MongoDB
   useEffect(() => {
     const init = async () => {
-      // Fetch saved editable costs from MongoDB
       let savedCosts: Record<string, number> = {};
       try {
         const res = await fetch("/api/costs/settings");
@@ -60,9 +58,10 @@ export default function CostsPage() {
         ...LIVE_SERVICES.map((s) => ({
           name: s.name,
           key: s.key,
-          cost: null,
+          // If user has manually saved a cost for this service, use it
+          cost: savedCosts[s.key] ?? null,
           error: null,
-          loading: true,
+          loading: !(s.key in savedCosts),
           lastFetched: null,
           type: "live" as const,
           apiRoute: s.apiRoute,
@@ -75,7 +74,6 @@ export default function CostsPage() {
           loading: false,
           lastFetched: null,
           type: "fixed" as const,
-          editable: s.editable,
         })),
       ];
       setServices(initial);
@@ -95,7 +93,9 @@ export default function CostsPage() {
       if (data.error) {
         setServices((prev) =>
           prev.map((s) =>
-            s.key === key ? { ...s, loading: false, error: data.error, cost: null } : s
+            s.key === key
+              ? { ...s, loading: false, error: data.error }
+              : s
           )
         );
       } else {
@@ -119,11 +119,11 @@ export default function CostsPage() {
   // Fetch all live services on mount
   useEffect(() => {
     if (services.length === 0) return;
-    const liveServices = services.filter((s) => s.type === "live" && s.apiRoute);
-    liveServices.forEach((s) => {
-      if (s.apiRoute) fetchService(s.key, s.apiRoute);
-    });
-    // Only run once on mount
+    services
+      .filter((s) => s.type === "live" && s.apiRoute && s.loading)
+      .forEach((s) => {
+        if (s.apiRoute) fetchService(s.key, s.apiRoute);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [services.length > 0]);
 
@@ -135,13 +135,13 @@ export default function CostsPage() {
       });
   };
 
+  // Save a manually entered cost to MongoDB
   const handleEditSave = async (key: string) => {
     const val = parseFloat(editValue);
     if (!isNaN(val) && val >= 0) {
       setServices((prev) =>
-        prev.map((s) => (s.key === key ? { ...s, cost: val } : s))
+        prev.map((s) => (s.key === key ? { ...s, cost: val, error: null } : s))
       );
-      // Persist to MongoDB
       try {
         await fetch("/api/costs/settings", {
           method: "POST",
@@ -149,7 +149,7 @@ export default function CostsPage() {
           body: JSON.stringify({ service: key, cost: val }),
         });
       } catch {
-        // Optimistic update — already applied to UI
+        // Optimistic update already applied
       }
     }
     setEditingKey(null);
@@ -211,7 +211,7 @@ export default function CostsPage() {
         {services.map((service) => (
           <div
             key={service.key}
-            className="bg-base-card rounded-xl border border-slate-800 p-5 flex flex-col justify-between"
+            className="bg-base-card rounded-xl border border-slate-800 p-5 flex flex-col justify-between min-h-[140px]"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -260,12 +260,6 @@ export default function CostsPage() {
                   <div className="w-4 h-4 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
                   <span className="text-sm text-slate-500 font-mono">Loading...</span>
                 </div>
-              ) : service.error ? (
-                <div>
-                  <p className="text-xs text-danger font-mono break-words" title={service.error}>
-                    {service.error}
-                  </p>
-                </div>
               ) : editingKey === service.key ? (
                 <div className="flex items-center gap-2">
                   <span className="text-lg text-white">$</span>
@@ -287,12 +281,29 @@ export default function CostsPage() {
                     Save
                   </button>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between">
-                  <p className="text-2xl font-bold text-white font-mono">
-                    ${(service.cost ?? 0).toFixed(2)}
+              ) : service.error && service.cost === null ? (
+                /* API failed and no saved cost — show error + Enter button */
+                <div>
+                  <p className="text-[10px] text-warning font-mono mb-2 break-words">
+                    {service.error}
                   </p>
-                  {service.editable && (
+                  <button
+                    onClick={() => {
+                      setEditingKey(service.key);
+                      setEditValue("");
+                    }}
+                    className="text-xs text-accent font-mono hover:underline"
+                  >
+                    Enter cost manually
+                  </button>
+                </div>
+              ) : (
+                /* Show cost (from API or manual entry) */
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-2xl font-bold text-white font-mono">
+                      ${(service.cost ?? 0).toFixed(2)}
+                    </p>
                     <button
                       onClick={() => {
                         setEditingKey(service.key);
@@ -302,6 +313,11 @@ export default function CostsPage() {
                     >
                       Edit
                     </button>
+                  </div>
+                  {service.error && (
+                    <p className="text-[10px] text-warning font-mono mt-1 break-words">
+                      API: {service.error}
+                    </p>
                   )}
                 </div>
               )}
