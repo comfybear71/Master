@@ -25,6 +25,7 @@ const LIVE_SERVICES: { name: string; key: string; apiRoute: string }[] = [
   { name: "Vercel", key: "vercel", apiRoute: "/api/costs/vercel" },
   { name: "Anthropic (Claude)", key: "anthropic", apiRoute: "/api/costs/anthropic" },
   { name: "xAI (Grok)", key: "xai", apiRoute: "/api/costs/xai" },
+  { name: "MongoDB Atlas", key: "mongodb", apiRoute: "/api/costs/mongodb" },
 ];
 
 const SERVICE_ICONS: Record<string, string> = {
@@ -32,6 +33,7 @@ const SERVICE_ICONS: Record<string, string> = {
   vercel: "\u25B2",            // triangle
   anthropic: "\u{1F9E0}",     // brain
   xai: "\u26A1",               // lightning
+  mongodb: "\u{1F343}",        // leaf (MongoDB logo)
   improvmx: "\u2709",          // envelope
   twitter: "\u{1D54F}",        // X
   claudemax: "\u2728",         // sparkles
