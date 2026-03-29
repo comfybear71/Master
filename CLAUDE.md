@@ -73,6 +73,7 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 5. All secrets via environment variables — never hardcode anything
 6. Every API route needs proper error handling and meaningful error messages
 7. **§GLITCH** — Always use the § symbol for GLITCH coin (§GLITCH), NEVER use $ for GLITCH. The $ is reserved for $BUDJU (Solana token) and real currency amounts.
+8. **NEVER use localStorage.** All persistent data goes in MongoDB. localStorage is unreliable, device-specific, and not accessible across sessions or devices. Use the `settings` collection for user preferences and editable values.
 
 ### Deployment
 7. Never deploy directly to production without showing the user a summary first
