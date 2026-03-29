@@ -44,19 +44,18 @@ const STRATEGIES: Strategy[] = [
     ],
   },
   {
-    title: "Drop Claude Max subscription",
-    service: "Claude Max",
-    currentCost: "$100/mo",
-    targetCost: "$0/mo",
-    savings: "$100/mo",
+    title: "✅ Downgraded Claude Max → Pro (DONE)",
+    service: "Claude Pro",
+    currentCost: "$100/mo → $19/mo",
+    targetCost: "$19/mo",
+    savings: "$81/mo saved",
     effort: "Easy",
     priority: 2,
     description:
-      "You're paying $100/mo for Claude Max (web chat) AND $1,281/mo for API usage (Claude Code). Claude Code is where all the real work happens. If you don't use claude.ai/chat regularly, this is $100/mo saved instantly.",
+      "Downgraded from Claude Max (A$169.99/mo) to Claude Pro (A$29/mo) on 2026-03-30. Claude Code uses API credits, not the subscription — so Pro gives the same coding experience at 83% less.",
     steps: [
-      "Audit: Do you use claude.ai/chat regularly, or do you do everything via Claude Code?",
-      "If Claude Code covers your needs, cancel the Max subscription at console.anthropic.com",
-      "Alternative: Downgrade to Claude Pro ($20/mo) if you still want some web chat access",
+      "✅ Downgraded to Pro at claude.ai — done 2026-03-30",
+      "Monitor: If you need Max features later (20x chat usage, priority access), you can upgrade back",
     ],
   },
   {
@@ -78,20 +77,19 @@ const STRATEGIES: Strategy[] = [
     ],
   },
   {
-    title: "Downgrade X (Twitter) plan",
+    title: "✅ X API is pay-per-use (already cheap)",
     service: "X (Twitter)",
-    currentCost: "$50/mo",
-    targetCost: "$0-10/mo",
-    savings: "$40-50/mo",
+    currentCost: "~$10-15/mo",
+    targetCost: "~$10-15/mo",
+    savings: "$35/mo corrected",
     effort: "Easy",
     priority: 4,
     description:
-      "The $50/mo X Basic API plan gives 10K tweet reads + 500 writes. If you're posting less than 100 tweets/month, the Free tier (1,500 tweets/mo write-only) or Basic ($100/year = $8.33/mo) may be enough.",
+      "X Developer API is already on pay-per-use plan, not the $50/mo fixed plan we assumed. Actual usage is well under $1/day (~$10-15/mo). $78.91 credits remaining. X Premium subscription (@spiritary verified badge) is separate — check that cost too.",
     steps: [
-      "Check X API usage: how many reads vs writes per month?",
-      "If mostly writes (posting): Free tier allows 1,500 tweets/mo",
-      "If you need reads (analytics): Basic annual plan is $100/year ($8.33/mo) instead of $50/mo",
-      "Note: Free tier has no read access — Growth page follower counts would need a workaround",
+      "✅ Confirmed: pay-per-use plan at console.x.com — no action needed",
+      "Check X Premium subscription cost at x.com → Premium → Manage subscription",
+      "Consider: Do you need the verified badge? If not, cancel X Premium too",
     ],
   },
   {
@@ -138,8 +136,8 @@ const EFFORT_COLORS: Record<string, string> = {
 
 const FIXED_SERVICES: { name: string; key: string; cost: number }[] = [
   { name: "ImprovMX", key: "improvmx", cost: 9.0 },
-  { name: "X (Twitter)", key: "twitter", cost: 50.0 },
-  { name: "Claude Max", key: "claudemax", cost: 100.0 },
+  { name: "X (Twitter)", key: "twitter", cost: 15.0 },
+  { name: "Claude Pro", key: "claudepro", cost: 19.0 },
 ];
 
 const LIVE_SERVICES: { name: string; key: string; apiRoute: string }[] = [
@@ -158,7 +156,7 @@ const SERVICE_ICONS: Record<string, string> = {
   mongodb: "\u{1F343}",
   improvmx: "\u2709",
   twitter: "\u{1D54F}",
-  claudemax: "\u2728",
+  claudepro: "\u2728",
 };
 
 export default function CostsPage() {
