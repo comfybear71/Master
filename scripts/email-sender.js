@@ -25,11 +25,14 @@ const SENDERS = {
 };
 
 async function sendEmail(sender, to, subject, html) {
+  const dns = require('dns');
+  dns.setDefaultResultOrder('ipv4first');
   const transporter = nodemailer.createTransport({
     host: 'smtp.improvmx.com',
     port: 587,
     secure: false,
     auth: { user: sender.email, pass: sender.password },
+    family: 4,
   });
 
   return transporter.sendMail({
