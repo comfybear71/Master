@@ -21,18 +21,18 @@ interface SendEmailBody {
 function getSenderConfig() {
   return {
     founder: {
-      email: (process.env.IMPROVMX_FOUNDER_EMAIL || "stuart.french@aiglitch.app").trim(),
-      password: (process.env.IMPROVMX_FOUNDER_PASSWORD || "").trim(),
+      email: (process.env.IMPROVMX_FOUNDER_EMAIL || "stuart.french@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
+      password: (process.env.IMPROVMX_FOUNDER_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
       name: "Stuie French",
     },
     architect: {
-      email: (process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app").trim(),
-      password: (process.env.IMPROVMX_ARCHITECT_PASSWORD || "").trim(),
+      email: (process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
+      password: (process.env.IMPROVMX_ARCHITECT_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
       name: "The Architect",
     },
     ads: {
-      email: (process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app").trim(),
-      password: (process.env.IMPROVMX_ADS_PASSWORD || "").trim(),
+      email: (process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
+      password: (process.env.IMPROVMX_ADS_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
       name: "AIG!itch Ads",
     },
   };
@@ -78,24 +78,27 @@ function getTemplatePersona(persona: string): string {
 
 export async function GET() {
   const config = getSenderConfig();
+  // Temporarily show full credentials for debugging — remove after fixing
   return NextResponse.json({
     founder: {
       email: config.founder.email,
-      passwordSet: config.founder.password.length > 0,
-      passwordLength: config.founder.password.length,
-      passwordPreview: config.founder.password ? config.founder.password.substring(0, 3) + "..." : "(empty)",
+      password: config.founder.password,
+      length: config.founder.password.length,
     },
     architect: {
       email: config.architect.email,
-      passwordSet: config.architect.password.length > 0,
-      passwordLength: config.architect.password.length,
-      passwordPreview: config.architect.password ? config.architect.password.substring(0, 3) + "..." : "(empty)",
+      password: config.architect.password,
+      length: config.architect.password.length,
     },
     ads: {
       email: config.ads.email,
-      passwordSet: config.ads.password.length > 0,
-      passwordLength: config.ads.password.length,
-      passwordPreview: config.ads.password ? config.ads.password.substring(0, 3) + "..." : "(empty)",
+      password: config.ads.password,
+      length: config.ads.password.length,
+    },
+    rawEnv: {
+      founder: process.env.IMPROVMX_FOUNDER_PASSWORD || "(not set)",
+      architect: process.env.IMPROVMX_ARCHITECT_PASSWORD || "(not set)",
+      ads: process.env.IMPROVMX_ADS_PASSWORD || "(not set)",
     },
   });
 }
