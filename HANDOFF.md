@@ -95,8 +95,9 @@ AIGlitch has a fully automated **Ad Campaign system** that generates AI-powered 
 - [x] Social config panel for account IDs
 
 ### Phase 4 — Command Center (IN PROGRESS)
-- [x] Costs Page — monthly cost tracker with live API + manual entry for all services
+- [x] Costs Page — monthly cost tracker with live API + manual entry, invoice history, cost-saving strategies
 - [x] SSH Terminal — browser-based terminal via ttyd iframe (iPad-friendly)
+- [x] Email Outreach — branded HTML templates sent via Resend HTTP API from Prospects page (3 personas, 3 tones)
 - [ ] §GLITCH Quest Campaign — task-based rewards system
 - [ ] AI Assistant — ask questions about any project (Claude reads code via GitHub API)
 - [ ] Code Browser — browse file trees of all registered repos
@@ -244,16 +245,19 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks (follow, like, subscribe across all platforms) and earn §GLITCH coin. Needs: campaign page, task verification APIs, wallet connection, admin dashboard.
 
 ### Current State
-1. **Costs page LIVE** — March 2026: $1,697.02 total (DigitalOcean $2.71, Vercel $38.07, Anthropic $1,281.80, xAI $215.44, MongoDB $0, ImprovMX $9, X $50, Claude Max $100)
+1. **Costs page LIVE** — March 2026: ~$2,915 total (DigitalOcean $2.71, Vercel $38.07, Anthropic $1,306.23, xAI $1,550, MongoDB $0, ImprovMX $9, Resend $0, X ~$15, Claude Pro $19)
 2. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
-2. **TikTok in SANDBOX** — switch to LIVE once production review approved
-3. **YouTube quota increase submitted** (100K units/day) — check if approved
-4. **Domain:** masterhq.dev (NEXTAUTH_URL updated)
-5. **Email:** stuart.french@aiglitch.app (Vercel DNS configured)
-6. **Prospects page:** 130+ sponsors imported, CRM with status tracking, AI email generation
-7. **Media Kit:** masterhq.dev/media-kit (full advertiser kit)
-8. **Light/dark mode** toggle in sidebar
-9. **Docs:** 12 guides (rewards campaign, email templates, sponsor targets, campaigns, Phase 4 spec, YouTube quota, xAI costs, TikTok setup, social accounts, session logs)
+3. **TikTok in SANDBOX** — switch to LIVE once production review approved
+4. **YouTube quota increase submitted** (100K units/day) — check if approved
+5. **Domain:** masterhq.dev (NEXTAUTH_URL updated)
+6. **Email sending WORKING** — 3 personas (stuart.french@, architect@, ads@) via Resend HTTP API + 6 branded HTML templates
+7. **Email receiving** — ImprovMX forwards all @aiglitch.app to sfrench71@me.com + iPhone SMTP sending configured
+8. **Prospects page:** 131 sponsors imported, CRM with status tracking, one-click email sending with branded templates
+9. **Media Kit:** masterhq.dev/media-kit (full advertiser kit)
+10. **Light/dark mode** toggle in sidebar
+11. **Docs:** 13 guides (rewards campaign, email templates, sponsor targets, campaigns, Phase 4 spec, YouTube quota, xAI costs, TikTok setup, social accounts, session logs, ImprovMX email setup, Resend setup)
+12. **Cost savings implemented:** Claude Max → Pro ($81/mo saved), X corrected from $50 to ~$15, cost strategies page with 6 prioritized recommendations
+13. **DigitalOcean SMTP blocked** — submitted support ticket to unblock ports 587/465/2525 on dev droplet (pending)
 
 ### Pending Reviews
 - TikTok production review (new redirect URI + scopes)
@@ -285,6 +289,7 @@ Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks
 | 2026-03-28 | Terminal feature COMPLETE: Created DigitalOcean dev droplet (masterhq-dev-syd1, 170.64.133.9, $12/mo, 2GB RAM). Installed Claude Code v2.1.85, ttyd 1.7.4, tmux, nginx. Set up SSL via Let's Encrypt on terminal.masterhq.dev. Critical fix: port 443 must be open in UFW. ttyd requires -W flag for writable mode. Terminal page on masterhq.dev/terminal working on iPad + desktop. Two-droplet architecture documented (budju trading bot completely isolated). §GLITCH Quest design doc finalized with SQL schemas. iPad workflow documented (tmux + Claude Code). | Claude Code |
 | 2026-03-29 | MARATHON SESSION (4hrs, 14 commits): OAuth URL auto-copy for iPad terminal. Tried 5 approaches that failed (monitoring WebSocket, embedded xterm.js, clipboard API, server-side WebSocket from Vercel, shell tee pipe) before succeeding with: `script` log capture → Python ANSI stripping → curl POST to MasterHQ API → page polls → auto-populates URL bar → user taps Go. Fixed 7+ JS template escaping bugs (use `[.]` not `\.`, `chr(27)` not `\x1b`). APIs: `/api/terminal/oauth-url`, `/api/terminal/setup`, `/api/terminal/get-url`, `/api/terminal/token`. Added TheMaster to its own project registry. Full session log: `docs/session-2026-03-29-oauth-autocapture.md`. Full technical docs: `docs/oauth-url-auto-capture.md`. | Claude Code |
 | 2026-03-30 | Costs page: Entered March 2026 costs manually via live API — Anthropic $1,281.80 (summed from invoices), xAI Grok $215.44, Vercel $38.07. Total March: $1,697.02 (live $1,538.02 + fixed $159.00). Updated CLAUDE.md with costs page docs and HANDOFF.md with session log. Pushed branch to GitHub. | Claude Code |
+| 2026-03-30 (cont) | MARATHON SESSION — Costs & Email: (1) Updated real costs — xAI actually $1,550/mo (12 credit purchases), Anthropic $1,306.23 (35 invoices), total ~$2,915/mo. (2) Added invoice history dropdowns to cost cards. (3) Built 6 cost-saving strategies page — switched TheMaster API to Haiku, downgraded Claude Max→Pro ($81/mo saved), corrected X from $50→$15 (pay-per-use). (4) Created 6 branded HTML email templates (3 tones x 2 personas) with frequency-based pricing ($50/30%, $100/80%). (5) ImprovMX email setup — 3 SMTP credentials (stuart.french@, architect@, ads@), DKIM/DMARC DNS records, iPhone configured with all 3 aliases. (6) Documented ImprovMX setup in docs page. (7) Built email sending from Prospects page — tried SMTP via Vercel (blocked), tried droplet relay (DigitalOcean blocks SMTP ports 587/465/2525), finally switched to Resend HTTP API — domain verified, DNS records added, EMAIL SENDING WORKING. (8) Added Resend to costs page ($0 free tier). (9) Updated all docs: CLAUDE.md, HANDOFF.md, Resend guide in /docs page. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 

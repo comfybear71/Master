@@ -1655,6 +1655,106 @@ Outlook requires sending/receiving from the same provider. Use **Thunderbird** i
 | Port 587 blocked | Try mobile data or different network |
 | Forwarding not working | Check ImprovMX dashboard green dot, MX records in Vercel |`,
   },
+  {
+    id: "resend-setup",
+    title: "Resend (Email Sending)",
+    icon: "\u{1F4E8}",
+    content: `## Resend — Email Sending API for MasterHQ
+
+**Service:** Resend (resend.com) — Free tier (100 emails/day)
+**Purpose:** Send branded HTML template emails to sponsor prospects from the Prospects page
+**Why Resend:** Both Vercel (serverless) and DigitalOcean droplet block outgoing SMTP ports (587, 465, 2525). Resend uses HTTP API — no port restrictions.
+
+---
+
+### Architecture
+
+| Component | Service | Purpose |
+|-----------|---------|---------|
+| **Receiving** | ImprovMX ($9/mo) | Forwards @aiglitch.app emails to sfrench71@me.com |
+| **Sending (MasterHQ)** | Resend (free) | HTTP API sends branded HTML templates from Prospects page |
+| **Sending (iPhone)** | ImprovMX SMTP | Send manually from Apple Mail via smtp.improvmx.com |
+
+---
+
+### Setup (Already Done)
+
+**1. Resend Account:**
+- Signed up at resend.com (account: sfrench71)
+- Domain \`aiglitch.app\` added and verified
+
+**2. DNS Records Added to Vercel (aiglitch.app):**
+
+| Type | Name | Purpose |
+|------|------|---------|
+| TXT | \`resend._domainkey\` | DKIM verification for Resend |
+| MX | \`send\` | Resend SPF sending (priority 10) |
+| TXT | \`send\` | Resend SPF record |
+
+These sit alongside the existing ImprovMX records (MX for mx1/mx2.improvmx.com, SPF, DKIM, DMARC).
+
+**3. Vercel Env Var:**
+- \`RESEND_API_KEY\` = your Resend API key (set in Vercel → TheMaster → Settings → Environment Variables)
+
+---
+
+### How It Works
+
+1. Go to **masterhq.dev/prospects**
+2. Select **persona** (founder / architect / ads) and **tone** (casual / formal / bold) at the top
+3. Click **Email** on any prospect row
+4. The API route (\`/api/send-email\`) does:
+   - Loads the matching HTML template from \`masterhq.dev/email-{persona}-{tone}.html\`
+   - Replaces **[NAME]** and **[COMPANY]** with prospect data
+   - Sends via Resend HTTP API from the selected persona's email address
+   - Logs the email in MongoDB (\`outreach_emails\` collection)
+   - Updates prospect status to "contacted" and increments \`emailsSent\`
+
+---
+
+### 3 Email Personas
+
+| Persona | Email | Display Name |
+|---------|-------|-------------|
+| founder | stuart.french@aiglitch.app | Stuie French |
+| architect | architect@aiglitch.app | The Architect |
+| ads | ads@aiglitch.app | AIG!itch Ads |
+
+---
+
+### 6 Email Templates
+
+| Persona | Casual | Formal | Bold |
+|---------|--------|--------|------|
+| Founder | email-founder-casual.html | email-founder-formal.html | email-founder-bold.html |
+| Architect | email-architect-casual.html | email-architect-formal.html | email-architect-bold.html |
+
+- \`ads\` persona uses founder templates
+- Pricing: Frequency-based, 7-day campaigns, all platforms
+- $50 = 30% frequency (~210 placements), $100 = 80% frequency (~560 placements)
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| "RESEND_API_KEY not configured" | Add the key to Vercel env vars and redeploy |
+| "Domain not verified" | Check Resend dashboard → Domains → all 3 records should be green |
+| Email goes to spam | DKIM records need time to propagate (up to 48hrs) |
+| Template not loading | Check template exists at masterhq.dev/email-{persona}-{tone}.html |
+| [NAME]/[COMPANY] not replaced | Prospect must have linkedinTitle or company field in MongoDB |
+
+---
+
+### Resend Dashboard
+
+- **Login:** resend.com (account: sfrench71@me.com)
+- **API Keys:** resend.com → API Keys
+- **Sent emails:** resend.com → Emails (shows delivery status, opens, clicks)
+- **Domain status:** resend.com → Domains → aiglitch.app
+- **Free tier limits:** 100 emails/day, 3,000 emails/month`,
+  },
 ];
 
 export default function DocsPage() {

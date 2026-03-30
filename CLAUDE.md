@@ -213,11 +213,39 @@ YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacif
 
 ### Email
 
-- **Outreach email:** stuart.french@aiglitch.app (Vercel DNS configured, sends directly from MasterHQ)
-- **Advertiser contact:** advertise@aiglitch.app
-- **Email forwarding:** ImprovMX Premium ($9/mo) — all @aiglitch.app emails forward to sfrench71@me.com
-- **Aliases:** catch-all (*), ads@, architect@ — all forwarding active
+- **Outreach emails:** stuart.french@aiglitch.app, architect@aiglitch.app, ads@aiglitch.app
+- **Email forwarding (receiving):** ImprovMX Premium ($9/mo) — all @aiglitch.app emails forward to sfrench71@me.com
+- **Email sending (from MasterHQ):** Resend (free tier, 100 emails/day) — HTTP API, no SMTP needed
+- **Email sending (from iPhone):** ImprovMX SMTP (smtp.improvmx.com, port 587, TLS)
+- **Aliases:** catch-all (*), ads@, architect@, stuart.french@, advertise@ — all forwarding active
+- **Env vars:** `RESEND_API_KEY` (Vercel), `IMPROVMX_FOUNDER_PASSWORD`, `IMPROVMX_ARCHITECT_PASSWORD`, `IMPROVMX_ADS_PASSWORD`
+- **Email templates:** 6 branded HTML templates at `public/email-{persona}-{tone}.html`
 - **Full setup guide:** `docs/improvmx-email-setup.md`
+
+### Email Templates
+
+6 branded HTML email templates for sponsor outreach, hosted on masterhq.dev:
+
+| Persona | Casual | Formal | Bold |
+|---------|--------|--------|------|
+| Founder (stuart.french@) | email-founder-casual.html | email-founder-formal.html | email-founder-bold.html |
+| Architect (architect@) | email-architect-casual.html | email-architect-formal.html | email-architect-bold.html |
+
+- **Pricing model:** Frequency-based, 7-day campaigns, all platforms. $50 = 30% frequency (~210 placements), $100 = 80% frequency (~560 placements)
+- **ads@ persona** uses founder templates
+- **[NAME]** and **[COMPANY]** are auto-replaced with prospect data when sending
+- **Send flow:** Prospects page → select persona + tone → click Email → Resend HTTP API → logged in MongoDB
+
+### Resend (Email Sending API)
+
+- **Service:** Resend (resend.com) — free tier, 100 emails/day
+- **Purpose:** Send branded HTML template emails from MasterHQ Prospects page
+- **Why Resend:** Both Vercel (serverless) and DigitalOcean (network firewall) block outgoing SMTP ports (587, 465, 2525). Resend uses HTTP API — no port restrictions.
+- **Domain:** aiglitch.app (verified in Resend with DKIM + SPF)
+- **DNS records added to Vercel:** `resend._domainkey` TXT, `send` MX, `send` TXT (alongside existing ImprovMX records)
+- **ImprovMX still handles:** Email forwarding/receiving (@aiglitch.app → sfrench71@me.com) and iPhone SMTP sending
+- **API route:** `/api/send-email` (POST sends email, GET shows status)
+- **Env var:** `RESEND_API_KEY`
 
 ### Social Platform Stats — TheMaster vs AIGlitch
 

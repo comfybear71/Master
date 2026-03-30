@@ -143,6 +143,7 @@ const EFFORT_COLORS: Record<string, string> = {
 
 const FIXED_SERVICES: { name: string; key: string; cost: number }[] = [
   { name: "ImprovMX", key: "improvmx", cost: 9.0 },
+  { name: "Resend", key: "resend", cost: 0.0 },
   { name: "X (Twitter)", key: "twitter", cost: 15.0 },
   { name: "Claude Pro", key: "claudepro", cost: 19.0 },
 ];
@@ -162,6 +163,7 @@ const SERVICE_ICONS: Record<string, string> = {
   xai: "\u26A1",
   mongodb: "\u{1F343}",
   improvmx: "\u2709",
+  resend: "\u{1F4E8}",
   twitter: "\u{1D54F}",
   claudepro: "\u2728",
 };
