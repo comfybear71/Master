@@ -6,6 +6,7 @@ import { join } from "path";
 
 const SMTP_HOST = "smtp.improvmx.com";
 const SMTP_PORT = 587;
+const SMTP_PORT_SSL = 465;
 
 interface SendEmailBody {
   prospectId: string;
@@ -15,12 +16,12 @@ interface SendEmailBody {
 
 const senderConfig = {
   founder: {
-    email: process.env.IMPROVMX_FOUNDER_EMAIL || "stuart.french@aiglitch.app",
+    email: process.env.IMPROVMX_FOUNDER_EMAIL || "Stuart.french@aiglitch.app",
     password: process.env.IMPROVMX_FOUNDER_PASSWORD || "",
     name: "Stuie French",
   },
   architect: {
-    email: process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app",
+    email: process.env.IMPROVMX_ARCHITECT_EMAIL || "Architect@aiglitch.app",
     password: process.env.IMPROVMX_ARCHITECT_PASSWORD || "",
     name: "The Architect",
   },
@@ -127,8 +128,8 @@ export async function POST(req: NextRequest) {
     const html = personalizeTemplate(templateHtml, contactName, prospect.company);
     const subject = extractSubject(persona, tone, prospect.company);
 
-    // Create SMTP transport
-    const transporter = nodemailer.createTransport({
+    // Try port 587 STARTTLS first, fall back to port 465 SSL
+    let transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: false,
@@ -136,23 +137,36 @@ export async function POST(req: NextRequest) {
         user: sender.email,
         pass: sender.password,
       },
-      debug: true,
     });
 
-    // Verify connection first
     try {
       await transporter.verify();
-    } catch (verifyErr) {
-      const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
-      return NextResponse.json({
-        error: `SMTP connection failed: ${msg}`,
-        debug: {
-          host: SMTP_HOST,
-          port: SMTP_PORT,
+    } catch {
+      // Retry with port 465 SSL
+      transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT_SSL,
+        secure: true,
+        auth: {
           user: sender.email,
-          passwordLength: sender.password.length,
+          pass: sender.password,
         },
-      }, { status: 500 });
+      });
+
+      try {
+        await transporter.verify();
+      } catch (verifyErr) {
+        const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return NextResponse.json({
+          error: `SMTP auth failed on both ports: ${msg}`,
+          debug: {
+            host: SMTP_HOST,
+            ports: [SMTP_PORT, SMTP_PORT_SSL],
+            user: sender.email,
+            passwordLength: sender.password.length,
+          },
+        }, { status: 500 });
+      }
     }
 
     // Send email
