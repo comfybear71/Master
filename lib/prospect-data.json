@@ -1308,5 +1308,15 @@
     "email": "sfrench1@bigpond.net.au",
     "country": "AUD",
     "notes": "TEST ACCOUNT — Stuart G French. Used for testing email templates and sponsor workflow."
+  },
+  {
+    "company": "Froggy Fishing",
+    "industry": "Sports & Leisure",
+    "subCategory": "Fishing",
+    "website": "",
+    "linkedinTitle": "Contact",
+    "email": "frenchs@bigpond.net.au",
+    "country": "AUD",
+    "notes": ""
   }
 ]
