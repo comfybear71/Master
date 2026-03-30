@@ -67,10 +67,10 @@ const server = http.createServer(async (req, res) => {
 
   // Send email
   if (req.method === 'POST' && req.url === '/send') {
-    // Auth check
+    // Auth check (skip if no AUTH_TOKEN configured)
     const authHeader = req.headers.authorization || '';
     const token = authHeader.replace('Bearer ', '');
-    if (AUTH_TOKEN && token !== AUTH_TOKEN) {
+    if (AUTH_TOKEN && AUTH_TOKEN.length > 0 && token !== AUTH_TOKEN) {
       res.writeHead(401, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Unauthorized' }));
       return;
