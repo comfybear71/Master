@@ -1298,5 +1298,15 @@
     "email": "Contact via website",
     "country": "USA",
     "notes": "Major content marketer itself."
+  },
+  {
+    "company": "AIG!tch",
+    "industry": "Inventor",
+    "subCategory": "AI Platform",
+    "website": "aiglitch.app",
+    "linkedinTitle": "Genius Inventor",
+    "email": "sfrench1@bigpond.net.au",
+    "country": "AUD",
+    "notes": "TEST ACCOUNT — Stuart G French. Used for testing email templates and sponsor workflow."
   }
 ]
