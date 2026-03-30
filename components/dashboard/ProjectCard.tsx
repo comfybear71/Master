@@ -26,6 +26,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const githubUrl = project.repo ? `https://github.com/${project.repo}` : null;
+  const isGlitch = project.name.toLowerCase().includes("glitch");
 
   return (
     <div className="bg-base-card rounded-xl border border-slate-800 hover:border-accent/30 transition-colors">
@@ -124,6 +125,41 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             <span className="text-slate-500 group-hover:text-white">&#x2192;</span>
             <span>Vercel Dashboard</span>
           </a>
+          {isGlitch && (
+            <>
+              <div className="border-t border-slate-700/50 my-2" />
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold mb-1">Email Templates</div>
+              <a href="https://masterhq.dev/email-founder-casual.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-green-400 transition-colors group">
+                <span className="text-green-500/60 group-hover:text-green-400">&#x2192;</span>
+                <span>Founder — Casual</span>
+              </a>
+              <a href="https://masterhq.dev/email-founder-formal.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-indigo-400 transition-colors group">
+                <span className="text-indigo-500/60 group-hover:text-indigo-400">&#x2192;</span>
+                <span>Founder — Formal</span>
+              </a>
+              <a href="https://masterhq.dev/email-founder-bold.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-red-400 transition-colors group">
+                <span className="text-red-500/60 group-hover:text-red-400">&#x2192;</span>
+                <span>Founder — Bold</span>
+              </a>
+              <a href="https://masterhq.dev/email-architect-casual.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors group">
+                <span className="text-cyan-500/60 group-hover:text-cyan-400">&#x2192;</span>
+                <span>Architect — Casual</span>
+              </a>
+              <a href="https://masterhq.dev/email-architect-formal.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors group">
+                <span className="text-cyan-500/60 group-hover:text-cyan-400">&#x2192;</span>
+                <span>Architect — Formal</span>
+              </a>
+              <a href="https://masterhq.dev/email-architect-bold.html" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-cyan-400 transition-colors group">
+                <span className="text-cyan-500/60 group-hover:text-cyan-400">&#x2192;</span>
+                <span>Architect — Bold</span>
+              </a>
+              <div className="border-t border-slate-700/50 my-2" />
+              <a href="https://masterhq.dev/media-kit" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-slate-400 hover:text-yellow-400 transition-colors group">
+                <span className="text-yellow-500/60 group-hover:text-yellow-400">&#x2605;</span>
+                <span>Media Kit</span>
+              </a>
+            </>
+          )}
         </div>
       )}
     </div>
