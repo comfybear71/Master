@@ -4,6 +4,10 @@ import nodemailer from "nodemailer";
 import { readFileSync } from "fs";
 import { join } from "path";
 
+// Force Node.js runtime (not Edge) for SMTP socket access
+export const runtime = "nodejs";
+export const maxDuration = 30;
+
 const SMTP_HOST = "smtp.improvmx.com";
 const SMTP_PORT = 587;
 const SMTP_PORT_SSL = 465;
@@ -136,33 +140,45 @@ export async function POST(req: NextRequest) {
     let transporter: nodemailer.Transporter | null = null;
 
     if (!useResend) {
-      // SMTP fallback
-      transporter = nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: SMTP_PORT,
-        secure: false,
-        requireTLS: true,
-        auth: {
-          user: sender.email,
-          pass: sender.password,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 15000,
-      });
+      // Try port 465 SSL first (more likely to work on Vercel), then 587 STARTTLS
+      const configs = [
+        { port: SMTP_PORT_SSL, secure: true },
+        { port: SMTP_PORT, secure: false },
+      ];
 
-      try {
-        await transporter.verify();
-      } catch (verifyErr) {
-        const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+      let lastError = "";
+      for (const cfg of configs) {
+        transporter = nodemailer.createTransport({
+          host: SMTP_HOST,
+          port: cfg.port,
+          secure: cfg.secure,
+          auth: {
+            user: sender.email,
+            pass: sender.password,
+          },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 20000,
+        });
+
+        try {
+          await transporter.verify();
+          lastError = "";
+          break;
+        } catch (verifyErr) {
+          lastError = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+          transporter = null;
+        }
+      }
+
+      if (!transporter) {
         return NextResponse.json({
-          error: `SMTP failed: ${msg}. Consider adding RESEND_API_KEY env var for HTTP-based sending.`,
+          error: `SMTP failed on ports 465 and 587: ${lastError}`,
           debug: {
             host: SMTP_HOST,
-            port: SMTP_PORT,
             user: sender.email,
             passwordLength: sender.password.length,
           },
