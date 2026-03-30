@@ -103,6 +103,252 @@ This would allow MasterHQ to send sponsor outreach emails directly from the serv
 
 ---
 
+## How to Use @aiglitch.app Emails on Your Devices
+
+### Receiving Emails
+
+**How it works:** All emails sent to ANY `@aiglitch.app` address are automatically **forwarded** to `sfrench71@me.com`. You don't need special configuration to receive them.
+
+**Steps:**
+1. Just use your existing Apple/Gmail/Outlook email setup
+2. Check your email on iPhone/iPad/Mac/PC normally — incoming @aiglitch.app emails appear in `sfrench71@me.com`
+3. No additional configuration needed
+
+**Example flow:**
+- Someone sends to: `ads@aiglitch.app`
+- Email is instantly forwarded to: `sfrench71@me.com`
+- You see it in Apple Mail, Gmail, Outlook, etc.
+
+---
+
+### Sending Emails FROM @aiglitch.app
+
+To **send** email as `stuart.french@aiglitch.app` or any `@aiglitch.app` address, you need to configure SMTP on your mail client.
+
+#### Step 1: Get Your SMTP Password
+
+1. Go to https://app.improvmx.com
+2. Click **Account Settings** → **SMTP**
+3. Generate a password (if not already created)
+4. Copy this password
+
+**⚠️ Important:** This is NOT your ImprovMX login password. It's a separate SMTP-only password.
+
+#### Step 2: Configure Mail Client
+
+**SMTP Configuration (same for all devices):**
+```
+Server:   smtp.improvmx.com
+Port:     587 (with STARTTLS) or 465 (with SSL)
+Username: stuart.french@aiglitch.app (or any alias you want to send as)
+Password: [Your SMTP password from Step 1]
+```
+
+---
+
+### iPhone / iPad Setup
+
+**Using Apple Mail:**
+
+1. Open **Settings** → **Mail** → **Accounts** → **Add Account**
+2. Choose **Other**
+3. Fill in:
+   - **Name:** Your name (appears in "From:")
+   - **Email:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+4. Tap **Next**
+5. For **Incoming Mail Server**, use your existing account settings (it will auto-detect)
+   - If Apple doesn't auto-detect, manually enter your email provider's IMAP settings
+6. For **Outgoing Mail Server (SMTP)**, enter:
+   - **Host:** `smtp.improvmx.com`
+   - **Port:** `587`
+   - **Use SSL:** Toggle ON
+   - **Username:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+7. Tap **Save**
+
+**Verification:**
+- Write a test email to yourself
+- Open Compose → check the "From:" line — it should show `stuart.french@aiglitch.app`
+- Send and verify it arrives
+
+**If it doesn't work:**
+- Verify you copied the SMTP password correctly
+- Check "OUTGOING (SMTP) Server Requires Authentication" is enabled
+- Try port 465 instead of 587
+
+---
+
+### Mac (Apple Mail)
+
+1. Open **Apple Mail** → **Mail** → **Preferences** → **Accounts**
+2. Click **+** → **Other Mail Account**
+3. Fill in:
+   - **Full Name:** Your name
+   - **Email Address:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+4. Click **Create**
+5. If it fails auto-setup, manually configure **SMTP:**
+   - Go to **Mail** → **Preferences** → **Accounts** → Select your account → **Server Settings**
+   - **Outgoing Mail Server (SMTP):** Click dropdown → **Edit SMTP Server List**
+   - Click **+** to add new server:
+     - **Server Name:** `smtp.improvmx.com`
+     - **Port:** `587`
+     - **Username:** `stuart.french@aiglitch.app`
+     - **Password:** [Your SMTP password]
+     - **Use SSL/TLS:** Checked
+   - Click **OK**
+6. Compose a test email and verify the "From:" line shows `stuart.french@aiglitch.app`
+
+---
+
+### Windows (Outlook / Windows Mail)
+
+**Using Outlook Desktop:**
+
+1. Open **Outlook** → **File** → **Add Account**
+2. Enter `stuart.french@aiglitch.app` → Click **Advanced Options**
+3. Check **Let me set up my account manually**
+4. Choose **IMAP** (or POP3, depending on your preference)
+5. For **Incoming Server:** Use your main email provider's settings (not ImprovMX)
+   - Example: If primary email is Gmail, use Gmail's IMAP settings
+6. For **Outgoing Server (SMTP):**
+   - **Server:** `smtp.improvmx.com`
+   - **Port:** `587`
+   - **Encryption:** STARTTLS
+   - **Username:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+7. Click **Next** and verify connection
+
+**Using Gmail in Outlook:**
+1. Use your main Google Account login for **Incoming** (IMAP)
+2. Use ImprovMX SMTP for **Outgoing**
+   - Outlook will use ImprovMX to send emails, but receive them via your main account
+   - In the "From:" line, manually select `stuart.french@aiglitch.app` when composing
+
+**Using Windows Mail:**
+1. **Settings** → **Accounts** → **Email & accounts** → **+ Add account**
+2. Select **Advanced setup** → **IMAP**
+3. Incoming server: Your main email provider (Gmail, Outlook, etc.)
+4. Outgoing server:
+   - **Server:** `smtp.improvmx.com`
+   - **Port:** `587`
+   - **Encryption Method:** STARTTLS
+   - **Username:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+5. Click **Sign in**
+
+---
+
+### Web Browser (Gmail, Outlook, etc.)
+
+If you use **Gmail Web** or **Outlook Web** and want to send as `@aiglitch.app`:
+
+**Gmail:**
+1. Go to **Gmail Settings** → **Accounts and Import** → **Send mail as**
+2. Click **Add another email address**
+3. Enter `stuart.french@aiglitch.app`
+4. Check **Treat as an alias**
+5. Click **Next Step** → SMTP Configuration:
+   - **SMTP Server:** `smtp.improvmx.com`
+   - **Port:** `587` (with STARTTLS) or `465` (with SSL)
+   - **Username:** `stuart.french@aiglitch.app`
+   - **Password:** [Your SMTP password]
+6. Click **Add Account**
+7. Verify by checking your inbox — Gmail sends a confirmation email to `stuart.french@aiglitch.app`
+
+**Outlook Web:**
+1. Go to **Settings** → **Mail** → **Forwarding**
+2. Scroll to **Send from another address**
+3. Enter `stuart.french@aiglitch.app`
+4. Outlook may redirect you to ImprovMX or require SMTP configuration
+5. Follow the SMTP settings above if prompted
+
+---
+
+## Recommended Email Workflow
+
+**Best practice for a solo developer:**
+
+| Task | Email Address | How |
+|------|---|---|
+| Receive all incoming | `sfrench71@me.com` | Automatic (catch-all forwarding) |
+| Outreach / Sponsorships | Send FROM `stuart.french@aiglitch.app` | Configure SMTP (Step 2 above) |
+| Advertiser inquiries | Send FROM `advertise@aiglitch.app` | Configure SMTP (Step 2 above) |
+| Ad partnerships | Send FROM `ads@aiglitch.app` | Configure SMTP (Step 2 above) |
+
+**Why this setup works:**
+- All incoming emails land in your personal inbox (`sfrench71@me.com`)
+- You can send as different aliases depending on context (outreach, ads, general)
+- Nobody needs your personal email address — they contact you via professional aliases
+- Zero configuration on iOS/Android — just use your normal mail app
+
+---
+
+## Common Issues & Fixes
+
+### "Authentication Failed" Error
+
+**Cause:** Wrong password
+
+**Fix:**
+1. Re-generate SMTP password in ImprovMX dashboard
+2. Make sure you copied the **SMTP password**, not your ImprovMX login password
+3. Try 3-4 times with the correct password before debugging further
+
+### Emails Send But Appear as "smtp@improvmx.com"
+
+**Cause:** Username is set to `smtp@improvmx.com` instead of your alias
+
+**Fix:**
+- In your mail client's SMTP settings, change username from `smtp@improvmx.com` to `stuart.french@aiglitch.app` (or whichever alias you're using)
+
+### "Port 587 not working, try 465"
+
+**Cause:** Some networks block port 587
+
+**Fix:**
+1. Try port `465` with SSL instead
+2. If both fail, you may be on a network with strict firewall rules (some workplaces, public WiFi)
+3. Switch to mobile data or a different network
+
+### Sent emails going to spam
+
+**Cause:** SPF/DKIM not configured on domain
+
+**Fix:**
+1. Verify DNS records are set up (see "DNS Configuration" section)
+2. Set up DKIM records in ImprovMX dashboard
+3. Consider adding a DMARC record for additional credibility
+4. Wait 24-48 hours for DNS propagation
+5. Ask recipient to whitelist `stuart.french@aiglitch.app`
+
+### Can't find the password I generated
+
+**If you lost your SMTP password:**
+1. Go to https://app.improvmx.com → **Account Settings** → **SMTP**
+2. You'll see the password you generated (or generate a new one)
+3. If you never generated one, click **Generate SMTP Password** now
+
+---
+
+## Security Notes
+
+- **SMTP Password:** Store this securely, treat it like a password
+- **Never share:** Don't share SMTP passwords via email, chat, or screenshots
+- **Regenerate:** If you suspect compromise, regenerate SMTP password immediately in ImprovMX
+- **DKIM/DMARC:** Not yet configured on aiglitch.app (optional but recommended for deliverability)
+
+---
+
+## Related Documentation
+
+- **ImprovMX Dashboard:** https://app.improvmx.com
+- **ImprovMX Guides:** https://improvmx.com/guides
+- **Vercel DNS Setup:** https://vercel.com/docs/projects/domains
+
+---
+
 ## Troubleshooting
 
 ### Emails not being received
