@@ -130,45 +130,73 @@ export async function POST(req: NextRequest) {
     const html = personalizeTemplate(templateHtml, contactName, prospect.company);
     const subject = extractSubject(persona, tone, prospect.company);
 
-    // Create SMTP transport — port 587 with STARTTLS
-    const transporter = nodemailer.createTransport({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      secure: false,
-      requireTLS: true,
-      auth: {
-        user: sender.email,
-        pass: sender.password,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+    // Try Resend first (HTTP-based, works on Vercel), fall back to SMTP
+    const resendApiKey = process.env.RESEND_API_KEY;
+    let useResend = !!resendApiKey;
+    let transporter: nodemailer.Transporter | null = null;
 
-    try {
-      await transporter.verify();
-    } catch (verifyErr) {
-      const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
-      return NextResponse.json({
-        error: `SMTP auth failed: ${msg}`,
-        debug: {
-          host: SMTP_HOST,
-          port: SMTP_PORT,
+    if (!useResend) {
+      // SMTP fallback
+      transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: false,
+        requireTLS: true,
+        auth: {
           user: sender.email,
-          passwordLength: sender.password.length,
-          passwordFirst3: sender.password.substring(0, 3),
-          passwordLast3: sender.password.substring(sender.password.length - 3),
+          pass: sender.password,
         },
-      }, { status: 500 });
+        tls: {
+          rejectUnauthorized: false,
+        },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+      });
+
+      try {
+        await transporter.verify();
+      } catch (verifyErr) {
+        const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+        return NextResponse.json({
+          error: `SMTP failed: ${msg}. Consider adding RESEND_API_KEY env var for HTTP-based sending.`,
+          debug: {
+            host: SMTP_HOST,
+            port: SMTP_PORT,
+            user: sender.email,
+            passwordLength: sender.password.length,
+          },
+        }, { status: 500 });
+      }
     }
 
     // Send email
-    const info = await transporter.sendMail({
-      from: `"${sender.name}" <${sender.email}>`,
-      to: prospect.email,
-      subject,
-      html,
-    });
+    let messageId = "";
+
+    if (useResend && resendApiKey) {
+      // HTTP-based sending via Resend (works on Vercel)
+      const { Resend } = await import("resend");
+      const resend = new Resend(resendApiKey);
+      const result = await resend.emails.send({
+        from: `${sender.name} <${sender.email}>`,
+        to: prospect.email,
+        subject,
+        html,
+      });
+      if (result.error) {
+        return NextResponse.json({ error: `Resend error: ${result.error.message}` }, { status: 500 });
+      }
+      messageId = result.data?.id || "";
+    } else if (transporter) {
+      // SMTP-based sending
+      const info = await transporter.sendMail({
+        from: `"${sender.name}" <${sender.email}>`,
+        to: prospect.email,
+        subject,
+        html,
+      });
+      messageId = info.messageId;
+    }
 
     // Log to database
     await db.collection("outreach_emails").insertOne({
@@ -180,7 +208,8 @@ export async function POST(req: NextRequest) {
       persona,
       tone,
       status: "sent",
-      messageId: info.messageId,
+      messageId,
+      sentVia: useResend ? "resend" : "smtp",
       createdAt: new Date().toISOString(),
     });
 
