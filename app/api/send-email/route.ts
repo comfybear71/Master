@@ -69,6 +69,30 @@ function getTemplatePersona(persona: string): string {
   return persona === "ads" ? "founder" : persona;
 }
 
+export async function GET() {
+  // Debug endpoint — shows which SMTP env vars are configured (not the actual passwords)
+  return NextResponse.json({
+    founder: {
+      email: senderConfig.founder.email,
+      passwordSet: senderConfig.founder.password.length > 0,
+      passwordLength: senderConfig.founder.password.length,
+      passwordPreview: senderConfig.founder.password ? senderConfig.founder.password.substring(0, 3) + "..." : "(empty)",
+    },
+    architect: {
+      email: senderConfig.architect.email,
+      passwordSet: senderConfig.architect.password.length > 0,
+      passwordLength: senderConfig.architect.password.length,
+      passwordPreview: senderConfig.architect.password ? senderConfig.architect.password.substring(0, 3) + "..." : "(empty)",
+    },
+    ads: {
+      email: senderConfig.ads.email,
+      passwordSet: senderConfig.ads.password.length > 0,
+      passwordLength: senderConfig.ads.password.length,
+      passwordPreview: senderConfig.ads.password ? senderConfig.ads.password.substring(0, 3) + "..." : "(empty)",
+    },
+  });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body: SendEmailBody = await req.json();
