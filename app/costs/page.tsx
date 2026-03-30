@@ -16,8 +16,7 @@ interface ServiceCost {
 interface Invoice {
   date: string;
   amount: number;
-  type: string;
-  status: string;
+  description?: string;
 }
 
 interface Strategy {
@@ -172,6 +171,11 @@ export default function CostsPage() {
   const [editValue, setEditValue] = useState("");
   const [invoices, setInvoices] = useState<Record<string, Invoice[]>>({});
   const [expandedInvoices, setExpandedInvoices] = useState<string | null>(null);
+  const [addingInvoiceKey, setAddingInvoiceKey] = useState<string | null>(null);
+  const [newInvDate, setNewInvDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [newInvAmount, setNewInvAmount] = useState("");
+  const [newInvDesc, setNewInvDesc] = useState("");
+  const [savingInvoice, setSavingInvoice] = useState(false);
 
   // Initialize services and load saved overrides from MongoDB
   useEffect(() => {
@@ -293,6 +297,67 @@ export default function CostsPage() {
     }
     setEditingKey(null);
     setEditValue("");
+  };
+
+  // Add a single invoice to a service
+  const handleAddInvoice = async (serviceKey: string) => {
+    const amount = parseFloat(newInvAmount);
+    if (isNaN(amount) || amount < 0 || !newInvDate) return;
+
+    setSavingInvoice(true);
+    try {
+      const res = await fetch("/api/costs/invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service: serviceKey,
+          date: newInvDate,
+          amount,
+          description: newInvDesc || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Update local invoices state
+        setInvoices((prev) => ({ ...prev, [serviceKey]: data.invoices }));
+        // Update the service cost to the new total
+        setServices((prev) =>
+          prev.map((s) =>
+            s.key === serviceKey ? { ...s, cost: data.total, error: null } : s
+          )
+        );
+        // Reset form and show invoices
+        setAddingInvoiceKey(null);
+        setNewInvAmount("");
+        setNewInvDesc("");
+        setExpandedInvoices(serviceKey);
+      }
+    } catch {
+      // Silent fail — optimistic UI
+    }
+    setSavingInvoice(false);
+  };
+
+  // Delete a single invoice
+  const handleDeleteInvoice = async (serviceKey: string, index: number) => {
+    try {
+      const res = await fetch("/api/costs/invoices", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service: serviceKey, index }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setInvoices((prev) => ({ ...prev, [serviceKey]: data.invoices }));
+        setServices((prev) =>
+          prev.map((s) =>
+            s.key === serviceKey ? { ...s, cost: data.total, error: null } : s
+          )
+        );
+      }
+    } catch {
+      // Silent fail
+    }
   };
 
   // Calculate totals
@@ -477,56 +542,149 @@ export default function CostsPage() {
               </p>
             )}
 
-            {/* Invoice History Dropdown */}
-            {invoices[service.key] && invoices[service.key].length > 0 && (
-              <div className="mt-3 border-t border-slate-800 pt-2">
-                <button
-                  onClick={() => setExpandedInvoices(expandedInvoices === service.key ? null : service.key)}
-                  className="flex items-center justify-between w-full text-[10px] text-slate-500 hover:text-accent font-mono transition-colors"
-                >
-                  <span>{invoices[service.key].length} invoices</span>
-                  <svg
-                    width="10"
-                    height="10"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`transition-transform ${expandedInvoices === service.key ? "rotate-180" : ""}`}
+            {/* Invoice Section */}
+            <div className="mt-3 border-t border-slate-800 pt-2">
+              {/* Toggle invoices / Add invoice buttons */}
+              <div className="flex items-center justify-between">
+                {invoices[service.key] && invoices[service.key].length > 0 ? (
+                  <button
+                    onClick={() => setExpandedInvoices(expandedInvoices === service.key ? null : service.key)}
+                    className="flex items-center gap-1 text-[10px] text-slate-500 hover:text-accent font-mono transition-colors"
                   >
-                    <polyline points="6 9 12 15 18 9" />
+                    <span>{invoices[service.key].length} invoice{invoices[service.key].length !== 1 ? "s" : ""}</span>
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className={`transition-transform ${expandedInvoices === service.key ? "rotate-180" : ""}`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-slate-600 font-mono">No invoices</span>
+                )}
+                <button
+                  onClick={() => {
+                    setAddingInvoiceKey(addingInvoiceKey === service.key ? null : service.key);
+                    setNewInvAmount("");
+                    setNewInvDesc("");
+                    setNewInvDate(new Date().toISOString().slice(0, 10));
+                  }}
+                  className="text-[10px] text-accent hover:text-accent/80 font-mono transition-colors flex items-center gap-1"
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
                   </svg>
+                  Add Invoice
                 </button>
+              </div>
 
-                {expandedInvoices === service.key && (
-                  <div className="mt-2 max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
-                    <div className="flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-wider pb-1 border-b border-slate-800/50">
-                      <span>Date</span>
-                      <span>Amount</span>
+              {/* Add Invoice Form */}
+              {addingInvoiceKey === service.key && (
+                <div className="mt-2 space-y-2 bg-slate-800/30 rounded-lg p-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      value={newInvDate}
+                      onChange={(e) => setNewInvDate(e.target.value)}
+                      className="flex-1 bg-base border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono focus:border-accent focus:outline-none"
+                    />
+                    <div className="flex items-center gap-1">
+                      <span className="text-[11px] text-slate-400">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.00"
+                        value={newInvAmount}
+                        onChange={(e) => setNewInvAmount(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAddInvoice(service.key);
+                          if (e.key === "Escape") setAddingInvoiceKey(null);
+                        }}
+                        autoFocus
+                        className="w-20 bg-base border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono focus:border-accent focus:outline-none"
+                      />
                     </div>
-                    {invoices[service.key].map((inv, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between text-[11px] font-mono py-0.5"
-                      >
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Description (optional)"
+                    value={newInvDesc}
+                    onChange={(e) => setNewInvDesc(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddInvoice(service.key);
+                      if (e.key === "Escape") setAddingInvoiceKey(null);
+                    }}
+                    className="w-full bg-base border border-slate-700 rounded px-2 py-1.5 text-[11px] text-white font-mono focus:border-accent focus:outline-none"
+                  />
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setAddingInvoiceKey(null)}
+                      className="text-[10px] text-slate-500 hover:text-slate-300 font-mono transition-colors px-2 py-1"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleAddInvoice(service.key)}
+                      disabled={savingInvoice || !newInvAmount || !newInvDate}
+                      className="text-[10px] text-success hover:text-success/80 font-mono transition-colors px-3 py-1 bg-success/10 border border-success/20 rounded disabled:opacity-30"
+                    >
+                      {savingInvoice ? "Saving..." : "Save"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Invoice List */}
+              {expandedInvoices === service.key && invoices[service.key] && invoices[service.key].length > 0 && (
+                <div className="mt-2 max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                  <div className="flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-wider pb-1 border-b border-slate-800/50">
+                    <span>Date</span>
+                    <span>Amount</span>
+                  </div>
+                  {invoices[service.key].map((inv, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between text-[11px] font-mono py-0.5 group"
+                    >
+                      <div className="flex items-center gap-2">
                         <span className="text-slate-500">{inv.date}</span>
+                        {inv.description && (
+                          <span className="text-[9px] text-slate-600 truncate max-w-[80px]" title={inv.description}>
+                            {inv.description}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
                         <span className={inv.amount === 0 ? "text-slate-600" : "text-slate-300"}>
                           ${inv.amount.toFixed(2)}
                         </span>
+                        <button
+                          onClick={() => handleDeleteInvoice(service.key, i)}
+                          className="opacity-0 group-hover:opacity-100 text-error/60 hover:text-error transition-opacity text-[10px]"
+                          title="Delete invoice"
+                        >
+                          ×
+                        </button>
                       </div>
-                    ))}
-                    <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-700 mt-1">
-                      <span className="text-slate-400 font-bold">Total</span>
-                      <span className="text-accent font-bold">
-                        ${invoices[service.key].reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
-                      </span>
                     </div>
+                  ))}
+                  <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-700 mt-1">
+                    <span className="text-slate-400 font-bold">Total</span>
+                    <span className="text-accent font-bold">
+                      ${invoices[service.key].reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                    </span>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
