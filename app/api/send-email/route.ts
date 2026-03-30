@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import { readFileSync } from "fs";
-import { join } from "path";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -9,6 +7,7 @@ export const maxDuration = 30;
 // Droplet email sender URL
 const EMAIL_SENDER_URL = process.env.EMAIL_SENDER_URL || "http://170.64.133.9:3456";
 const EMAIL_AUTH_TOKEN = process.env.TERMINAL_PASSWORD || "";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterhq.dev";
 
 interface SendEmailBody {
   prospectId: string;
@@ -16,10 +15,12 @@ interface SendEmailBody {
   persona: "founder" | "architect" | "ads";
 }
 
-function getTemplateHtml(persona: string, tone: string): string {
-  const filename = `email-${persona}-${tone}.html`;
-  const filepath = join(process.cwd(), "public", filename);
-  return readFileSync(filepath, "utf-8");
+async function getTemplateHtml(persona: string, tone: string): Promise<string> {
+  const templatePersona = persona === "ads" ? "founder" : persona;
+  const url = `${SITE_URL}/email-${templatePersona}-${tone}.html`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch template: ${url} (${res.status})`);
+  return res.text();
 }
 
 function extractSubject(persona: string, tone: string, company: string): string {
@@ -43,9 +44,7 @@ function extractSubject(persona: string, tone: string, company: string): string 
   return subjects[persona]?.[tone] || `Partnership Opportunity — ${company}`;
 }
 
-function getTemplatePersona(persona: string): string {
-  return persona === "ads" ? "founder" : persona;
-}
+// getTemplatePersona is handled inside getTemplateHtml
 
 export async function GET() {
   // Health check — test connection to droplet email sender
@@ -83,8 +82,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prospect has no email address" }, { status: 400 });
     }
 
-    // Load template
-    const templateHtml = getTemplateHtml(getTemplatePersona(persona), tone);
+    // Load template via HTTP from public folder
+    const templateHtml = await getTemplateHtml(persona, tone);
     const contactName = (prospect.linkedinTitle || prospect.company).split(",")[0].trim();
     const subject = extractSubject(persona, tone, prospect.company);
 
