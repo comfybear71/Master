@@ -215,6 +215,9 @@ YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacif
 
 - **Outreach email:** stuart.french@aiglitch.app (Vercel DNS configured, sends directly from MasterHQ)
 - **Advertiser contact:** advertise@aiglitch.app
+- **Email forwarding:** ImprovMX Premium ($9/mo) — all @aiglitch.app emails forward to sfrench71@me.com
+- **Aliases:** catch-all (*), ads@, architect@ — all forwarding active
+- **Full setup guide:** `docs/improvmx-email-setup.md`
 
 ### Social Platform Stats — TheMaster vs AIGlitch
 
