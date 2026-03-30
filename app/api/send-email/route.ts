@@ -14,23 +14,25 @@ interface SendEmailBody {
   persona: "founder" | "architect" | "ads";
 }
 
-const senderConfig = {
-  founder: {
-    email: process.env.IMPROVMX_FOUNDER_EMAIL || "Stuart.french@aiglitch.app",
-    password: process.env.IMPROVMX_FOUNDER_PASSWORD || "",
-    name: "Stuie French",
-  },
-  architect: {
-    email: process.env.IMPROVMX_ARCHITECT_EMAIL || "Architect@aiglitch.app",
-    password: process.env.IMPROVMX_ARCHITECT_PASSWORD || "",
-    name: "The Architect",
-  },
-  ads: {
-    email: process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app",
-    password: process.env.IMPROVMX_ADS_PASSWORD || "",
-    name: "AIG!itch Ads",
-  },
-};
+function getSenderConfig() {
+  return {
+    founder: {
+      email: (process.env.IMPROVMX_FOUNDER_EMAIL || "stuart.french@aiglitch.app").trim(),
+      password: (process.env.IMPROVMX_FOUNDER_PASSWORD || "").trim(),
+      name: "Stuie French",
+    },
+    architect: {
+      email: (process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app").trim(),
+      password: (process.env.IMPROVMX_ARCHITECT_PASSWORD || "").trim(),
+      name: "The Architect",
+    },
+    ads: {
+      email: (process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app").trim(),
+      password: (process.env.IMPROVMX_ADS_PASSWORD || "").trim(),
+      name: "AIG!itch Ads",
+    },
+  };
+}
 
 function getTemplateHtml(persona: string, tone: string): string {
   const filename = `email-${persona}-${tone}.html`;
@@ -71,25 +73,25 @@ function getTemplatePersona(persona: string): string {
 }
 
 export async function GET() {
-  // Debug endpoint — shows which SMTP env vars are configured (not the actual passwords)
+  const config = getSenderConfig();
   return NextResponse.json({
     founder: {
-      email: senderConfig.founder.email,
-      passwordSet: senderConfig.founder.password.length > 0,
-      passwordLength: senderConfig.founder.password.length,
-      passwordPreview: senderConfig.founder.password ? senderConfig.founder.password.substring(0, 3) + "..." : "(empty)",
+      email: config.founder.email,
+      passwordSet: config.founder.password.length > 0,
+      passwordLength: config.founder.password.length,
+      passwordPreview: config.founder.password ? config.founder.password.substring(0, 3) + "..." : "(empty)",
     },
     architect: {
-      email: senderConfig.architect.email,
-      passwordSet: senderConfig.architect.password.length > 0,
-      passwordLength: senderConfig.architect.password.length,
-      passwordPreview: senderConfig.architect.password ? senderConfig.architect.password.substring(0, 3) + "..." : "(empty)",
+      email: config.architect.email,
+      passwordSet: config.architect.password.length > 0,
+      passwordLength: config.architect.password.length,
+      passwordPreview: config.architect.password ? config.architect.password.substring(0, 3) + "..." : "(empty)",
     },
     ads: {
-      email: senderConfig.ads.email,
-      passwordSet: senderConfig.ads.password.length > 0,
-      passwordLength: senderConfig.ads.password.length,
-      passwordPreview: senderConfig.ads.password ? senderConfig.ads.password.substring(0, 3) + "..." : "(empty)",
+      email: config.ads.email,
+      passwordSet: config.ads.password.length > 0,
+      passwordLength: config.ads.password.length,
+      passwordPreview: config.ads.password ? config.ads.password.substring(0, 3) + "..." : "(empty)",
     },
   });
 }
@@ -103,7 +105,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing prospectId" }, { status: 400 });
     }
 
-    const sender = senderConfig[persona];
+    const sender = getSenderConfig()[persona];
     if (!sender.password) {
       return NextResponse.json(
         { error: `SMTP password not configured for ${persona}. Set IMPROVMX_${persona.toUpperCase()}_PASSWORD env var.` },
@@ -128,45 +130,36 @@ export async function POST(req: NextRequest) {
     const html = personalizeTemplate(templateHtml, contactName, prospect.company);
     const subject = extractSubject(persona, tone, prospect.company);
 
-    // Try port 587 STARTTLS first, fall back to port 465 SSL
-    let transporter = nodemailer.createTransport({
+    // Create SMTP transport — port 587 with STARTTLS
+    const transporter = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: false,
+      requireTLS: true,
       auth: {
         user: sender.email,
         pass: sender.password,
+      },
+      tls: {
+        rejectUnauthorized: false,
       },
     });
 
     try {
       await transporter.verify();
-    } catch {
-      // Retry with port 465 SSL
-      transporter = nodemailer.createTransport({
-        host: SMTP_HOST,
-        port: SMTP_PORT_SSL,
-        secure: true,
-        auth: {
+    } catch (verifyErr) {
+      const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+      return NextResponse.json({
+        error: `SMTP auth failed: ${msg}`,
+        debug: {
+          host: SMTP_HOST,
+          port: SMTP_PORT,
           user: sender.email,
-          pass: sender.password,
+          passwordLength: sender.password.length,
+          passwordFirst3: sender.password.substring(0, 3),
+          passwordLast3: sender.password.substring(sender.password.length - 3),
         },
-      });
-
-      try {
-        await transporter.verify();
-      } catch (verifyErr) {
-        const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
-        return NextResponse.json({
-          error: `SMTP auth failed on both ports: ${msg}`,
-          debug: {
-            host: SMTP_HOST,
-            ports: [SMTP_PORT, SMTP_PORT_SSL],
-            user: sender.email,
-            passwordLength: sender.password.length,
-          },
-        }, { status: 500 });
-      }
+      }, { status: 500 });
     }
 
     // Send email
