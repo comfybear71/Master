@@ -13,6 +13,13 @@ interface ServiceCost {
   apiRoute?: string;
 }
 
+interface Invoice {
+  date: string;
+  amount: number;
+  type: string;
+  status: string;
+}
+
 interface Strategy {
   title: string;
   service: string;
@@ -163,6 +170,8 @@ export default function CostsPage() {
   const [services, setServices] = useState<ServiceCost[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [invoices, setInvoices] = useState<Record<string, Invoice[]>>({});
+  const [expandedInvoices, setExpandedInvoices] = useState<string | null>(null);
 
   // Initialize services and load saved overrides from MongoDB
   useEffect(() => {
@@ -173,6 +182,15 @@ export default function CostsPage() {
         savedCosts = await res.json();
       } catch {
         // Use defaults
+      }
+
+      // Load invoice histories
+      try {
+        const invRes = await fetch("/api/costs/invoices");
+        const invData = await invRes.json();
+        setInvoices(invData);
+      } catch {
+        // No invoices yet
       }
 
       const initial: ServiceCost[] = [
@@ -457,6 +475,57 @@ export default function CostsPage() {
               <p className="text-[10px] text-slate-600 font-mono mt-2">
                 {new Date(service.lastFetched).toLocaleTimeString()}
               </p>
+            )}
+
+            {/* Invoice History Dropdown */}
+            {invoices[service.key] && invoices[service.key].length > 0 && (
+              <div className="mt-3 border-t border-slate-800 pt-2">
+                <button
+                  onClick={() => setExpandedInvoices(expandedInvoices === service.key ? null : service.key)}
+                  className="flex items-center justify-between w-full text-[10px] text-slate-500 hover:text-accent font-mono transition-colors"
+                >
+                  <span>{invoices[service.key].length} invoices</span>
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`transition-transform ${expandedInvoices === service.key ? "rotate-180" : ""}`}
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+
+                {expandedInvoices === service.key && (
+                  <div className="mt-2 max-h-48 overflow-y-auto space-y-1 pr-1 scrollbar-thin">
+                    <div className="flex items-center justify-between text-[9px] text-slate-600 font-mono uppercase tracking-wider pb-1 border-b border-slate-800/50">
+                      <span>Date</span>
+                      <span>Amount</span>
+                    </div>
+                    {invoices[service.key].map((inv, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between text-[11px] font-mono py-0.5"
+                      >
+                        <span className="text-slate-500">{inv.date}</span>
+                        <span className={inv.amount === 0 ? "text-slate-600" : "text-slate-300"}>
+                          ${inv.amount.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between text-[11px] font-mono pt-1 border-t border-slate-700 mt-1">
+                      <span className="text-slate-400 font-bold">Total</span>
+                      <span className="text-accent font-bold">
+                        ${invoices[service.key].reduce((sum, inv) => sum + inv.amount, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         ))}
