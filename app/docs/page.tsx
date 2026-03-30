@@ -1590,6 +1590,13 @@ Without these, sent emails go to spam or get rejected.
    - Password: ImprovMX SMTP password
 6. Save → Test: compose email, verify "From:" shows alias, send to different address
 
+**Adding a second alias (e.g. architect@aiglitch.app):**
+iOS won't allow a second account with the same IMAP server. Instead:
+1. Settings → Apps → Mail → Mail Accounts → tap your existing account
+2. Tap **SMTP** (under Outgoing Mail Server) → **Add Server**
+3. Host: \`smtp.improvmx.com\` | Username: \`architect@aiglitch.app\` | Password: its SMTP password
+4. Save → when composing, tap "From:" to switch between aliases
+
 ---
 
 ### Mac (Apple Mail)

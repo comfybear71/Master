@@ -196,6 +196,24 @@ All emails to ANY `@aiglitch.app` address are **automatically forwarded** to `sf
 8. Tap **Next** → allow verification → **Save**
 9. **Test:** Compose a new email. The "From:" should show `stuart.french@aiglitch.app`. Send a test to a different email address to confirm delivery.
 
+**Adding a Second Alias (e.g. architect@aiglitch.app):**
+
+iOS won't allow adding a second account with the same IMAP server — you'll get "This IMAP account has already been added." Instead, add a second outgoing SMTP server to your existing account:
+
+1. Go to **Settings** → **Apps** → **Mail** → **Mail Accounts**
+2. Tap the **stuart.french@aiglitch.app** account you already set up
+3. Tap **SMTP** (under Outgoing Mail Server)
+4. Tap **Add Server**
+5. Enter:
+   - **Host Name:** `smtp.improvmx.com`
+   - **Username:** `architect@aiglitch.app`
+   - **Password:** Your ImprovMX SMTP password for the architect credential
+6. Save
+
+Now when composing an email, tap the **"From:"** field — you can switch between `stuart.french@aiglitch.app` and `architect@aiglitch.app`.
+
+**Repeat for any additional aliases** (e.g. `ads@aiglitch.app`) — just add another SMTP server each time.
+
 ---
 
 ### iPad (Same as iPhone)
