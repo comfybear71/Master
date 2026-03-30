@@ -63,53 +63,88 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const steps: string[] = [];
   try {
+    steps.push("1. Parsing request body");
     const body: SendEmailBody = await req.json();
     const { prospectId, tone, persona = "founder" } = body;
+    steps.push(`2. Got prospectId=${prospectId}, tone=${tone}, persona=${persona}`);
 
     if (!prospectId) {
-      return NextResponse.json({ error: "Missing prospectId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing prospectId", steps }, { status: 400 });
     }
 
+    steps.push("3. Connecting to MongoDB");
     const db = await getDb();
     const { ObjectId } = await import("mongodb");
+
+    steps.push("4. Looking up prospect");
     const prospect = await db.collection("prospects").findOne({ _id: new ObjectId(prospectId) });
     if (!prospect) {
-      return NextResponse.json({ error: "Prospect not found" }, { status: 404 });
+      return NextResponse.json({ error: "Prospect not found", steps }, { status: 404 });
     }
+    steps.push(`5. Found prospect: ${prospect.company} (${prospect.email})`);
 
     if (!prospect.email) {
-      return NextResponse.json({ error: "Prospect has no email address" }, { status: 400 });
+      return NextResponse.json({ error: "Prospect has no email address", steps }, { status: 400 });
     }
 
-    // Load template via HTTP from public folder
-    const templateHtml = await getTemplateHtml(persona, tone);
+    steps.push("6. Loading email template");
+    let templateHtml: string;
+    try {
+      templateHtml = await getTemplateHtml(persona, tone);
+      steps.push(`7. Template loaded (${templateHtml.length} chars)`);
+    } catch (templateErr) {
+      const msg = templateErr instanceof Error ? templateErr.message : String(templateErr);
+      return NextResponse.json({ error: `Template load failed: ${msg}`, steps }, { status: 500 });
+    }
+
     const contactName = (prospect.linkedinTitle || prospect.company).split(",")[0].trim();
     const subject = extractSubject(persona, tone, prospect.company);
+    steps.push(`8. Subject: ${subject}, Contact: ${contactName}`);
 
-    // Send via droplet email sender (real server, no SMTP blocking)
-    const sendRes = await fetch(`${EMAIL_SENDER_URL}/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${EMAIL_AUTH_TOKEN}`,
-      },
-      body: JSON.stringify({
-        persona,
-        to: prospect.email,
-        subject,
-        html: templateHtml,
-        contactName,
-        company: prospect.company,
-      }),
-      signal: AbortSignal.timeout(20000),
-    });
+    steps.push(`9. Sending to droplet at ${EMAIL_SENDER_URL}/send`);
+    let sendRes: Response;
+    try {
+      sendRes = await fetch(`${EMAIL_SENDER_URL}/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${EMAIL_AUTH_TOKEN}`,
+        },
+        body: JSON.stringify({
+          persona,
+          to: prospect.email,
+          subject,
+          html: templateHtml,
+          contactName,
+          company: prospect.company,
+        }),
+        signal: AbortSignal.timeout(25000),
+      });
+    } catch (fetchErr) {
+      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+      return NextResponse.json({
+        error: `Droplet fetch failed: ${msg}`,
+        dropletUrl: EMAIL_SENDER_URL,
+        steps,
+      }, { status: 500 });
+    }
 
-    const sendData = await sendRes.json();
+    steps.push(`10. Droplet responded: ${sendRes.status}`);
+    let sendData: Record<string, unknown>;
+    try {
+      sendData = await sendRes.json();
+    } catch {
+      const text = await sendRes.text();
+      return NextResponse.json({ error: `Droplet returned non-JSON: ${text.substring(0, 200)}`, steps }, { status: 500 });
+    }
 
     if (!sendRes.ok) {
-      return NextResponse.json({ error: sendData.error || "Failed to send via droplet" }, { status: 500 });
+      return NextResponse.json({ error: sendData.error || "Droplet send failed", dropletResponse: sendData, steps }, { status: 500 });
     }
+
+    steps.push("11. Email sent successfully, logging to DB");
 
     // Log to database
     await db.collection("outreach_emails").insertOne({
@@ -121,7 +156,7 @@ export async function POST(req: NextRequest) {
       persona,
       tone,
       status: "sent",
-      messageId: sendData.messageId || "",
+      messageId: (sendData.messageId as string) || "",
       sentVia: "droplet-smtp",
       createdAt: new Date().toISOString(),
     });
@@ -138,6 +173,8 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    steps.push("12. Done!");
+
     return NextResponse.json({
       success: true,
       messageId: sendData.messageId,
@@ -145,9 +182,11 @@ export async function POST(req: NextRequest) {
       subject,
       persona,
       tone,
+      steps,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to send email";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const stack = error instanceof Error ? error.stack : undefined;
+    return NextResponse.json({ error: message, stack, steps }, { status: 500 });
   }
 }
