@@ -93,8 +93,10 @@ export async function POST(req: NextRequest) {
     finalHtml = finalHtml.replace(/\[NAME\]/g, contactName);
     finalHtml = finalHtml.replace(/\[COMPANY\]/g, prospect.company);
 
-    // Send via Resend HTTP API
+    // Replace mailto links to match the actual sending persona
     const sender = PERSONA_EMAILS[persona] || PERSONA_EMAILS.founder;
+    finalHtml = finalHtml.replace(/mailto:stuart\.french@aiglitch\.app/g, `mailto:${sender.email}`);
+    finalHtml = finalHtml.replace(/mailto:architect@aiglitch\.app/g, `mailto:${sender.email}`);
     const { data, error } = await resend.emails.send({
       from: `${sender.name} <${sender.email}>`,
       to: [prospect.email],
