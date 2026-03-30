@@ -1,16 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
-import nodemailer from "nodemailer";
 import { readFileSync } from "fs";
 import { join } from "path";
 
-// Force Node.js runtime (not Edge) for SMTP socket access
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-const SMTP_HOST = "smtp.improvmx.com";
-const SMTP_PORT = 587;
-const SMTP_PORT_SSL = 465;
+// Droplet email sender URL
+const EMAIL_SENDER_URL = process.env.EMAIL_SENDER_URL || "http://170.64.133.9:3456";
+const EMAIL_AUTH_TOKEN = process.env.TERMINAL_PASSWORD || "";
 
 interface SendEmailBody {
   prospectId: string;
@@ -18,36 +16,10 @@ interface SendEmailBody {
   persona: "founder" | "architect" | "ads";
 }
 
-function getSenderConfig() {
-  return {
-    founder: {
-      email: (process.env.IMPROVMX_FOUNDER_EMAIL || "stuart.french@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
-      password: (process.env.IMPROVMX_FOUNDER_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
-      name: "Stuie French",
-    },
-    architect: {
-      email: (process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
-      password: (process.env.IMPROVMX_ARCHITECT_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
-      name: "The Architect",
-    },
-    ads: {
-      email: (process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app").trim().replace(/^["']|["']$/g, ""),
-      password: (process.env.IMPROVMX_ADS_PASSWORD || "").trim().replace(/^["']|["']$/g, ""),
-      name: "AIG!itch Ads",
-    },
-  };
-}
-
 function getTemplateHtml(persona: string, tone: string): string {
   const filename = `email-${persona}-${tone}.html`;
   const filepath = join(process.cwd(), "public", filename);
   return readFileSync(filepath, "utf-8");
-}
-
-function personalizeTemplate(html: string, name: string, company: string): string {
-  return html
-    .replace(/\[NAME\]/g, name)
-    .replace(/\[COMPANY\]/g, company);
 }
 
 function extractSubject(persona: string, tone: string, company: string): string {
@@ -72,35 +44,23 @@ function extractSubject(persona: string, tone: string, company: string): string 
 }
 
 function getTemplatePersona(persona: string): string {
-  // ads persona uses the founder templates
   return persona === "ads" ? "founder" : persona;
 }
 
 export async function GET() {
-  const config = getSenderConfig();
-  // Temporarily show full credentials for debugging — remove after fixing
-  return NextResponse.json({
-    founder: {
-      email: config.founder.email,
-      password: config.founder.password,
-      length: config.founder.password.length,
-    },
-    architect: {
-      email: config.architect.email,
-      password: config.architect.password,
-      length: config.architect.password.length,
-    },
-    ads: {
-      email: config.ads.email,
-      password: config.ads.password,
-      length: config.ads.password.length,
-    },
-    rawEnv: {
-      founder: process.env.IMPROVMX_FOUNDER_PASSWORD || "(not set)",
-      architect: process.env.IMPROVMX_ARCHITECT_PASSWORD || "(not set)",
-      ads: process.env.IMPROVMX_ADS_PASSWORD || "(not set)",
-    },
-  });
+  // Health check — test connection to droplet email sender
+  try {
+    const res = await fetch(`${EMAIL_SENDER_URL}/health`, { signal: AbortSignal.timeout(5000) });
+    const data = await res.json();
+    return NextResponse.json({ dropletStatus: "connected", ...data, emailSenderUrl: EMAIL_SENDER_URL });
+  } catch (err) {
+    return NextResponse.json({
+      dropletStatus: "unreachable",
+      emailSenderUrl: EMAIL_SENDER_URL,
+      error: err instanceof Error ? err.message : String(err),
+      setup: "Run on droplet: cd /path/to/Master && IMPROVMX_FOUNDER_PASSWORD=xxx IMPROVMX_ARCHITECT_PASSWORD=xxx IMPROVMX_ADS_PASSWORD=xxx node scripts/email-sender.js",
+    });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -110,14 +70,6 @@ export async function POST(req: NextRequest) {
 
     if (!prospectId) {
       return NextResponse.json({ error: "Missing prospectId" }, { status: 400 });
-    }
-
-    const sender = getSenderConfig()[persona];
-    if (!sender.password) {
-      return NextResponse.json(
-        { error: `SMTP password not configured for ${persona}. Set IMPROVMX_${persona.toUpperCase()}_PASSWORD env var.` },
-        { status: 500 }
-      );
     }
 
     const db = await getDb();
@@ -131,90 +83,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prospect has no email address" }, { status: 400 });
     }
 
-    // Load and personalize template (ads uses founder templates)
+    // Load template
     const templateHtml = getTemplateHtml(getTemplatePersona(persona), tone);
     const contactName = (prospect.linkedinTitle || prospect.company).split(",")[0].trim();
-    const html = personalizeTemplate(templateHtml, contactName, prospect.company);
     const subject = extractSubject(persona, tone, prospect.company);
 
-    // Try Resend first (HTTP-based, works on Vercel), fall back to SMTP
-    const resendApiKey = process.env.RESEND_API_KEY;
-    let useResend = !!resendApiKey;
-    let transporter: nodemailer.Transporter | null = null;
-
-    if (!useResend) {
-      // Try port 465 SSL first (more likely to work on Vercel), then 587 STARTTLS
-      const configs = [
-        { port: SMTP_PORT_SSL, secure: true },
-        { port: SMTP_PORT, secure: false },
-      ];
-
-      let lastError = "";
-      for (const cfg of configs) {
-        transporter = nodemailer.createTransport({
-          host: SMTP_HOST,
-          port: cfg.port,
-          secure: cfg.secure,
-          auth: {
-            user: sender.email,
-            pass: sender.password,
-          },
-          tls: {
-            rejectUnauthorized: false,
-          },
-          connectionTimeout: 15000,
-          greetingTimeout: 15000,
-          socketTimeout: 20000,
-        });
-
-        try {
-          await transporter.verify();
-          lastError = "";
-          break;
-        } catch (verifyErr) {
-          lastError = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
-          transporter = null;
-        }
-      }
-
-      if (!transporter) {
-        return NextResponse.json({
-          error: `SMTP failed on ports 465 and 587: ${lastError}`,
-          debug: {
-            host: SMTP_HOST,
-            user: sender.email,
-            passwordLength: sender.password.length,
-          },
-        }, { status: 500 });
-      }
-    }
-
-    // Send email
-    let messageId = "";
-
-    if (useResend && resendApiKey) {
-      // HTTP-based sending via Resend (works on Vercel)
-      const { Resend } = await import("resend");
-      const resend = new Resend(resendApiKey);
-      const result = await resend.emails.send({
-        from: `${sender.name} <${sender.email}>`,
+    // Send via droplet email sender (real server, no SMTP blocking)
+    const sendRes = await fetch(`${EMAIL_SENDER_URL}/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${EMAIL_AUTH_TOKEN}`,
+      },
+      body: JSON.stringify({
+        persona,
         to: prospect.email,
         subject,
-        html,
-      });
-      if (result.error) {
-        return NextResponse.json({ error: `Resend error: ${result.error.message}` }, { status: 500 });
-      }
-      messageId = result.data?.id || "";
-    } else if (transporter) {
-      // SMTP-based sending
-      const info = await transporter.sendMail({
-        from: `"${sender.name}" <${sender.email}>`,
-        to: prospect.email,
-        subject,
-        html,
-      });
-      messageId = info.messageId;
+        html: templateHtml,
+        contactName,
+        company: prospect.company,
+      }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    const sendData = await sendRes.json();
+
+    if (!sendRes.ok) {
+      return NextResponse.json({ error: sendData.error || "Failed to send via droplet" }, { status: 500 });
     }
 
     // Log to database
@@ -227,8 +122,8 @@ export async function POST(req: NextRequest) {
       persona,
       tone,
       status: "sent",
-      messageId,
-      sentVia: useResend ? "resend" : "smtp",
+      messageId: sendData.messageId || "",
+      sentVia: "droplet-smtp",
       createdAt: new Date().toISOString(),
     });
 
@@ -246,7 +141,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      messageId: info.messageId,
+      messageId: sendData.messageId,
       to: prospect.email,
       subject,
       persona,
