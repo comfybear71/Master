@@ -48,6 +48,25 @@ This is the MASTER repo. All other projects are registered here and managed from
 | Grok API | Alternative AI, real-time data |
 | NewsAPI | Real news headlines for fictionalized topic generation (free tier: 100 req/day) |
 
+### Costs Page (`/costs`)
+
+Monthly cost tracker across all services. Combines live API-fetched costs with fixed monthly costs and manual overrides.
+
+| Service | Type | Source |
+|---|---|---|
+| DigitalOcean | Live | DigitalOcean billing API (`DIGITALOCEAN_API_TOKEN`) |
+| Vercel | Live | Manual entry (billing API unreliable) |
+| Anthropic (Claude) | Live | Manual entry from console.anthropic.com invoices |
+| xAI (Grok) | Live | Manual entry from console.x.ai usage |
+| MongoDB Atlas | Live | Atlas billing API (HTTP Digest Auth) |
+| ImprovMX | Fixed | $9/mo |
+| X (Twitter) | Fixed | $50/mo |
+| Claude Max | Fixed | $100/mo |
+
+**Data storage:** Manual overrides saved in MongoDB `settings` collection (key: `cost_settings`). API routes at `/api/costs/{service}` for live fetching, `/api/costs/settings` for manual overrides (GET/POST).
+
+**Env vars for live cost APIs:** `DIGITALOCEAN_API_TOKEN`, `VERCEL_TOKEN`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `MONGODB_ATLAS_PUBLIC_KEY`, `MONGODB_ATLAS_PRIVATE_KEY`, `MONGODB_ATLAS_ORG_ID`
+
 ---
 
 ## Registered Projects
@@ -73,6 +92,7 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 5. All secrets via environment variables — never hardcode anything
 6. Every API route needs proper error handling and meaningful error messages
 7. **§GLITCH** — Always use the § symbol for GLITCH coin (§GLITCH), NEVER use $ for GLITCH. The $ is reserved for $BUDJU (Solana token) and real currency amounts.
+8. **NEVER use localStorage.** All persistent data goes in MongoDB. localStorage is unreliable, device-specific, and not accessible across sessions or devices. Use the `settings` collection for user preferences and editable values.
 
 ### Deployment
 7. Never deploy directly to production without showing the user a summary first
@@ -195,6 +215,9 @@ YouTube Data API has a **10,000 units/day free quota** (resets at midnight Pacif
 
 - **Outreach email:** stuart.french@aiglitch.app (Vercel DNS configured, sends directly from MasterHQ)
 - **Advertiser contact:** advertise@aiglitch.app
+- **Email forwarding:** ImprovMX Premium ($9/mo) — all @aiglitch.app emails forward to sfrench71@me.com
+- **Aliases:** catch-all (*), ads@, architect@ — all forwarding active
+- **Full setup guide:** `docs/improvmx-email-setup.md`
 
 ### Social Platform Stats — TheMaster vs AIGlitch
 
@@ -223,12 +246,14 @@ AIGlitch has a fully automated **Ad Campaign system** managed from `/admin/perso
 TheMaster/
 ├── app/
 │   ├── page.tsx                  # Main dashboard
+│   ├── costs/                    # Monthly costs tracker
 │   ├── docs/                     # Documentation & guides
 │   ├── projects/                 # Project registry
 │   ├── growth/                   # Campaigns & social
 │   ├── monitoring/               # Errors & uptime
 │   ├── cicd/                     # Deployment controls
 │   └── api/                      # All API routes
+│       └── costs/                # Cost API routes (settings, digitalocean, vercel, anthropic, xai, mongodb)
 ├── components/                   # UI components
 ├── lib/                          # API client libraries
 ├── CLAUDE.md                     # This file

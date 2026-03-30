@@ -25,15 +25,18 @@
     "autoprefixer": "^10.4.27",
     "mongodb": "^7.1.0",
     "next": "^14.2.35",
+    "nodemailer": "^8.0.4",
     "postcss": "^8.5.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "resend": "^6.9.4",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "ws": "^8.20.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@types/nodemailer": "^7.0.11",
     "@types/ws": "^8.18.1"
   }
 }

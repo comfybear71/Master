@@ -58,6 +58,9 @@ export default function ProspectsPage() {
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [bulkResults, setBulkResults] = useState<Array<{ company: string; success: boolean }> | null>(null);
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [sendResult, setSendResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
+  const [selectedPersona, setSelectedPersona] = useState<"founder" | "architect" | "ads">("founder");
 
   const PAGE_SIZE = 30;
 
@@ -153,6 +156,39 @@ export default function ProspectsPage() {
     setSelected(new Set());
   };
 
+  const sendTemplateEmail = async (prospect: Prospect) => {
+    if (!prospect.email) {
+      setSendResult({ id: prospect._id, success: false, message: "No email address" });
+      setTimeout(() => setSendResult(null), 3000);
+      return;
+    }
+    setSendingEmail(prospect._id);
+    setSendResult(null);
+    try {
+      const res = await fetch("/api/send-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prospectId: prospect._id,
+          tone: emailTone,
+          persona: selectedPersona,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSendResult({ id: prospect._id, success: true, message: `Sent to ${data.to}` });
+        fetchProspects();
+        fetchStats();
+      } else {
+        setSendResult({ id: prospect._id, success: false, message: data.error || "Failed" });
+      }
+    } catch {
+      setSendResult({ id: prospect._id, success: false, message: "Network error" });
+    }
+    setSendingEmail(null);
+    setTimeout(() => setSendResult(null), 4000);
+  };
+
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text);
     setCopiedField(field);
@@ -228,6 +264,16 @@ export default function ProspectsPage() {
             <option key={i} value={i}>{i}</option>
           ))}
         </select>
+        <div className="flex gap-1">
+          {(["founder", "architect", "ads"] as const).map((p) => (
+            <button key={p} onClick={() => setSelectedPersona(p)}
+              className={`px-3 py-2 rounded-lg text-xs font-mono ${
+                selectedPersona === p ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-400 border border-slate-700"
+              }`}>
+              {p}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-1">
           {(["casual", "formal", "bold"] as const).map((t) => (
             <button key={t} onClick={() => setEmailTone(t)}
@@ -318,15 +364,31 @@ export default function ProspectsPage() {
                 </td>
                 <td className="p-3 text-xs font-mono text-slate-400">{p.emailsSent || 0}</td>
                 <td className="p-3">
-                  <div className="flex gap-1">
-                    <button onClick={() => generateEmail(p)}
-                      className="text-[10px] px-2 py-1 bg-accent/10 text-accent rounded hover:bg-accent/20 font-mono">
-                      Email
-                    </button>
-                    <button onClick={() => markContacted(p._id)}
-                      className="text-[10px] px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded hover:bg-cyan-500/20 font-mono">
-                      Sent
-                    </button>
+                  <div className="flex flex-col gap-1">
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => sendTemplateEmail(p)}
+                        disabled={sendingEmail === p._id || !p.email}
+                        className={`text-[10px] px-2 py-1 rounded font-mono ${
+                          sendingEmail === p._id
+                            ? "bg-yellow-500/20 text-yellow-400 animate-pulse"
+                            : !p.email
+                            ? "bg-slate-700/20 text-slate-600 cursor-not-allowed"
+                            : "bg-accent/10 text-accent hover:bg-accent/20"
+                        }`}
+                      >
+                        {sendingEmail === p._id ? "Sending..." : "Email"}
+                      </button>
+                      <button onClick={() => markContacted(p._id)}
+                        className="text-[10px] px-2 py-1 bg-cyan-500/10 text-cyan-400 rounded hover:bg-cyan-500/20 font-mono">
+                        Sent
+                      </button>
+                    </div>
+                    {sendResult?.id === p._id && (
+                      <span className={`text-[9px] font-mono ${sendResult.success ? "text-green-400" : "text-red-400"}`}>
+                        {sendResult.message}
+                      </span>
+                    )}
                   </div>
                 </td>
               </tr>

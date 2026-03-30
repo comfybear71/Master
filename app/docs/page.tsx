@@ -1502,6 +1502,159 @@ All tokens are configured in Vercel for both TheMaster and AIGlitch.
 - **YouTube 403 = quota limit**, not auth failure
 - **TheMaster stats vs AIGlitch stats differ** — TheMaster shows real platform totals, AIGlitch only tracks posts spread through its own system`,
   },
+  {
+    id: "email-setup",
+    title: "Email Setup (ImprovMX)",
+    icon: "\u2709",
+    content: `## @aiglitch.app Email Setup — ImprovMX
+
+**Service:** ImprovMX Premium ($9/mo)
+**Domain:** aiglitch.app
+**Incoming:** All emails forward to sfrench71@me.com (iCloud) — already working
+**Outgoing:** ImprovMX SMTP (smtp.improvmx.com, port 587, TLS)
+
+---
+
+### Current Aliases
+
+| Alias | Forwards To | Purpose |
+|-------|-------------|---------|
+| **\\*** (catch-all) | sfrench71@me.com | Catches any @aiglitch.app address |
+| **ads@** | sfrench71@me.com | Advertiser inquiries |
+| **architect@** | sfrench71@me.com | The Architect persona |
+| **stuart.french@** | sfrench71@me.com | Outreach & sponsorships |
+| **advertise@** | sfrench71@me.com | Ad partnerships |
+
+---
+
+### Setup Checklist (Do These First)
+
+**1. Create SMTP Credentials (Done):**
+- ImprovMX → cogwheel next to aiglitch.app → **SMTP Credentials** tab
+- Created: \`stuart.french@aiglitch.app\`
+
+**2. Add DKIM & DMARC DNS Records in Vercel:**
+Go to vercel.com → Domains → aiglitch.app → add:
+
+| Type | Name | Value |
+|------|------|-------|
+| CNAME | \`dkimprovmx1._domainkey\` | \`dkimprovmx1.improvmx.com\` |
+| CNAME | \`dkimprovmx2._domainkey\` | \`dkimprovmx2.improvmx.com\` |
+| TXT | \`_dmarc\` | \`v=DMARC1; p=none;\` |
+
+Without these, sent emails go to spam or get rejected.
+
+**3. Generate iCloud App-Specific Password:**
+- Go to https://appleid.apple.com → Sign-In & Security → App-Specific Passwords
+- Generate one named "AIGlitch Email"
+- Save the 16-character password (xxxx-xxxx-xxxx-xxxx)
+
+---
+
+### Connection Settings Reference
+
+**Outgoing (SMTP) — ImprovMX:**
+
+| Setting | Value |
+|---------|-------|
+| Server | \`smtp.improvmx.com\` |
+| Port | \`587\` |
+| Security | TLS |
+| Username | \`stuart.french@aiglitch.app\` |
+| Password | Your ImprovMX SMTP password |
+
+**Incoming (IMAP) — iCloud:**
+
+| Setting | Value |
+|---------|-------|
+| Server | \`imap.mail.me.com\` |
+| Port | \`993\` |
+| Security | SSL |
+| Username | \`sfrench71\` |
+| Password | iCloud App-Specific Password |
+
+---
+
+### iPhone / iPad (Apple Mail)
+
+1. **Settings** → **Apps** → **Mail** → **Mail Accounts** → **Add Account** → **Other** → **Add Mail Account**
+2. Enter: Name, Email (\`stuart.french@aiglitch.app\`), iCloud App-Specific Password
+3. Tap Next — auto-detection will fail, that's normal. Select **IMAP**.
+4. **Incoming Mail Server:**
+   - Host: \`imap.mail.me.com\`
+   - Username: \`sfrench71\`
+   - Password: iCloud App-Specific Password
+5. **Outgoing Mail Server:**
+   - Host: \`smtp.improvmx.com\`
+   - Username: \`stuart.french@aiglitch.app\`
+   - Password: ImprovMX SMTP password
+6. Save → Test: compose email, verify "From:" shows alias, send to different address
+
+**Adding a second alias (e.g. architect@aiglitch.app):**
+iOS won't allow a second account with the same IMAP server. Instead:
+1. Settings → Apps → Mail → Mail Accounts → tap your existing account
+2. Tap **SMTP** (under Outgoing Mail Server) → **Add Server**
+3. Host: \`smtp.improvmx.com\` | Username: \`architect@aiglitch.app\` | Password: its SMTP password
+4. Save → when composing, tap "From:" to switch between aliases
+
+---
+
+### Mac (Apple Mail)
+
+1. **Mail** → **Add Account** → **Other Mail Account** → **Continue**
+2. Enter name, email (\`stuart.french@aiglitch.app\`), iCloud App-Specific Password
+3. Sign In will fail — proceed manually. Set Account Type: **IMAP**
+4. Incoming: \`imap.mail.me.com\` | Outgoing: \`smtp.improvmx.com\`
+5. **Critical — fix outgoing server:** Mail → Settings → Accounts → Server Settings:
+   - Outgoing username: \`stuart.french@aiglitch.app\` (NOT iCloud username)
+   - Outgoing password: ImprovMX SMTP password
+   - Port: 587 | TLS: ON
+   - **Uncheck** "Automatically manage connection settings"
+6. Send test email
+
+---
+
+### PC — Mozilla Thunderbird (Recommended)
+
+Microsoft Outlook does NOT work with ImprovMX. Use Thunderbird (free).
+
+1. Download from https://www.thunderbird.net
+2. Add Mail Account → enter name, email, iCloud App-Specific Password
+3. **Configure manually:**
+   - Incoming: IMAP | \`imap.mail.me.com\` | Port 993 | SSL | Username: \`sfrench71\`
+   - Outgoing: \`smtp.improvmx.com\` | Port 587 | STARTTLS | Username: \`stuart.french@aiglitch.app\`
+4. When prompted: Incoming password = iCloud App Password | Outgoing = ImprovMX SMTP password
+5. Send test email
+
+---
+
+### Gmail Web (Send As)
+
+1. Gmail Settings → Accounts and Import → Send mail as → Add another email address
+2. Enter \`stuart.french@aiglitch.app\` → **UNCHECK** "Treat as an alias"
+3. SMTP: \`smtp.improvmx.com\` | Port: 587 | TLS
+4. Username: \`stuart.french@aiglitch.app\` | Password: ImprovMX SMTP password
+5. Click Add Account → verify via confirmation email (arrives at sfrench71@me.com)
+
+---
+
+### Microsoft Outlook — NOT COMPATIBLE
+
+Outlook requires sending/receiving from the same provider. Use **Thunderbird** instead.
+
+---
+
+### Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Outgoing auth failed | Use ImprovMX SMTP password, full alias as username |
+| Incoming auth failed | Use iCloud App-Specific Password, username \`sfrench71\` |
+| Emails go to spam | Add DKIM & DMARC records in Vercel DNS |
+| "From:" wrong | Fix outgoing SMTP username to \`stuart.french@aiglitch.app\` |
+| Port 587 blocked | Try mobile data or different network |
+| Forwarding not working | Check ImprovMX dashboard green dot, MX records in Vercel |`,
+  },
 ];
 
 export default function DocsPage() {

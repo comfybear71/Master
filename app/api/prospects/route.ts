@@ -128,6 +128,32 @@ export async function POST(req: NextRequest) {
     const db = await getDb();
     const body = await req.json().catch(() => ({}));
 
+    if (action === "create") {
+      const { company, industry, subCategory, website, linkedinTitle, email, country, notes } = body;
+      if (!company) return NextResponse.json({ error: "Company name required" }, { status: 400 });
+
+      const existing = await db.collection("prospects").findOne({ company: { $regex: `^${company}$`, $options: "i" } });
+      if (existing) return NextResponse.json({ error: "Prospect already exists", prospectId: String(existing._id) }, { status: 409 });
+
+      const prospect = {
+        company: company || "",
+        industry: industry || "",
+        subCategory: subCategory || "",
+        website: website || "",
+        linkedinTitle: linkedinTitle || "",
+        email: email || "",
+        country: country || "",
+        notes: notes || "",
+        status: "new",
+        followUpDate: null,
+        lastContactedAt: null,
+        emailsSent: 0,
+        createdAt: new Date().toISOString(),
+      };
+      const result = await db.collection("prospects").insertOne(prospect);
+      return NextResponse.json({ success: true, prospectId: String(result.insertedId) });
+    }
+
     if (action === "update-status") {
       const { prospectId, status } = body;
       await db.collection("prospects").updateOne(
