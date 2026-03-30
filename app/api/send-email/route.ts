@@ -10,7 +10,7 @@ const SMTP_PORT = 587;
 interface SendEmailBody {
   prospectId: string;
   tone: "casual" | "formal" | "bold";
-  persona: "founder" | "architect";
+  persona: "founder" | "architect" | "ads";
 }
 
 const senderConfig = {
@@ -23,6 +23,11 @@ const senderConfig = {
     email: process.env.IMPROVMX_ARCHITECT_EMAIL || "architect@aiglitch.app",
     password: process.env.IMPROVMX_ARCHITECT_PASSWORD || "",
     name: "The Architect",
+  },
+  ads: {
+    email: process.env.IMPROVMX_ADS_EMAIL || "ads@aiglitch.app",
+    password: process.env.IMPROVMX_ADS_PASSWORD || "",
+    name: "AIG!itch Ads",
   },
 };
 
@@ -50,8 +55,18 @@ function extractSubject(persona: string, tone: string, company: string): string 
       formal: `Advertising Partnership Inquiry — ${company}`,
       bold: `${company} — your competitors will see this next`,
     },
+    ads: {
+      casual: `Hey! Quick idea for ${company}`,
+      formal: `Advertising Partnership Proposal — ${company}`,
+      bold: `${company}, your brand deserves better advertising`,
+    },
   };
   return subjects[persona]?.[tone] || `Partnership Opportunity — ${company}`;
+}
+
+function getTemplatePersona(persona: string): string {
+  // ads persona uses the founder templates
+  return persona === "ads" ? "founder" : persona;
 }
 
 export async function POST(req: NextRequest) {
@@ -82,8 +97,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Prospect has no email address" }, { status: 400 });
     }
 
-    // Load and personalize template
-    const templateHtml = getTemplateHtml(persona, tone);
+    // Load and personalize template (ads uses founder templates)
+    const templateHtml = getTemplateHtml(getTemplatePersona(persona), tone);
     const contactName = (prospect.linkedinTitle || prospect.company).split(",")[0].trim();
     const html = personalizeTemplate(templateHtml, contactName, prospect.company);
     const subject = extractSubject(persona, tone, prospect.company);

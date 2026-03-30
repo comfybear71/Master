@@ -60,7 +60,7 @@ export default function ProspectsPage() {
   const [bulkResults, setBulkResults] = useState<Array<{ company: string; success: boolean }> | null>(null);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [sendResult, setSendResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
-  const [selectedPersona, setSelectedPersona] = useState<"founder" | "architect">("founder");
+  const [selectedPersona, setSelectedPersona] = useState<"founder" | "architect" | "ads">("founder");
 
   const PAGE_SIZE = 30;
 
@@ -265,7 +265,7 @@ export default function ProspectsPage() {
           ))}
         </select>
         <div className="flex gap-1">
-          {(["founder", "architect"] as const).map((p) => (
+          {(["founder", "architect", "ads"] as const).map((p) => (
             <button key={p} onClick={() => setSelectedPersona(p)}
               className={`px-3 py-2 rounded-lg text-xs font-mono ${
                 selectedPersona === p ? "bg-green-500/20 text-green-400 border border-green-500/30" : "bg-slate-800 text-slate-400 border border-slate-700"
