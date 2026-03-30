@@ -136,7 +136,24 @@ export async function POST(req: NextRequest) {
         user: sender.email,
         pass: sender.password,
       },
+      debug: true,
     });
+
+    // Verify connection first
+    try {
+      await transporter.verify();
+    } catch (verifyErr) {
+      const msg = verifyErr instanceof Error ? verifyErr.message : String(verifyErr);
+      return NextResponse.json({
+        error: `SMTP connection failed: ${msg}`,
+        debug: {
+          host: SMTP_HOST,
+          port: SMTP_PORT,
+          user: sender.email,
+          passwordLength: sender.password.length,
+        },
+      }, { status: 500 });
+    }
 
     // Send email
     const info = await transporter.sendMail({
