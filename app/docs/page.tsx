@@ -14,7 +14,6 @@ const DOC_CATEGORIES: { key: string; label: string; icon: string }[] = [
   { key: "aiglitch", label: "AIG!itch", icon: "\u26A1" },
   { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
   { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
-  { key: "reference", label: "Reference", icon: "\u{1F4DA}" },
 ];
 
 const docs: DocSection[] = [
@@ -1099,7 +1098,7 @@ Email (Resend) → Sponsor clicks tier link
   {
     id: "youtube-quota",
     title: "YouTube API Quota Increase",
-    category: "reference",
+    category: "aiglitch",
     icon: "\u25B6",
     content: `## How to Increase YouTube API Quota
 
@@ -1147,7 +1146,7 @@ YouTube Data API has a **10,000 units/day free quota** which resets at midnight 
   {
     id: "xai-grok-costs",
     title: "xAI Grok Cost Optimization",
-    category: "reference",
+    category: "aiglitch",
     icon: "\u2726",
     content: `## xAI Grok Cost Optimization Guide
 
@@ -1275,7 +1274,7 @@ xAI automatically caches repeated prompt prefixes at reduced rates.
   {
     id: "tiktok-setup",
     title: "TikTok API Setup",
-    category: "reference",
+    category: "aiglitch",
     icon: "\u266A",
     content: `## TikTok API Integration Guide
 
@@ -1588,7 +1587,7 @@ This guide grows with you. Future sections to be added as needed:
   {
     id: "social-accounts",
     title: "Social Media Accounts",
-    category: "reference",
+    category: "aiglitch",
     icon: "\u2B21",
     content: `## Social Media Account Links
 
@@ -1622,7 +1621,7 @@ All tokens are configured in Vercel for both TheMaster and AIGlitch.
   {
     id: "email-setup",
     title: "Email Setup (ImprovMX)",
-    category: "reference",
+    category: "aiglitch",
     icon: "\u2709",
     content: `## @aiglitch.app Email Setup — ImprovMX
 
@@ -2076,6 +2075,16 @@ Paste the contents of \`docs/aiglitch-sponsor-prompt.md\` into an AIG!itch Claud
 
 export default function DocsPage() {
   const [activeDoc, setActiveDoc] = useState<string>(docs[0].id);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>(() => {
+    // Start with the first category expanded
+    const initial: Record<string, boolean> = {};
+    DOC_CATEGORIES.forEach((cat, i) => { initial[cat.key] = i === 0; });
+    return initial;
+  });
+
+  const toggleCat = (key: string) => {
+    setExpandedCats((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const currentDoc = docs.find((d) => d.id === activeDoc) || docs[0];
 
@@ -2087,30 +2096,43 @@ export default function DocsPage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <div className="lg:w-64 shrink-0">
-          <div className="bg-base-card rounded-xl border border-slate-800 p-3 space-y-1">
+          <div className="bg-base-card rounded-xl border border-slate-800 p-3 space-y-0.5">
             {DOC_CATEGORIES.map((cat) => {
               const catDocs = docs.filter((d) => d.category === cat.key);
               if (catDocs.length === 0) return null;
+              const isExpanded = expandedCats[cat.key];
+              const hasActiveDoc = catDocs.some((d) => d.id === activeDoc);
               return (
-                <div key={cat.key} className="mb-2">
-                  <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                <div key={cat.key}>
+                  <button
+                    onClick={() => toggleCat(cat.key)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${
+                      hasActiveDoc ? "text-accent" : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    <span className="text-xs transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>{"\u25B6"}</span>
                     <span>{cat.icon}</span>
                     <span>{cat.label}</span>
-                  </div>
-                  {catDocs.map((doc) => (
-                    <button
-                      key={doc.id}
-                      onClick={() => setActiveDoc(doc.id)}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                        activeDoc === doc.id
-                          ? "bg-accent/10 text-accent border border-accent/20"
-                          : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                      }`}
-                    >
-                      <span className="text-base">{doc.icon}</span>
-                      <span className="font-medium">{doc.title}</span>
-                    </button>
-                  ))}
+                    <span className="ml-auto text-slate-600 text-[10px] font-normal">{catDocs.length}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-2 border-l border-slate-800 pl-1 mb-2">
+                      {catDocs.map((doc) => (
+                        <button
+                          key={doc.id}
+                          onClick={() => setActiveDoc(doc.id)}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                            activeDoc === doc.id
+                              ? "bg-accent/10 text-accent border border-accent/20"
+                              : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                          }`}
+                        >
+                          <span className="text-sm">{doc.icon}</span>
+                          <span className="font-medium">{doc.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
