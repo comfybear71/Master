@@ -264,10 +264,44 @@
     <h3>Campaign Payment</h3>
 
     <!-- Success/Cancel messages -->
-    <div id="payment-success" style="display:none;text-align:center;padding:24px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:12px;margin-bottom:24px;">
-      <div style="font-size:36px;margin-bottom:8px;">&#9989;</div>
-      <div style="font-size:18px;font-weight:700;color:#00ff88;">Payment Received!</div>
-      <div style="font-size:13px;color:var(--muted);margin-top:8px;">Thank you! We'll have your campaign live within 24 hours. Check your email for confirmation.</div>
+    <div id="payment-success" style="display:none;margin-bottom:24px;">
+      <div style="text-align:center;padding:24px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:12px;margin-bottom:24px;">
+        <div style="font-size:36px;margin-bottom:8px;">&#9989;</div>
+        <div style="font-size:18px;font-weight:700;color:#00ff88;">Payment Received!</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px;">Now upload your brand assets so our AI can start creating content.</div>
+      </div>
+
+      <!-- Asset Upload Form -->
+      <div style="background:var(--black);border:1px solid var(--border);border-radius:14px;padding:28px;">
+        <h4 style="font-size:16px;font-weight:700;margin-bottom:4px;">Upload Your Brand Assets</h4>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:24px;">1 logo (required) + up to 5 product images. JPEG, PNG, WebP, SVG, or GIF.</p>
+
+        <form id="upload-form" onsubmit="handleUpload(event)">
+          <!-- Logo -->
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:11px;color:var(--electric);font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Logo *</label>
+            <div id="logo-drop" style="border:2px dashed rgba(0,240,255,0.2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('logo-input').click()">
+              <div style="font-size:24px;margin-bottom:4px;">&#128247;</div>
+              <div id="logo-label" style="font-size:13px;color:var(--muted);">Click or drag to upload logo</div>
+              <input type="file" id="logo-input" accept="image/*" style="display:none;" onchange="updateLabel('logo')">
+            </div>
+          </div>
+
+          <!-- Product Images -->
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:11px;color:var(--electric);font-family:'JetBrains Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:8px;">Product Images (up to 5)</label>
+            <div id="images-drop" style="border:2px dashed rgba(200,255,0,0.15);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:border-color 0.2s;" onclick="document.getElementById('images-input').click()">
+              <div style="font-size:24px;margin-bottom:4px;">&#128444;</div>
+              <div id="images-label" style="font-size:13px;color:var(--muted);">Click or drag to upload product images</div>
+              <input type="file" id="images-input" accept="image/*" multiple style="display:none;" onchange="updateLabel('images')">
+            </div>
+          </div>
+
+          <button type="submit" id="upload-btn" class="pay-btn" style="background:var(--electric);">Upload Assets &rarr;</button>
+        </form>
+
+        <div id="upload-result" style="display:none;margin-top:16px;"></div>
+      </div>
     </div>
     <div id="payment-cancelled" style="display:none;text-align:center;padding:16px;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:12px;margin-bottom:24px;">
       <div style="font-size:13px;color:#ff4444;">Payment cancelled. No worries — choose a tier below when you're ready.</div>
@@ -387,6 +421,83 @@
         btn.style.background = '#c8ff00';
         btn.disabled = false;
       }, 3000);
+    }
+  }
+
+  function updateLabel(type) {
+    if (type === 'logo') {
+      var f = document.getElementById('logo-input').files;
+      document.getElementById('logo-label').textContent = f.length ? f[0].name : 'Click or drag to upload logo';
+      if (f.length) document.getElementById('logo-drop').style.borderColor = 'rgba(0,240,255,0.5)';
+    } else {
+      var f = document.getElementById('images-input').files;
+      var count = Math.min(f.length, 5);
+      document.getElementById('images-label').textContent = count ? count + ' image' + (count > 1 ? 's' : '') + ' selected' : 'Click or drag to upload product images';
+      if (count) document.getElementById('images-drop').style.borderColor = 'rgba(200,255,0,0.4)';
+    }
+  }
+
+  async function handleUpload(e) {
+    e.preventDefault();
+    var btn = document.getElementById('upload-btn');
+    var result = document.getElementById('upload-result');
+    var logoInput = document.getElementById('logo-input');
+    var imagesInput = document.getElementById('images-input');
+
+    if (!logoInput.files.length) {
+      result.style.display = 'block';
+      result.innerHTML = '<div style="color:#ff4444;font-size:13px;">Please upload a logo.</div>';
+      return;
+    }
+
+    btn.textContent = 'Uploading...';
+    btn.disabled = true;
+    btn.style.background = '#666';
+
+    var formData = new FormData();
+    formData.append('company', document.getElementById('company-input') ? document.getElementById('company-input').value : 'Unknown');
+    formData.append('email', document.getElementById('email-input') ? document.getElementById('email-input').value : '');
+    formData.append('tier', selectedTier);
+    formData.append('logo', logoInput.files[0]);
+
+    var imageFiles = Array.from(imagesInput.files).slice(0, 5);
+    imageFiles.forEach(function(f, i) {
+      formData.append('image' + (i + 1), f);
+    });
+
+    try {
+      var res = await fetch('/api/sponsor/upload', { method: 'POST', body: formData });
+      var data = await res.json();
+
+      if (data.success) {
+        btn.textContent = '\u2705 Assets Uploaded!';
+        btn.style.background = '#00ff88';
+        btn.style.color = '#0a0a0a';
+        result.style.display = 'block';
+        var html = '<div style="padding:16px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:10px;">';
+        html += '<div style="font-size:14px;font-weight:700;color:#00ff88;margin-bottom:12px;">\u2705 ' + data.files.length + ' file(s) uploaded!</div>';
+        data.files.forEach(function(f) {
+          html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">';
+          html += '<img src="' + f.url + '" style="width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid rgba(255,255,255,0.1);">';
+          html += '<div><div style="font-size:12px;color:#f5f4f0;">' + f.name + '</div></div>';
+          html += '</div>';
+        });
+        html += '<div style="margin-top:12px;font-size:12px;color:var(--muted);">We\'ll start creating AI content with your assets within 24 hours. Stay Glitchy! \u26A1</div>';
+        html += '</div>';
+        result.innerHTML = html;
+      } else {
+        btn.textContent = 'Upload Assets \u2192';
+        btn.style.background = '#00f0ff';
+        btn.disabled = false;
+        result.style.display = 'block';
+        result.innerHTML = '<div style="color:#ff4444;font-size:13px;">' + (data.error || 'Upload failed') + '</div>';
+      }
+    } catch (err) {
+      btn.textContent = 'Upload Assets \u2192';
+      btn.style.background = '#00f0ff';
+      btn.disabled = false;
+      result.style.display = 'block';
+      result.innerHTML = '<div style="color:#ff4444;font-size:13px;">Network error — try again</div>';
     }
   }
 </script>
