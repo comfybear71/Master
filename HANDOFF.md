@@ -240,20 +240,36 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Next Session — Start Here
 
-### Priority: Build §GLITCH Rewards Campaign (Phase 3 completion)
-Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks (follow, like, subscribe across all platforms) and earn §GLITCH coin. Needs: campaign page, task verification APIs, wallet connection, admin dashboard.
+### Priority: AIG!itch Sponsor Auto-Import
+Give AIG!itch the prompt at `docs/aiglitch-sponsor-prompt.md` — it builds the auto-import from MasterHQ so paid sponsors appear in admin with zero manual handling.
 
 ### Current State
-1. **Costs page LIVE** — March 2026: $1,697.02 total (DigitalOcean $2.71, Vercel $38.07, Anthropic $1,281.80, xAI $215.44, MongoDB $0, ImprovMX $9, X $50, Claude Max $100)
-2. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
-2. **TikTok in SANDBOX** — switch to LIVE once production review approved
-3. **YouTube quota increase submitted** (100K units/day) — check if approved
-4. **Domain:** masterhq.dev (NEXTAUTH_URL updated)
-5. **Email:** stuart.french@aiglitch.app (Vercel DNS configured)
-6. **Prospects page:** 130+ sponsors imported, CRM with status tracking, AI email generation
-7. **Media Kit:** masterhq.dev/media-kit (full advertiser kit)
-8. **Light/dark mode** toggle in sidebar
-9. **Docs:** 12 guides (rewards campaign, email templates, sponsor targets, campaigns, Phase 4 spec, YouTube quota, xAI costs, TikTok setup, social accounts, session logs)
+1. **Sponsor Onboarding Pipeline COMPLETE** — Email → Stripe payment → asset upload → MongoDB + Blob Store → AIG!itch auto-import API
+2. **Blob Store connected** — aiglitch-media Blob Store shared between MasterHQ and AIG!itch projects
+3. **Costs page LIVE** — March 2026: $1,697.02 total (DigitalOcean $2.71, Vercel $38.07, Anthropic $1,281.80, xAI $215.44, MongoDB $0, ImprovMX $9, X $50, Claude Max $100)
+4. All 5 social platforms connected (X, YouTube, Facebook, Instagram, TikTok)
+5. **TikTok in SANDBOX** — switch to LIVE once production review approved
+6. **YouTube quota increase submitted** (100K units/day) — check if approved
+7. **Domain:** masterhq.dev (NEXTAUTH_URL updated)
+8. **Email:** stuart.french@aiglitch.app (Vercel DNS configured)
+9. **Prospects page:** 130+ sponsors imported, CRM with status tracking, AI email generation
+10. **Media Kit:** masterhq.dev/media-kit (full advertiser kit)
+11. **Light/dark mode** toggle in sidebar
+12. **Docs:** 13 guides (rewards campaign, email templates, sponsor targets, campaigns, Phase 4 spec, YouTube quota, xAI costs, TikTok setup, social accounts, session logs)
+
+### Sponsor Onboarding Flow (end-to-end)
+```
+Prospect receives email → clicks $50/$100 tier link
+→ Lands on masterhq.dev/sponsor-onboarding
+→ Pays via Stripe Checkout (STRIPE_AIGLITCH_SECRET_KEY)
+→ Redirected back with ?payment=success
+→ Uploads logo + up to 5 product images
+→ Files saved to Vercel Blob Store (aiglitch-media, shared)
+→ Metadata saved to MongoDB sponsor_uploads collection
+→ AIG!itch admin calls GET masterhq.dev/api/sponsor/list?status=pending
+→ One-click import creates sponsor + campaign with all images
+→ POST masterhq.dev/api/sponsor/list marks as imported (prevents duplicates)
+```
 
 ### Pending Reviews
 - TikTok production review (new redirect URI + scopes)
@@ -261,7 +277,7 @@ Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks
 - TikTok Content Posting API audit
 
 ### AIGlitch Prompts Ready (in docs/ folder)
-- `aiglitch-sponsor-prompt.md` — Sponsor management system
+- `aiglitch-sponsor-prompt.md` — Sponsor management + MasterHQ auto-import (UPDATED 2026-03-31)
 - `aiglitch-cost-optimization.md` — Reduce $1,365/mo → $300-500
 - `aiglitch-30s-video-fix.md` — 30s ads only producing 10s clips
 - `aiglitch-video-stitch-fix.md` — MP4 edts box fix
@@ -285,6 +301,7 @@ Full spec at `/docs` → "§GLITCH Rewards Campaign". Users complete 10-20 tasks
 | 2026-03-28 | Terminal feature COMPLETE: Created DigitalOcean dev droplet (masterhq-dev-syd1, 170.64.133.9, $12/mo, 2GB RAM). Installed Claude Code v2.1.85, ttyd 1.7.4, tmux, nginx. Set up SSL via Let's Encrypt on terminal.masterhq.dev. Critical fix: port 443 must be open in UFW. ttyd requires -W flag for writable mode. Terminal page on masterhq.dev/terminal working on iPad + desktop. Two-droplet architecture documented (budju trading bot completely isolated). §GLITCH Quest design doc finalized with SQL schemas. iPad workflow documented (tmux + Claude Code). | Claude Code |
 | 2026-03-29 | MARATHON SESSION (4hrs, 14 commits): OAuth URL auto-copy for iPad terminal. Tried 5 approaches that failed (monitoring WebSocket, embedded xterm.js, clipboard API, server-side WebSocket from Vercel, shell tee pipe) before succeeding with: `script` log capture → Python ANSI stripping → curl POST to MasterHQ API → page polls → auto-populates URL bar → user taps Go. Fixed 7+ JS template escaping bugs (use `[.]` not `\.`, `chr(27)` not `\x1b`). APIs: `/api/terminal/oauth-url`, `/api/terminal/setup`, `/api/terminal/get-url`, `/api/terminal/token`. Added TheMaster to its own project registry. Full session log: `docs/session-2026-03-29-oauth-autocapture.md`. Full technical docs: `docs/oauth-url-auto-capture.md`. | Claude Code |
 | 2026-03-30 | Costs page: Entered March 2026 costs manually via live API — Anthropic $1,281.80 (summed from invoices), xAI Grok $215.44, Vercel $38.07. Total March: $1,697.02 (live $1,538.02 + fixed $159.00). Updated CLAUDE.md with costs page docs and HANDOFF.md with session log. Pushed branch to GitHub. | Claude Code |
+| 2026-03-31 | SPONSOR ONBOARDING PIPELINE: Full end-to-end sponsor flow — Stripe payment ($50 Glitch / $100 Chaos tiers), asset upload (logo + 5 images to Vercel Blob Store), MongoDB metadata storage. Built: sponsor-onboarding page (public HTML), /api/stripe/checkout, /api/sponsor/upload (Blob Store + MongoDB), /api/sponsor/list (AIG!itch auto-import API with pending filter + mark-as-imported). Connected aiglitch-media Blob Store to MasterHQ (shared storage). Updated aiglitch-sponsor-prompt.md with MasterHQ auto-import, multiple images, $50/$100 tiers. BUDJU tested as first sponsor ($50 payment). 6 branded HTML email templates (3 tones x 2 personas). Session log: docs/session-2026-03-31. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 

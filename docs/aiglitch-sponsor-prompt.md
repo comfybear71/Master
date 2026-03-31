@@ -1,6 +1,6 @@
 # AIGlitch Sponsored Ad Campaign System — Build Prompt
 
-> Paste this entire file into a Claude Code session on the AIGlitch repo, branch `claude/review-documentation-4MYvb`.
+> Paste this entire file into a Claude Code session on the AIGlitch repo.
 
 ---
 
@@ -8,7 +8,68 @@
 
 You are working on the **AIGlitch** codebase. AIGlitch already has a fully automated Ad Campaign system that generates AI-powered video ads and distributes them across 6 social platforms (X, TikTok, Instagram, Facebook, YouTube, Telegram).
 
-**Your task**: Build a Sponsored Ad Campaign system that lets external sponsors pay (in §GLITCH tokens or cash) to have their products featured in AIG!itch-branded video ads, distributed through the existing ad pipeline.
+**Your task**: Build a Sponsored Ad Campaign system with **AUTO-IMPORT from MasterHQ**. When a sponsor pays and uploads assets on MasterHQ (masterhq.dev), their data should automatically appear in AIG!itch admin — ready to create campaigns with zero manual data entry.
+
+### MasterHQ Integration (CRITICAL — THIS IS THE KEY FEATURE)
+
+MasterHQ (masterhq.dev) handles the sponsor onboarding pipeline:
+1. Sponsor receives outreach email → clicks tier link
+2. Lands on sponsor-onboarding page → pays via Stripe ($50 or $100)
+3. After payment, uploads 1 logo + up to 5 product images
+4. Files stored in Vercel Blob Store (shared aiglitch-media blob store)
+5. Upload metadata saved in MasterHQ MongoDB `sponsor_uploads` collection
+
+**MasterHQ API endpoint (already built):**
+```
+GET https://masterhq.dev/api/sponsor/list
+```
+Returns:
+```json
+{
+  "sponsors": [
+    {
+      "id": "mongodb_object_id",
+      "company": "BUDJU",
+      "email": "contact@budju.xyz",
+      "tier": "glitch",
+      "files": [
+        { "name": "Logo", "url": "https://jug8pwv8lcpdrski.public.blob.vercel-storage.com/sponsors/budju/logo.png", "type": "logo" },
+        { "name": "Product Image 1", "url": "https://...image-1.jpg", "type": "image" },
+        { "name": "Product Image 2", "url": "https://...image-2.jpg", "type": "image" },
+        { "name": "Product Image 3", "url": "https://...image-3.jpg", "type": "image" }
+      ],
+      "createdAt": "2026-03-31T...",
+      "importedToAiglitch": false,
+      "package": { "name": "Glitch", "price": 50, "frequency": 30, "placements": 210, "duration": 7 }
+    }
+  ],
+  "count": 1
+}
+```
+
+**Filter options:**
+- `?status=pending` — only sponsors not yet imported to AIG!itch
+- `?company=BUDJU` — filter by company name
+
+**Mark as imported (prevents duplicates):**
+```
+POST https://masterhq.dev/api/sponsor/list
+Body: { "sponsorId": "mongodb_object_id" }
+```
+
+### What AIG!itch Admin Must Do Automatically
+
+When admin opens the Sponsors page:
+1. **Auto-fetch** pending sponsors from MasterHQ API (GET with `?status=pending`)
+2. **Show a banner** if new sponsors are waiting: "2 new sponsors ready to import from MasterHQ"
+3. **One-click import** button per sponsor that:
+   - Creates the sponsor in AIG!itch Postgres `sponsors` table
+   - Creates the first `sponsored_ad` with all their images attached
+   - Sets up the campaign at the correct frequency (30% for Glitch, 80% for Chaos)
+   - Marks the sponsor as imported on MasterHQ (POST to `/api/sponsor/list`)
+4. **"Import All" button** to batch-import all pending sponsors at once
+
+The admin should NEVER have to manually type a company name, email, or paste image URLs. Everything comes from MasterHQ.
 
 ### Existing System Reference
 
@@ -26,7 +87,6 @@ You are working on the **AIGlitch** codebase. AIGlitch already has a fully autom
 ### Important Rules
 
 - Always run `npx tsc --noEmit` before pushing
-- Branch: `claude/review-documentation-4MYvb`
 - Read the project's `CLAUDE.md` and `HANDOFF.md` before starting
 - Use existing patterns in the codebase (check how other admin pages, API routes, and DB migrations are structured)
 - Reuse the existing `PromptViewer` component wherever AI-generated text needs preview/editing
@@ -72,16 +132,24 @@ CREATE TABLE IF NOT EXISTS sponsored_ads (
   -- campaign_id links to existing ad_campaigns table if one exists, otherwise nullable
   product_name VARCHAR(255) NOT NULL,
   product_description TEXT NOT NULL,
-  product_image_url VARCHAR(500),
+  logo_url VARCHAR(500),
+  -- logo uploaded via MasterHQ sponsor onboarding
+  product_images JSONB DEFAULT '[]',
+  -- array of image objects: [{ "url": "https://...", "type": "logo"|"image", "name": "Logo" }]
+  -- replaces old single product_image_url field
+  -- backward compat: if old ads have product_image_url, treat it as first image
   ad_style VARCHAR(50) NOT NULL DEFAULT 'product_showcase',
   -- ad_style values: 'product_showcase', 'testimonial', 'comparison', 'lifestyle', 'unboxing'
   target_platforms TEXT[] NOT NULL DEFAULT ARRAY['x', 'tiktok', 'instagram', 'facebook', 'youtube', 'telegram'],
   duration INTEGER NOT NULL DEFAULT 10,
   -- duration in seconds: 10 or 30
-  package VARCHAR(50) NOT NULL DEFAULT 'basic',
-  -- package values: 'basic', 'standard', 'premium', 'ultra'
-  glitch_cost INTEGER NOT NULL DEFAULT 0,
-  cash_equivalent DECIMAL(10,2) NOT NULL DEFAULT 0,
+  frequency INTEGER NOT NULL DEFAULT 30,
+  -- how often this sponsor's ad appears in the rotation (30% for Glitch tier, 80% for Chaos tier)
+  campaign_days INTEGER NOT NULL DEFAULT 7,
+  -- campaign duration in days
+  package VARCHAR(50) NOT NULL DEFAULT 'glitch',
+  -- package values: 'glitch' ($50, 30% freq), 'chaos' ($100, 80% freq)
+  cash_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
   status VARCHAR(50) NOT NULL DEFAULT 'draft',
   -- status values: 'draft', 'pending_review', 'approved', 'generating', 'ready', 'published', 'completed', 'rejected'
   video_url VARCHAR(500),
@@ -89,7 +157,8 @@ CREATE TABLE IF NOT EXISTS sponsored_ads (
   -- array of {platform, post_id} objects after publishing
   performance JSONB DEFAULT '{}',
   -- cached metrics: {views, likes, shares, clicks}
-  follow_ups_remaining INTEGER NOT NULL DEFAULT 0,
+  masterhq_sponsor_id VARCHAR(100),
+  -- the MongoDB ObjectId from MasterHQ sponsor_uploads, used to prevent duplicate imports
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -119,16 +188,41 @@ Create a new admin page at `src/app/admin/sponsors/page.tsx`.
 - "Add Sponsor" button opens a modal/form with fields: company_name, contact_email, contact_name, industry, website, notes
 - Click a sponsor row to expand/show their sponsored ads
 
-#### Section B: Sponsored Ad Creator (middle of page)
+#### Section B: MasterHQ Auto-Import (TOP PRIORITY — show above everything else)
+
+This is the **primary workflow**. When a sponsor pays on MasterHQ, their data should appear here automatically.
+
+- On page load, fetch `GET https://masterhq.dev/api/sponsor/list?status=pending`
+- If pending sponsors exist, show a prominent banner:
+  ```
+  🔔 2 new paid sponsors ready to import from MasterHQ
+  [Import All]
+  ```
+- For each pending sponsor, show a card with:
+  - Company name, email, tier (Glitch $50 / Chaos $100)
+  - Logo thumbnail + product image thumbnails (from the `files` array)
+  - Package details (frequency, placements, duration)
+  - **[Import & Create Campaign]** button
+- When "Import & Create Campaign" is clicked:
+  1. Create sponsor in AIG!itch `sponsors` table (company, email, status='active')
+  2. Create `sponsored_ad` with all images from MasterHQ (`files` array → `product_images` JSONB, logo → `logo_url`)
+  3. Set frequency from the package (30% for Glitch, 80% for Chaos)
+  4. Set campaign duration to 7 days
+  5. Mark as imported on MasterHQ: `POST https://masterhq.dev/api/sponsor/list` with `{ "sponsorId": "..." }`
+  6. Show success: "BUDJU imported! Campaign ready at 30% frequency for 7 days."
+- **"Import All"** button does the above for all pending sponsors in one click
+
+#### Section C: Sponsored Ad Creator (for manual creation if needed)
 
 - Form to create a new sponsored ad:
   - Select sponsor (dropdown of active sponsors)
   - Product name (text input)
   - Product description (textarea)
-  - Product image URL (text input with preview)
+  - Logo URL (text input with preview)
+  - Product Image URLs (up to 5, add/remove dynamically, each with preview)
   - Ad style (dropdown: product_showcase, testimonial, comparison, lifestyle, unboxing)
-  - Package (dropdown showing the 4 tiers — auto-fills duration, platforms, cost)
-  - Target platforms (checkboxes, pre-filled by package)
+  - Package (dropdown: Glitch $50 / Chaos $100 — auto-fills frequency, duration)
+  - Target platforms (checkboxes, pre-filled to all 6)
 - "Generate Ad" button calls `/api/generate-ads` with sponsor data
 - Shows PromptViewer for the AI-generated caption and video prompt before submission
 - "Approve & Generate Video" triggers video generation via Grok
@@ -187,47 +281,27 @@ The endpoint auto-calculates `duration`, `glitch_cost`, `cash_equivalent`, and `
 
 ### Package Definitions (use as constants)
 
+These match the MasterHQ sponsor onboarding tiers exactly:
+
 ```typescript
 export const SPONSOR_PACKAGES = {
-  basic: {
-    name: 'Basic',
-    duration: 10,
-    platforms: ['x', 'tiktok', 'instagram'],
-    glitch_cost: 500,
-    cash_equivalent: 50,
-    follow_ups: 0,
-    pinned: false,
-    description: '10s video ad on 3 platforms'
-  },
-  standard: {
-    name: 'Standard',
-    duration: 10,
+  glitch: {
+    name: 'Glitch',
+    price: 50,
+    frequency: 30,        // 30% of ad rotation
+    placements: 210,      // estimated placements over 7 days
+    duration: 7,          // campaign duration in days
     platforms: ['x', 'tiktok', 'instagram', 'facebook', 'youtube', 'telegram'],
-    glitch_cost: 1000,
-    cash_equivalent: 100,
-    follow_ups: 0,
-    pinned: false,
-    description: '10s video ad on all 6 platforms'
+    description: '7-day campaign, 30% frequency, ~210 placements across all platforms'
   },
-  premium: {
-    name: 'Premium',
-    duration: 30,
+  chaos: {
+    name: 'Chaos',
+    price: 100,
+    frequency: 80,        // 80% of ad rotation
+    placements: 560,      // estimated placements over 7 days
+    duration: 7,
     platforms: ['x', 'tiktok', 'instagram', 'facebook', 'youtube', 'telegram'],
-    glitch_cost: 2500,
-    cash_equivalent: 250,
-    follow_ups: 0,
-    pinned: false,
-    description: '30s video ad on all 6 platforms'
-  },
-  ultra: {
-    name: 'Ultra',
-    duration: 30,
-    platforms: ['x', 'tiktok', 'instagram', 'facebook', 'youtube', 'telegram'],
-    glitch_cost: 5000,
-    cash_equivalent: 500,
-    follow_ups: 3,
-    pinned: true,
-    description: '30s video + 3 follow-ups on all 6 platforms + pinned'
+    description: '7-day campaign, 80% frequency, ~560 placements across all platforms'
   }
 } as const;
 ```
@@ -358,10 +432,8 @@ SPONSOR INFO:
 TONE: {tone}
 
 PRICING PACKAGES:
-- Basic: 10s video ad, 3 platforms — 500 §GLITCH ($50)
-- Standard: 10s video ad, all 6 platforms — 1,000 §GLITCH ($100)
-- Premium: 30s video ad, all 6 platforms — 2,500 §GLITCH ($250)
-- Ultra: 30s video + 3 follow-ups, all platforms + pinned — 5,000 §GLITCH ($500)
+- Glitch: 7-day campaign, 30% ad frequency, ~210 placements across all 6 platforms — $50
+- Chaos: 7-day campaign, 80% ad frequency, ~560 placements across all 6 platforms — $100
 
 Generate:
 1. EMAIL SUBJECT LINE — catchy, personalized to their industry
@@ -433,17 +505,17 @@ Create a public-facing page at `src/app/sponsor/page.tsx`.
 3. "Distributed everywhere" — show the 6 platform icons
 
 #### Pricing Packages
-Display the 4 tiers as cards:
+Display the 2 tiers as cards:
 
-| | Basic | Standard | Premium | Ultra |
-|---|---|---|---|---|
-| **Price** | 500 §GLITCH ($50) | 1,000 §GLITCH ($100) | 2,500 §GLITCH ($250) | 5,000 §GLITCH ($500) |
-| **Video** | 10s | 10s | 30s | 30s |
-| **Platforms** | X, TikTok, Instagram | All 6 | All 6 | All 6 |
-| **Follow-ups** | - | - | - | 3 follow-ups |
-| **Pinned** | - | - | - | Yes |
+| | Glitch | Chaos |
+|---|---|---|
+| **Price** | $50 | $100 |
+| **Frequency** | 30% of ad rotation | 80% of ad rotation |
+| **Duration** | 7 days | 7 days |
+| **Placements** | ~210 | ~560 |
+| **Platforms** | All 6 | All 6 |
 
-Highlight "Standard" as "Most Popular" and "Ultra" as "Best Value".
+Highlight "Chaos" as "Most Popular".
 
 #### Example Ads (placeholder section)
 - Placeholder grid for 3-4 example ad thumbnails/videos
@@ -458,7 +530,7 @@ Fields:
 - Industry (dropdown: Tech, Gaming, Fashion, Food & Beverage, Health & Fitness, Finance, Education, Entertainment, Other)
 - Website URL
 - Message / What do you want to advertise? (textarea, required)
-- Preferred Package (dropdown: Basic, Standard, Premium, Ultra, Not sure)
+- Preferred Package (dropdown: Glitch $50, Chaos $100, Not sure)
 
 On submit:
 1. Call `POST /api/sponsor/inquiry`

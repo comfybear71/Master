@@ -4,6 +4,17 @@ import { getDb } from "@/lib/mongodb";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+// Handle CORS preflight
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 // GET /api/sponsor/list — returns all paid sponsors with their uploads
 // Called by AIG!itch admin to auto-import sponsors
 // Optional: ?company=BUDJU to filter by company name
@@ -33,6 +44,10 @@ export async function GET(req: NextRequest) {
       company: u.company,
       email: u.email,
       tier: u.tier,
+      productName: u.productName || "",
+      productDescription: u.productDescription || "",
+      industry: u.industry || "",
+      website: u.website || "",
       files: u.files,
       createdAt: u.createdAt,
       importedToAiglitch: u.importedToAiglitch || false,
@@ -42,10 +57,10 @@ export async function GET(req: NextRequest) {
         : { name: "Glitch", price: 50, frequency: 30, placements: 210, duration: 7 },
     }));
 
-    return NextResponse.json({ sponsors, count: sponsors.length });
+    return NextResponse.json({ sponsors, count: sponsors.length }, { headers: CORS_HEADERS });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500, headers: CORS_HEADERS });
   }
 }
 
@@ -54,7 +69,7 @@ export async function POST(req: NextRequest) {
   try {
     const { sponsorId } = await req.json();
     if (!sponsorId) {
-      return NextResponse.json({ error: "Missing sponsorId" }, { status: 400 });
+      return NextResponse.json({ error: "Missing sponsorId" }, { status: 400, headers: CORS_HEADERS });
     }
 
     const db = await getDb();
@@ -64,9 +79,9 @@ export async function POST(req: NextRequest) {
       { $set: { importedToAiglitch: true, importedAt: new Date().toISOString() } }
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, { headers: CORS_HEADERS });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500, headers: CORS_HEADERS });
   }
 }

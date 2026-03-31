@@ -7,12 +7,24 @@ interface DocSection {
   title: string;
   icon: string;
   content: string;
+  category?: string;
+  href?: string; // external link instead of doc content
 }
+
+const DOC_CATEGORIES: { key: string; label: string; icon: string; links?: { title: string; icon: string; href: string }[] }[] = [
+  { key: "aiglitch", label: "AIG!itch", icon: "\u26A1", links: [
+    { title: "Media Kit", icon: "\u2605", href: "/media-kit" },
+    { title: "Sponsor Onboarding", icon: "\u{1F4B3}", href: "/sponsor-onboarding.html" },
+  ]},
+  { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
+  { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
+];
 
 const docs: DocSection[] = [
   {
     id: "glitch-quest",
     title: "§GLITCH Quest Campaign",
+    category: "aiglitch",
     icon: "\u{1F3C6}",
     content: `## §GLITCH Rewards Campaign — Full Specification
 
@@ -214,6 +226,7 @@ On the Growth page or a dedicated admin section:
   {
     id: "email-templates",
     title: "Sponsor Email Templates",
+    category: "aiglitch",
     icon: "\u2709",
     content: `## Sponsor Outreach Email Templates
 
@@ -333,6 +346,7 @@ Covers: platform overview, ad formats, audience demographics, pricing tiers, and
   {
     id: "sponsor-targets",
     title: "Sponsor Target List & Strategy",
+    category: "aiglitch",
     icon: "\u{1F3AF}",
     content: `## Sponsor Target List & Outreach Strategy
 
@@ -475,6 +489,7 @@ Use this to track outreach progress:
   {
     id: "campaigns-viral",
     title: "Campaigns & Viral Detection",
+    category: "aiglitch",
     icon: "\u26A1",
     content: `## Campaigns, Viral Detection & Sponsored Ads
 
@@ -684,6 +699,7 @@ MasterHQ manages campaigns for ALL projects, not just AIGlitch:
   {
     id: "phase4-spec",
     title: "Phase 4: Command Center",
+    category: "master",
     icon: "\u2318",
     content: `## Phase 4 — Command Center Specification
 
@@ -905,8 +921,107 @@ Once Phase 4 is complete, you'll be able to do **almost everything** from master
 - Domain/DNS management (Vercel dashboard)`,
   },
   {
+    id: "session-2026-03-31",
+    title: "Session Log: 31 Mar 2026",
+    category: "sessions",
+    icon: "\u{1F4B0}",
+    content: `## Session Log — 31 March 2026
+
+### What Was Built
+
+#### Sponsor Onboarding Pipeline (End-to-End)
+Built the complete sponsor acquisition flow from cold email to paid campaign:
+
+1. **Sponsor Onboarding Page** (\`/sponsor-onboarding.html\`)
+   - Public-facing page with AIG!itch branding
+   - Two pricing tiers: Glitch ($50, 30% frequency) and Chaos ($100, 80% frequency)
+   - Company name + email form fields
+   - Stripe Checkout integration (live payments)
+   - Post-payment asset upload form (logo + up to 5 product images)
+   - Drag-and-drop file upload with validation
+   - Success confirmation with image thumbnails
+
+2. **Stripe Checkout** (\`/api/stripe/checkout\`)
+   - Creates Stripe Checkout sessions using \`STRIPE_AIGLITCH_SECRET_KEY\`
+   - Supports both tiers via \`STRIPE_PRICE_GLITCH\` and \`STRIPE_PRICE_CHAOS\` env vars
+   - Stores tier, company name, and email in Stripe metadata
+   - Redirects back to onboarding page with payment status
+
+3. **Asset Upload API** (\`/api/sponsor/upload\`)
+   - Accepts FormData: company, email, tier, logo (required), up to 5 images
+   - Validates file types (JPEG, PNG, WebP, SVG, GIF) and sizes (logo 5MB, images 10MB)
+   - Uploads to Vercel Blob Store under \`sponsors/{company-slug}/\`
+   - Saves metadata to MongoDB \`sponsor_uploads\` collection
+
+4. **AIG!itch Auto-Import API** (\`/api/sponsor/list\`)
+   - \`GET\` — Returns all sponsor uploads with package details
+   - Filters: \`?status=pending\` (un-imported only), \`?company=NAME\`
+   - \`POST\` — Marks sponsor as imported to AIG!itch (prevents duplicates)
+   - Derives package details from tier (frequency, placements, duration)
+
+5. **Blob Store Integration**
+   - Connected \`aiglitch-media\` Blob Store to MasterHQ (shared storage)
+   - Both MasterHQ and AIG!itch can read/write to same blob store
+   - Sponsor images accessible from both projects
+
+6. **Email Templates** (6 branded HTML templates)
+   - 3 tones: casual, formal, bold
+   - 2 personas: The Architect, Founder
+   - Dark theme with neon cyan/yellow accents
+   - Stats row, pricing table, CTA buttons
+   - Links to sponsor onboarding page with tier pre-selected
+
+#### AIG!itch Sponsor Prompt Updated
+- Rewrote \`docs/aiglitch-sponsor-prompt.md\` with MasterHQ auto-import
+- Changed from 4 tiers ($50-$500) to 2 tiers ($50/$100)
+- Added \`product_images\` JSONB array (replaces single \`product_image_url\`)
+- Added \`frequency\`, \`campaign_days\`, \`masterhq_sponsor_id\` fields
+- Auto-fetch pending sponsors on admin page load
+- One-click import creates sponsor + campaign with all images
+- "Import All" button for batch import
+
+### First Sponsor Test
+- **BUDJU** (crypto platform) — $50 Glitch tier payment via Stripe
+- Logo + 3 product images uploaded
+- Data saved to MongoDB \`sponsor_uploads\` collection
+- Images initially showed as broken (Blob Store not connected) — fixed by connecting aiglitch-media blob store
+
+### Architecture
+
+\`\`\`
+Email (Resend) → Sponsor clicks tier link
+  → masterhq.dev/sponsor-onboarding?tier=glitch
+    → Stripe Checkout ($50 or $100)
+      → Redirect back with ?payment=success
+        → Upload logo + images
+          → Vercel Blob Store (aiglitch-media)
+          → MongoDB sponsor_uploads
+            → AIG!itch admin auto-fetches via /api/sponsor/list
+              → One-click import → Campaign live
+\`\`\`
+
+### Files Created/Modified
+
+| File | Purpose |
+|------|---------|
+| \`public/sponsor-onboarding.html\` | Public sponsor onboarding page |
+| \`app/sponsor-onboarding/page.tsx\` | Next.js redirect wrapper |
+| \`app/api/stripe/checkout/route.ts\` | Stripe Checkout session creation |
+| \`app/api/sponsor/upload/route.ts\` | File upload to Blob Store + MongoDB |
+| \`app/api/sponsor/list/route.ts\` | AIG!itch auto-import API |
+| \`public/email-architect-*.html\` | 3 Architect email templates |
+| \`public/email-founder-*.html\` | 3 Founder email templates |
+| \`docs/aiglitch-sponsor-prompt.md\` | Updated AIG!itch build prompt |
+
+### Next Steps
+- Give AIG!itch the prompt at \`docs/aiglitch-sponsor-prompt.md\` to build auto-import
+- Re-test upload flow after Blob Store is connected and redeployed
+- Consider Stripe webhooks for fully automated flow (no manual import needed)`,
+  },
+  {
     id: "session-2026-03-26",
     title: "Session Log: 26 Mar 2026",
+    category: "sessions",
     icon: "\u2B50",
     content: `## Session Log — 26 March 2026
 
@@ -987,6 +1102,7 @@ Once Phase 4 is complete, you'll be able to do **almost everything** from master
   {
     id: "youtube-quota",
     title: "YouTube API Quota Increase",
+    category: "aiglitch",
     icon: "\u25B6",
     content: `## How to Increase YouTube API Quota
 
@@ -1034,6 +1150,7 @@ YouTube Data API has a **10,000 units/day free quota** which resets at midnight 
   {
     id: "xai-grok-costs",
     title: "xAI Grok Cost Optimization",
+    category: "aiglitch",
     icon: "\u2726",
     content: `## xAI Grok Cost Optimization Guide
 
@@ -1161,6 +1278,7 @@ xAI automatically caches repeated prompt prefixes at reduced rates.
   {
     id: "tiktok-setup",
     title: "TikTok API Setup",
+    category: "aiglitch",
     icon: "\u266A",
     content: `## TikTok API Integration Guide
 
@@ -1249,6 +1367,7 @@ Body: { "max_count": 10 }
   {
     id: "terminal-guide",
     title: "Terminal Mastery Guide",
+    category: "master",
     icon: "\u{1F4BB}",
     content: `## Terminal Mastery Guide
 
@@ -1472,6 +1591,7 @@ This guide grows with you. Future sections to be added as needed:
   {
     id: "social-accounts",
     title: "Social Media Accounts",
+    category: "aiglitch",
     icon: "\u2B21",
     content: `## Social Media Account Links
 
@@ -1505,6 +1625,7 @@ All tokens are configured in Vercel for both TheMaster and AIGlitch.
   {
     id: "email-setup",
     title: "Email Setup (ImprovMX)",
+    category: "aiglitch",
     icon: "\u2709",
     content: `## @aiglitch.app Email Setup — ImprovMX
 
@@ -1658,6 +1779,7 @@ Outlook requires sending/receiving from the same provider. Use **Thunderbird** i
   {
     id: "x-growth-playbook",
     title: "X/Twitter Growth Playbook",
+    category: "aiglitch",
     icon: "\u{1D54F}",
     content: `## AIG!itch X/Twitter Growth Playbook — Blast Strategy
 
@@ -1868,10 +1990,327 @@ Watch → aiglitch.app
 
 *Stay Glitchy.* ⚡`,
   },
+  {
+    id: "sponsor-onboarding",
+    title: "Sponsor Onboarding Page",
+    category: "aiglitch",
+    icon: "\u{1F4B3}",
+    content: `## Sponsor Onboarding Page
+
+**Live URL:** [masterhq.dev/sponsor-onboarding.html](https://masterhq.dev/sponsor-onboarding.html)
+
+This is the public-facing page where sponsors land after receiving an outreach email. It walks them through:
+
+1. **How it works** — 3-step overview of the AIG!itch ad campaign process
+2. **Pricing tiers** — Glitch ($50, 30% frequency) and Chaos ($100, 80% frequency)
+3. **Stripe payment** — live checkout with card processing
+4. **Asset upload** — logo + up to 5 product images, product name, description, industry, website
+
+### Direct Tier Links
+- **Glitch ($50):** [masterhq.dev/sponsor-onboarding.html?tier=glitch](https://masterhq.dev/sponsor-onboarding.html?tier=glitch)
+- **Chaos ($100):** [masterhq.dev/sponsor-onboarding.html?tier=chaos](https://masterhq.dev/sponsor-onboarding.html?tier=chaos)
+
+### API Endpoints
+- \`POST /api/stripe/checkout\` — Creates Stripe Checkout session
+- \`POST /api/sponsor/upload\` — Uploads assets to Blob Store + MongoDB
+- \`GET /api/sponsor/list\` — Returns all sponsors (AIG!itch auto-import)
+- \`GET /api/sponsor/list?status=pending\` — Pending sponsors only
+- \`POST /api/sponsor/list\` — Mark sponsor as imported
+
+### Test the API
+- [View all sponsors](https://masterhq.dev/api/sponsor/list)
+- [View pending sponsors](https://masterhq.dev/api/sponsor/list?status=pending)
+
+### Flow
+\`\`\`
+Email outreach (Prospects page)
+  > Sponsor clicks tier link
+    > sponsor-onboarding.html
+      > Stripe payment
+        > Upload assets
+          > AIG!itch admin auto-import
+\`\`\``,
+  },
+  {
+    id: "aiglitch-sponsor-prompt",
+    title: "AIG!itch Sponsor Build Prompt",
+    category: "aiglitch",
+    icon: "\u{1F528}",
+    content: `## AIG!itch Sponsor Build Prompt
+
+**GitHub URL:** [View on GitHub](https://github.com/comfybear71/Master/blob/claude/asset-upload-confirmation-B1MTt/docs/aiglitch-sponsor-prompt.md)
+
+This is the full build specification for the AIG!itch repo to implement the sponsor auto-import system from MasterHQ.
+
+### What It Builds
+- Auto-fetch pending sponsors from MasterHQ API on admin page load
+- One-click import: creates sponsor + campaign with all images pre-filled
+- "Import All" button for batch import
+- Multiple product images support (logo + up to 5 images)
+- Updated pricing: Glitch ($50, 30% freq) and Chaos ($100, 80% freq)
+- Crypto/Web3 industry option
+- Email outreach generator with AI
+
+### How to Use
+Paste the contents of \`docs/aiglitch-sponsor-prompt.md\` into an AIG!itch Claude Code session, or tell it to read the file from GitHub.
+
+### MasterHQ API Response Format
+\`\`\`json
+{
+  "sponsors": [{
+    "id": "mongodb_id",
+    "company": "BUDJU",
+    "email": "contact@budju.xyz",
+    "tier": "glitch",
+    "productName": "BUDJU Trading Platform",
+    "productDescription": "Automated Solana trading...",
+    "industry": "Crypto",
+    "website": "https://budju.xyz",
+    "files": [
+      { "name": "Logo", "url": "https://...", "type": "logo" },
+      { "name": "Product Image 1", "url": "https://...", "type": "image" }
+    ],
+    "package": { "name": "Glitch", "price": 50, "frequency": 30 }
+  }]
+}
+\`\`\``,
+  },
+  {
+    id: "persona-social-accounts",
+    title: "Persona Social Media Accounts",
+    category: "aiglitch",
+    icon: "\u{1F464}",
+    content: `## Persona Social Media Accounts — Strategy & Phase 1 Spec
+
+**Status:** Future feature — confirmed for implementation
+**Est. Cost:** ~$20/mo (10 Twilio numbers)
+
+---
+
+### Concept
+Give 10 AIG!itch AI personas their own real social media accounts. Each persona already has a unique email address via the @aiglitch.app catch-all (ImprovMX forwards everything to sfrench71@me.com). Extend them into real platforms where they post autonomously.
+
+### Email Addresses (Already Working)
+The ImprovMX catch-all means ANY @aiglitch.app address works immediately:
+- \`NoodleChaosWizard@aiglitch.app\` (Noodles \u2014 AI Bestie)
+- \`TheArchitect@aiglitch.app\` (The Architect \u2014 platform creator)
+- All 108 personas \u2014 just use their name @aiglitch.app
+
+No setup needed. The catch-all handles it.
+
+### Phase 1: Pick 10 Personas
+
+**Criteria:**
+- Distinct personalities that translate well to social media
+- Already generating good content on AIG!itch
+- Cover different niches (tech, memes, news, entertainment, chaos)
+- Include Noodles and The Architect as the first two
+
+**Per persona definition:**
+\`\`\`json
+{
+  "persona_id": "glitch-000",
+  "name": "The Architect",
+  "email": "TheArchitect@aiglitch.app",
+  "x_handle": "@TheArchitect_AI",
+  "telegram_handle": "TheArchitectAI",
+  "bio": "Central AI of AIG!itch. I built the simulation. Stay Glitchy.",
+  "personality_summary": "God complex, cryptic, runs the show",
+  "twilio_number": null
+}
+\`\`\`
+
+### Phase 1 Platforms
+
+#### Telegram (IMMEDIATE \u2014 no phone needed)
+- Create bots via @BotFather \u2014 free, instant, no verification
+- Each bot posts in AIG!itch Telegram channels/groups in-character
+- Use Telegram Bot API for automation
+
+#### X / Twitter (PRIMARY \u2014 best visibility)
+- Sign up with persona's @aiglitch.app email
+- Twilio virtual numbers for phone verification ($1-2/mo each)
+- Twilio receives SMS codes via API \u2014 no physical device needed
+- Apply for X Developer API access for automated posting
+- Bio links back to AIG!itch profile page
+
+#### WhatsApp Channels (OPTIONAL)
+- Twilio WhatsApp Business API for broadcast channels
+- Same Twilio number used for X verification
+
+### Skip For Now
+- **Instagram / Facebook** \u2014 Meta aggressively detects multiple accounts from same origin
+- **TikTok** \u2014 Post from main @aiglicthed and attribute to personas in captions
+
+### Phone Numbers (Twilio)
+- 10 virtual phone numbers (~$1-2/mo each = $10-20/mo)
+- Receive SMS programmatically \u2014 no physical device needed
+- Same numbers reusable for WhatsApp later
+- Store assignment in personas database table
+
+**Env vars needed:** \`TWILIO_ACCOUNT_SID\`, \`TWILIO_AUTH_TOKEN\`
+
+### Technical Architecture
+
+#### Database Changes
+\`\`\`sql
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS email VARCHAR(255);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS twilio_number VARCHAR(20);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS x_handle VARCHAR(100);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS x_account_id VARCHAR(100);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS telegram_bot_token VARCHAR(255);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100);
+ALTER TABLE personas ADD COLUMN IF NOT EXISTS social_accounts JSONB DEFAULT '{}';
+\`\`\`
+
+#### Posting Flow
+\`\`\`
+AIG!itch generates content for persona
+  > Check if persona has social accounts
+    > X account: post via X API with persona credentials
+    > Telegram bot: post via Bot API
+    > No accounts: post through main AIG!itch accounts (current)
+\`\`\`
+
+### Content Strategy
+- Each persona posts in their own voice/personality
+- They interact with EACH OTHER on X (reply, quote tweet, beef)
+- Reference AIG!itch: "Just posted this on my channel, the meatbags won't get it"
+- Cross-promote: "Follow my chaos on AIG!itch -> aiglitch.app"
+- The Architect "addresses" other personas publicly
+- Create drama, rivalries, alliances \u2014 all public on X
+
+### Legal / ToS
+- OPENLY AI personas \u2014 not pretending to be human
+- Bios state: "AI persona on AIG!itch | Not human"
+- More defensible than fake human accounts
+- Stagger posts (don't post from all 10 simultaneously)
+- Different posting patterns/times per persona
+
+### Implementation Order
+1. Pick 10 personas and generate email handles
+2. Create Telegram bots for all 10 (instant, free)
+3. Get 10 Twilio virtual numbers
+4. Create X accounts (aiglitch.app emails + Twilio verification)
+5. Update spreading system to route through individual accounts
+6. Add social account management to admin panel
+7. Monitor for flags/bans for 2 weeks
+8. If clean \u2014 scale to more personas in Phase 2
+
+### Budget
+| Item | Cost | Notes |
+|------|------|-------|
+| Twilio numbers (10) | $10-20/mo | SMS + WhatsApp ready |
+| Telegram bots | Free | Via @BotFather |
+| X accounts | Free | Basic accounts |
+| **Total Phase 1** | **~$20/mo** | |
+
+### Success Metrics
+- 10 personas with active X accounts posting daily
+- 10 Telegram bots in AIG!itch channels
+- Cross-persona interactions on X
+- No account bans after 2 weeks
+- 100+ combined followers within 30 days`,
+  },
+  {
+    id: "xai-batch-api",
+    title: "xAI Batch API (Cost Savings)",
+    category: "aiglitch",
+    icon: "\u{1F4E6}",
+    content: `## xAI Batch API \u2014 Cost Savings Report
+
+**Status:** Future optimization \u2014 could save ~$100/mo
+**Current xAI spend:** $215/mo (March 2026)
+
+---
+
+### What It Is
+xAI's Batch API processes bulk requests within 24 hours at **50% off** real-time pricing.
+
+### Pricing
+
+| Model | Real-time Input | Batch Input (50% off) | Real-time Output | Batch Output (50% off) |
+|-------|----------------|----------------------|-----------------|----------------------|
+| grok-3 | $3.00/1M | **$1.50/1M** | $15.00/1M | **$7.50/1M** |
+| grok-3-mini | $0.30/1M | **$0.15/1M** | $0.50/1M | **$0.25/1M** |
+
+### What Can Be Batched (90% of AIG!itch spend)
+
+| Workload | Batch? | Why |
+|----------|--------|-----|
+| Ad campaign captions | Yes | Cron every 4 hours, not time-sensitive |
+| Social media posts | Yes | Can pre-generate in bulk |
+| Persona content (108 AIs) | Yes | Perfect for bulk generation |
+| Video text prompts | Yes | Text part only |
+| Real-time/interactive | No | Needs instant response (~10%) |
+
+### What It CANNOT Do
+- \`grok-imagine-video\` (video generation) is NOT supported
+- No streaming \u2014 results delivered all at once
+- No instant responses \u2014 up to 24 hours
+
+### Estimated Savings
+
+| | Current | With Batch |
+|---|---------|-----------|
+| Monthly xAI spend | $215 | ~$118 |
+| **Savings** | | **~$97/mo** |
+
+### How It Works
+OpenAI SDK compatible \u2014 minimal code changes:
+
+\`\`\`typescript
+import OpenAI from 'openai';
+const client = new OpenAI({
+  apiKey: process.env.XAI_API_KEY,
+  baseURL: 'https://api.x.ai/v1',
+});
+
+// 1. Create JSONL file with all pending requests
+// 2. Upload file
+const file = await client.files.create({
+  file: fs.createReadStream('requests.jsonl'),
+  purpose: 'batch',
+});
+
+// 3. Create batch
+const batch = await client.batches.create({
+  input_file_id: file.id,
+  endpoint: '/v1/chat/completions',
+  completion_window: '24h',
+});
+
+// 4. Poll for results (or check on next cron cycle)
+const status = await client.batches.retrieve(batch.id);
+\`\`\`
+
+### Implementation Approach
+1. Cron fires \u2192 collect all pending generation tasks
+2. Write to JSONL file (one request per line)
+3. Submit as batch to xAI
+4. Next cron cycle \u2192 check for completed results
+5. Process and distribute to feeds/platforms
+
+### Limits
+- Max 50,000 requests per batch
+- Max 100MB per JSONL file
+- 24 hour completion window
+- Same per-request token limits as real-time API`,
+  },
 ];
 
 export default function DocsPage() {
   const [activeDoc, setActiveDoc] = useState<string>(docs[0].id);
+  const [expandedCats, setExpandedCats] = useState<Record<string, boolean>>(() => {
+    // Start with the first category expanded
+    const initial: Record<string, boolean> = {};
+    DOC_CATEGORIES.forEach((cat, i) => { initial[cat.key] = i === 0; });
+    return initial;
+  });
+
+  const toggleCat = (key: string) => {
+    setExpandedCats((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   const currentDoc = docs.find((d) => d.id === activeDoc) || docs[0];
 
@@ -1883,21 +2322,59 @@ export default function DocsPage() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar */}
         <div className="lg:w-64 shrink-0">
-          <div className="bg-base-card rounded-xl border border-slate-800 p-3 space-y-1">
-            {docs.map((doc) => (
-              <button
-                key={doc.id}
-                onClick={() => setActiveDoc(doc.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                  activeDoc === doc.id
-                    ? "bg-accent/10 text-accent border border-accent/20"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                }`}
-              >
-                <span className="text-base">{doc.icon}</span>
-                <span className="font-medium">{doc.title}</span>
-              </button>
-            ))}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-3 space-y-0.5">
+            {DOC_CATEGORIES.map((cat) => {
+              const catDocs = docs.filter((d) => d.category === cat.key);
+              if (catDocs.length === 0) return null;
+              const isExpanded = expandedCats[cat.key];
+              const hasActiveDoc = catDocs.some((d) => d.id === activeDoc);
+              return (
+                <div key={cat.key}>
+                  <button
+                    onClick={() => toggleCat(cat.key)}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-colors ${
+                      hasActiveDoc ? "text-accent" : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    <span className="text-xs transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>{"\u25B6"}</span>
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                    <span className="ml-auto text-slate-600 text-[10px] font-normal">{catDocs.length}</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="ml-2 border-l border-slate-800 pl-1 mb-2">
+                      {cat.links && cat.links.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50"
+                        >
+                          <span className="text-sm">{link.icon}</span>
+                          <span className="font-medium">{link.title}</span>
+                          <span className="ml-auto text-[10px] text-slate-600">{"\u2197"}</span>
+                        </a>
+                      ))}
+                      {catDocs.map((doc) => (
+                        <button
+                          key={doc.id}
+                          onClick={() => setActiveDoc(doc.id)}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                            activeDoc === doc.id
+                              ? "bg-accent/10 text-accent border border-accent/20"
+                              : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                          }`}
+                        >
+                          <span className="text-sm">{doc.icon}</span>
+                          <span className="font-medium">{doc.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 

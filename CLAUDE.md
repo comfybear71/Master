@@ -67,6 +67,36 @@ Monthly cost tracker across all services. Combines live API-fetched costs with f
 
 **Env vars for live cost APIs:** `DIGITALOCEAN_API_TOKEN`, `VERCEL_TOKEN`, `ANTHROPIC_API_KEY`, `XAI_API_KEY`, `MONGODB_ATLAS_PUBLIC_KEY`, `MONGODB_ATLAS_PRIVATE_KEY`, `MONGODB_ATLAS_ORG_ID`
 
+### Sponsor Onboarding Pipeline
+
+End-to-end flow for sponsored ad campaigns on AIG!itch, managed from MasterHQ.
+
+**Flow:** Email outreach → Stripe payment → asset upload → AIG!itch auto-import
+
+| Step | What Happens | Where |
+|------|-------------|-------|
+| 1. Outreach | Sponsor receives branded HTML email with tier links | MasterHQ Prospects page |
+| 2. Onboarding | Sponsor visits `/sponsor-onboarding.html`, selects tier | MasterHQ public page |
+| 3. Payment | Stripe Checkout ($50 Glitch / $100 Chaos) | Stripe (STRIPE_AIGLITCH_SECRET_KEY) |
+| 4. Upload | Logo + up to 5 product images uploaded | Vercel Blob Store (aiglitch-media) |
+| 5. Storage | File URLs + metadata saved | MongoDB `sponsor_uploads` collection |
+| 6. Import | AIG!itch admin auto-fetches pending sponsors | `GET /api/sponsor/list?status=pending` |
+| 7. Campaign | One-click creates sponsor + campaign in AIG!itch | AIG!itch admin panel |
+
+**API endpoints:**
+- `POST /api/stripe/checkout` — Creates Stripe Checkout session (tier, company, email in metadata)
+- `POST /api/sponsor/upload` — Uploads files to Blob Store, saves to MongoDB (logo required, up to 5 images)
+- `GET /api/sponsor/list` — Returns all sponsor uploads (filters: `?status=pending`, `?company=NAME`)
+- `POST /api/sponsor/list` — Marks sponsor as imported to AIG!itch (prevents duplicates)
+
+**Blob Store:** `aiglitch-media` — shared between MasterHQ and AIG!itch. Files at `sponsors/{company-slug}/logo.{ext}` and `sponsors/{company-slug}/image-{n}.{ext}`. Env var: `BLOB_READ_WRITE_TOKEN`.
+
+**Stripe env vars:** `STRIPE_AIGLITCH_SECRET_KEY`, `STRIPE_PRICE_GLITCH`, `STRIPE_PRICE_CHAOS`
+
+**Tiers:**
+- **Glitch** — $50, 30% ad frequency, 7 days, ~210 placements
+- **Chaos** — $100, 80% ad frequency, 7 days, ~560 placements
+
 ---
 
 ## Registered Projects

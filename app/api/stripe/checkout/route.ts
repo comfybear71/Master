@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "payment",
-      success_url: `${SITE_URL}/sponsor-onboarding.html?payment=success&tier=${tier}`,
+      success_url: `${SITE_URL}/sponsor-onboarding.html?payment=success&tier=${tier}&company=${encodeURIComponent(company || "")}&email=${encodeURIComponent(email || "")}`,
       cancel_url: `${SITE_URL}/sponsor-onboarding.html?payment=cancelled`,
       customer_email: email || undefined,
       metadata: {
