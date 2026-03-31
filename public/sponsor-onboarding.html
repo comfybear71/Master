@@ -368,6 +368,14 @@
   } else if (params.get('tier') === 'glitch') {
     setTimeout(function() { document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' }); }, 500);
   }
+  // Restore company/email from URL params (survive Stripe redirect)
+  if (params.get('company')) {
+    document.getElementById('company-input').value = decodeURIComponent(params.get('company'));
+  }
+  if (params.get('email')) {
+    document.getElementById('email-input').value = decodeURIComponent(params.get('email'));
+  }
+
   if (params.get('payment') === 'success') {
     document.getElementById('payment-success').style.display = 'block';
     document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' });
