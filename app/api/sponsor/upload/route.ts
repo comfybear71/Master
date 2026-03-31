@@ -15,6 +15,10 @@ export async function POST(req: NextRequest) {
     const company = formData.get("company") as string || "Unknown";
     const email = formData.get("email") as string || "";
     const tier = formData.get("tier") as string || "glitch";
+    const productName = formData.get("productName") as string || "";
+    const productDescription = formData.get("productDescription") as string || "";
+    const industry = formData.get("industry") as string || "";
+    const website = formData.get("website") as string || "";
 
     const uploadedFiles: { name: string; url: string; type: string }[] = [];
 
@@ -60,6 +64,10 @@ export async function POST(req: NextRequest) {
       company,
       email,
       tier,
+      productName,
+      productDescription,
+      industry,
+      website,
       files: uploadedFiles,
       createdAt: new Date().toISOString(),
     });
