@@ -1318,5 +1318,15 @@
     "email": "crackmumma@gmail.com",
     "country": "AUD",
     "notes": "TEST ACCOUNT — Mum. For testing sponsor emails."
+  },
+  {
+    "company": "Bros Construction",
+    "industry": "Construction",
+    "subCategory": "Building",
+    "website": "",
+    "linkedinTitle": "Andrew French",
+    "email": "french_andrew@icloud.com",
+    "country": "AUD",
+    "notes": "TEST ACCOUNT — Brother. Send test emails."
   }
 ]
