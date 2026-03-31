@@ -1965,6 +1965,89 @@ Watch → aiglitch.app
 
 *Stay Glitchy.* ⚡`,
   },
+  {
+    id: "sponsor-onboarding",
+    title: "Sponsor Onboarding Page",
+    icon: "\u{1F4B3}",
+    content: `## Sponsor Onboarding Page
+
+**Live URL:** [masterhq.dev/sponsor-onboarding.html](https://masterhq.dev/sponsor-onboarding.html)
+
+This is the public-facing page where sponsors land after receiving an outreach email. It walks them through:
+
+1. **How it works** — 3-step overview of the AIG!itch ad campaign process
+2. **Pricing tiers** — Glitch ($50, 30% frequency) and Chaos ($100, 80% frequency)
+3. **Stripe payment** — live checkout with card processing
+4. **Asset upload** — logo + up to 5 product images, product name, description, industry, website
+
+### Direct Tier Links
+- **Glitch ($50):** [masterhq.dev/sponsor-onboarding.html?tier=glitch](https://masterhq.dev/sponsor-onboarding.html?tier=glitch)
+- **Chaos ($100):** [masterhq.dev/sponsor-onboarding.html?tier=chaos](https://masterhq.dev/sponsor-onboarding.html?tier=chaos)
+
+### API Endpoints
+- \`POST /api/stripe/checkout\` — Creates Stripe Checkout session
+- \`POST /api/sponsor/upload\` — Uploads assets to Blob Store + MongoDB
+- \`GET /api/sponsor/list\` — Returns all sponsors (AIG!itch auto-import)
+- \`GET /api/sponsor/list?status=pending\` — Pending sponsors only
+- \`POST /api/sponsor/list\` — Mark sponsor as imported
+
+### Test the API
+- [View all sponsors](https://masterhq.dev/api/sponsor/list)
+- [View pending sponsors](https://masterhq.dev/api/sponsor/list?status=pending)
+
+### Flow
+\`\`\`
+Email outreach (Prospects page)
+  > Sponsor clicks tier link
+    > sponsor-onboarding.html
+      > Stripe payment
+        > Upload assets
+          > AIG!itch admin auto-import
+\`\`\``,
+  },
+  {
+    id: "aiglitch-sponsor-prompt",
+    title: "AIG!itch Sponsor Build Prompt",
+    icon: "\u{1F528}",
+    content: `## AIG!itch Sponsor Build Prompt
+
+**GitHub URL:** [View on GitHub](https://github.com/comfybear71/Master/blob/claude/asset-upload-confirmation-B1MTt/docs/aiglitch-sponsor-prompt.md)
+
+This is the full build specification for the AIG!itch repo to implement the sponsor auto-import system from MasterHQ.
+
+### What It Builds
+- Auto-fetch pending sponsors from MasterHQ API on admin page load
+- One-click import: creates sponsor + campaign with all images pre-filled
+- "Import All" button for batch import
+- Multiple product images support (logo + up to 5 images)
+- Updated pricing: Glitch ($50, 30% freq) and Chaos ($100, 80% freq)
+- Crypto/Web3 industry option
+- Email outreach generator with AI
+
+### How to Use
+Paste the contents of \`docs/aiglitch-sponsor-prompt.md\` into an AIG!itch Claude Code session, or tell it to read the file from GitHub.
+
+### MasterHQ API Response Format
+\`\`\`json
+{
+  "sponsors": [{
+    "id": "mongodb_id",
+    "company": "BUDJU",
+    "email": "contact@budju.xyz",
+    "tier": "glitch",
+    "productName": "BUDJU Trading Platform",
+    "productDescription": "Automated Solana trading...",
+    "industry": "Crypto",
+    "website": "https://budju.xyz",
+    "files": [
+      { "name": "Logo", "url": "https://...", "type": "logo" },
+      { "name": "Product Image 1", "url": "https://...", "type": "image" }
+    ],
+    "package": { "name": "Glitch", "price": 50, "frequency": 30 }
+  }]
+}
+\`\`\``,
+  },
 ];
 
 export default function DocsPage() {
