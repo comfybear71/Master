@@ -7,12 +7,21 @@ interface DocSection {
   title: string;
   icon: string;
   content: string;
+  category?: string;
 }
+
+const DOC_CATEGORIES: { key: string; label: string; icon: string }[] = [
+  { key: "aiglitch", label: "AIG!itch", icon: "\u26A1" },
+  { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
+  { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
+  { key: "reference", label: "Reference", icon: "\u{1F4DA}" },
+];
 
 const docs: DocSection[] = [
   {
     id: "glitch-quest",
     title: "§GLITCH Quest Campaign",
+    category: "aiglitch",
     icon: "\u{1F3C6}",
     content: `## §GLITCH Rewards Campaign — Full Specification
 
@@ -214,6 +223,7 @@ On the Growth page or a dedicated admin section:
   {
     id: "email-templates",
     title: "Sponsor Email Templates",
+    category: "aiglitch",
     icon: "\u2709",
     content: `## Sponsor Outreach Email Templates
 
@@ -333,6 +343,7 @@ Covers: platform overview, ad formats, audience demographics, pricing tiers, and
   {
     id: "sponsor-targets",
     title: "Sponsor Target List & Strategy",
+    category: "aiglitch",
     icon: "\u{1F3AF}",
     content: `## Sponsor Target List & Outreach Strategy
 
@@ -475,6 +486,7 @@ Use this to track outreach progress:
   {
     id: "campaigns-viral",
     title: "Campaigns & Viral Detection",
+    category: "aiglitch",
     icon: "\u26A1",
     content: `## Campaigns, Viral Detection & Sponsored Ads
 
@@ -684,6 +696,7 @@ MasterHQ manages campaigns for ALL projects, not just AIGlitch:
   {
     id: "phase4-spec",
     title: "Phase 4: Command Center",
+    category: "master",
     icon: "\u2318",
     content: `## Phase 4 — Command Center Specification
 
@@ -907,6 +920,7 @@ Once Phase 4 is complete, you'll be able to do **almost everything** from master
   {
     id: "session-2026-03-31",
     title: "Session Log: 31 Mar 2026",
+    category: "sessions",
     icon: "\u{1F4B0}",
     content: `## Session Log — 31 March 2026
 
@@ -1004,6 +1018,7 @@ Email (Resend) → Sponsor clicks tier link
   {
     id: "session-2026-03-26",
     title: "Session Log: 26 Mar 2026",
+    category: "sessions",
     icon: "\u2B50",
     content: `## Session Log — 26 March 2026
 
@@ -1084,6 +1099,7 @@ Email (Resend) → Sponsor clicks tier link
   {
     id: "youtube-quota",
     title: "YouTube API Quota Increase",
+    category: "reference",
     icon: "\u25B6",
     content: `## How to Increase YouTube API Quota
 
@@ -1131,6 +1147,7 @@ YouTube Data API has a **10,000 units/day free quota** which resets at midnight 
   {
     id: "xai-grok-costs",
     title: "xAI Grok Cost Optimization",
+    category: "reference",
     icon: "\u2726",
     content: `## xAI Grok Cost Optimization Guide
 
@@ -1258,6 +1275,7 @@ xAI automatically caches repeated prompt prefixes at reduced rates.
   {
     id: "tiktok-setup",
     title: "TikTok API Setup",
+    category: "reference",
     icon: "\u266A",
     content: `## TikTok API Integration Guide
 
@@ -1346,6 +1364,7 @@ Body: { "max_count": 10 }
   {
     id: "terminal-guide",
     title: "Terminal Mastery Guide",
+    category: "master",
     icon: "\u{1F4BB}",
     content: `## Terminal Mastery Guide
 
@@ -1569,6 +1588,7 @@ This guide grows with you. Future sections to be added as needed:
   {
     id: "social-accounts",
     title: "Social Media Accounts",
+    category: "reference",
     icon: "\u2B21",
     content: `## Social Media Account Links
 
@@ -1602,6 +1622,7 @@ All tokens are configured in Vercel for both TheMaster and AIGlitch.
   {
     id: "email-setup",
     title: "Email Setup (ImprovMX)",
+    category: "reference",
     icon: "\u2709",
     content: `## @aiglitch.app Email Setup — ImprovMX
 
@@ -1755,6 +1776,7 @@ Outlook requires sending/receiving from the same provider. Use **Thunderbird** i
   {
     id: "x-growth-playbook",
     title: "X/Twitter Growth Playbook",
+    category: "aiglitch",
     icon: "\u{1D54F}",
     content: `## AIG!itch X/Twitter Growth Playbook — Blast Strategy
 
@@ -1968,6 +1990,7 @@ Watch → aiglitch.app
   {
     id: "sponsor-onboarding",
     title: "Sponsor Onboarding Page",
+    category: "aiglitch",
     icon: "\u{1F4B3}",
     content: `## Sponsor Onboarding Page
 
@@ -2008,6 +2031,7 @@ Email outreach (Prospects page)
   {
     id: "aiglitch-sponsor-prompt",
     title: "AIG!itch Sponsor Build Prompt",
+    category: "aiglitch",
     icon: "\u{1F528}",
     content: `## AIG!itch Sponsor Build Prompt
 
@@ -2064,20 +2088,32 @@ export default function DocsPage() {
         {/* Sidebar */}
         <div className="lg:w-64 shrink-0">
           <div className="bg-base-card rounded-xl border border-slate-800 p-3 space-y-1">
-            {docs.map((doc) => (
-              <button
-                key={doc.id}
-                onClick={() => setActiveDoc(doc.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors flex items-center gap-2 ${
-                  activeDoc === doc.id
-                    ? "bg-accent/10 text-accent border border-accent/20"
-                    : "text-slate-400 hover:text-white hover:bg-slate-800/50"
-                }`}
-              >
-                <span className="text-base">{doc.icon}</span>
-                <span className="font-medium">{doc.title}</span>
-              </button>
-            ))}
+            {DOC_CATEGORIES.map((cat) => {
+              const catDocs = docs.filter((d) => d.category === cat.key);
+              if (catDocs.length === 0) return null;
+              return (
+                <div key={cat.key} className="mb-2">
+                  <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                    <span>{cat.icon}</span>
+                    <span>{cat.label}</span>
+                  </div>
+                  {catDocs.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => setActiveDoc(doc.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${
+                        activeDoc === doc.id
+                          ? "bg-accent/10 text-accent border border-accent/20"
+                          : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                      }`}
+                    >
+                      <span className="text-base">{doc.icon}</span>
+                      <span className="font-medium">{doc.title}</span>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </div>
 
