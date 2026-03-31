@@ -905,6 +905,103 @@ Once Phase 4 is complete, you'll be able to do **almost everything** from master
 - Domain/DNS management (Vercel dashboard)`,
   },
   {
+    id: "session-2026-03-31",
+    title: "Session Log: 31 Mar 2026",
+    icon: "\u{1F4B0}",
+    content: `## Session Log — 31 March 2026
+
+### What Was Built
+
+#### Sponsor Onboarding Pipeline (End-to-End)
+Built the complete sponsor acquisition flow from cold email to paid campaign:
+
+1. **Sponsor Onboarding Page** (\`/sponsor-onboarding.html\`)
+   - Public-facing page with AIG!itch branding
+   - Two pricing tiers: Glitch ($50, 30% frequency) and Chaos ($100, 80% frequency)
+   - Company name + email form fields
+   - Stripe Checkout integration (live payments)
+   - Post-payment asset upload form (logo + up to 5 product images)
+   - Drag-and-drop file upload with validation
+   - Success confirmation with image thumbnails
+
+2. **Stripe Checkout** (\`/api/stripe/checkout\`)
+   - Creates Stripe Checkout sessions using \`STRIPE_AIGLITCH_SECRET_KEY\`
+   - Supports both tiers via \`STRIPE_PRICE_GLITCH\` and \`STRIPE_PRICE_CHAOS\` env vars
+   - Stores tier, company name, and email in Stripe metadata
+   - Redirects back to onboarding page with payment status
+
+3. **Asset Upload API** (\`/api/sponsor/upload\`)
+   - Accepts FormData: company, email, tier, logo (required), up to 5 images
+   - Validates file types (JPEG, PNG, WebP, SVG, GIF) and sizes (logo 5MB, images 10MB)
+   - Uploads to Vercel Blob Store under \`sponsors/{company-slug}/\`
+   - Saves metadata to MongoDB \`sponsor_uploads\` collection
+
+4. **AIG!itch Auto-Import API** (\`/api/sponsor/list\`)
+   - \`GET\` — Returns all sponsor uploads with package details
+   - Filters: \`?status=pending\` (un-imported only), \`?company=NAME\`
+   - \`POST\` — Marks sponsor as imported to AIG!itch (prevents duplicates)
+   - Derives package details from tier (frequency, placements, duration)
+
+5. **Blob Store Integration**
+   - Connected \`aiglitch-media\` Blob Store to MasterHQ (shared storage)
+   - Both MasterHQ and AIG!itch can read/write to same blob store
+   - Sponsor images accessible from both projects
+
+6. **Email Templates** (6 branded HTML templates)
+   - 3 tones: casual, formal, bold
+   - 2 personas: The Architect, Founder
+   - Dark theme with neon cyan/yellow accents
+   - Stats row, pricing table, CTA buttons
+   - Links to sponsor onboarding page with tier pre-selected
+
+#### AIG!itch Sponsor Prompt Updated
+- Rewrote \`docs/aiglitch-sponsor-prompt.md\` with MasterHQ auto-import
+- Changed from 4 tiers ($50-$500) to 2 tiers ($50/$100)
+- Added \`product_images\` JSONB array (replaces single \`product_image_url\`)
+- Added \`frequency\`, \`campaign_days\`, \`masterhq_sponsor_id\` fields
+- Auto-fetch pending sponsors on admin page load
+- One-click import creates sponsor + campaign with all images
+- "Import All" button for batch import
+
+### First Sponsor Test
+- **BUDJU** (crypto platform) — $50 Glitch tier payment via Stripe
+- Logo + 3 product images uploaded
+- Data saved to MongoDB \`sponsor_uploads\` collection
+- Images initially showed as broken (Blob Store not connected) — fixed by connecting aiglitch-media blob store
+
+### Architecture
+
+\`\`\`
+Email (Resend) → Sponsor clicks tier link
+  → masterhq.dev/sponsor-onboarding?tier=glitch
+    → Stripe Checkout ($50 or $100)
+      → Redirect back with ?payment=success
+        → Upload logo + images
+          → Vercel Blob Store (aiglitch-media)
+          → MongoDB sponsor_uploads
+            → AIG!itch admin auto-fetches via /api/sponsor/list
+              → One-click import → Campaign live
+\`\`\`
+
+### Files Created/Modified
+
+| File | Purpose |
+|------|---------|
+| \`public/sponsor-onboarding.html\` | Public sponsor onboarding page |
+| \`app/sponsor-onboarding/page.tsx\` | Next.js redirect wrapper |
+| \`app/api/stripe/checkout/route.ts\` | Stripe Checkout session creation |
+| \`app/api/sponsor/upload/route.ts\` | File upload to Blob Store + MongoDB |
+| \`app/api/sponsor/list/route.ts\` | AIG!itch auto-import API |
+| \`public/email-architect-*.html\` | 3 Architect email templates |
+| \`public/email-founder-*.html\` | 3 Founder email templates |
+| \`docs/aiglitch-sponsor-prompt.md\` | Updated AIG!itch build prompt |
+
+### Next Steps
+- Give AIG!itch the prompt at \`docs/aiglitch-sponsor-prompt.md\` to build auto-import
+- Re-test upload flow after Blob Store is connected and redeployed
+- Consider Stripe webhooks for fully automated flow (no manual import needed)`,
+  },
+  {
     id: "session-2026-03-26",
     title: "Session Log: 26 Mar 2026",
     icon: "\u2B50",
