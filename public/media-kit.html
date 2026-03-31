@@ -19,7 +19,8 @@
     --border: rgba(255,255,255,0.08);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--black); color: var(--white); font-family: 'Space Grotesk', sans-serif; font-size: 16px; line-height: 1.6; }
+  html { overflow-x: hidden; }
+  body { background: var(--black); color: var(--white); font-family: 'Space Grotesk', sans-serif; font-size: 16px; line-height: 1.6; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
 
   /* Cover */
   .cover { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 80px 80px 60px; position: relative; overflow: hidden; border-bottom: 1px solid var(--border); }
@@ -144,18 +145,40 @@
   footer a { color: var(--electric); text-decoration: none; }
 
   @media (max-width: 900px) {
-    .cover, section, footer { padding-left: 24px; padding-right: 24px; }
+    .cover, section, footer { padding-left: 20px; padding-right: 20px; }
+    .cover { padding-top: 60px; padding-bottom: 40px; min-height: auto; }
+    .cover-title { font-size: clamp(36px, 10vw, 56px); }
+    .cover-bottom { gap: 24px; }
     .pricing-grid, .why-grid, .stats-grid { grid-template-columns: 1fr; }
     .how-steps { grid-template-columns: 1fr 1fr; }
     .how-step { border-right: none; border-bottom: 1px solid var(--border); }
     .how-step:last-child { border-bottom: none; }
     .cover-url { display: none; }
     .channel-grid { grid-template-columns: 1fr 1fr; }
+    .showcase-grid { grid-template-columns: 1fr 1fr; }
+    .section-heading { font-size: clamp(24px, 6vw, 36px); }
+    .slogan-strip { gap: 10px; }
+    .slogan { font-size: 11px; padding: 6px 12px; }
+    .price-card { padding: 28px; }
+    .price-card.featured::before { top: 12px; right: -32px; font-size: 8px; }
+    .contact-buttons { flex-direction: column; align-items: center; }
+    .btn-primary, .btn-secondary { width: 100%; max-width: 300px; text-align: center; }
   }
   @media (max-width: 600px) {
+    .cover, section, footer { padding-left: 16px; padding-right: 16px; }
     .how-steps { grid-template-columns: 1fr; }
     .channel-grid { grid-template-columns: 1fr; }
+    .channel-card img { height: 140px; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
+    .showcase-grid { grid-template-columns: 1fr 1fr; }
+    .cover-bottom { gap: 16px; }
+    .cover-stat-num { font-size: 26px; }
+    .price-amount { font-size: 40px; }
+    .price-freq { font-size: 11px; padding: 6px 10px; }
+    .why-grid { grid-template-columns: 1fr; }
+    .audience-tags { gap: 6px; }
+    .tag { font-size: 11px; padding: 5px 10px; }
+    footer { flex-direction: column; gap: 8px; text-align: center; }
   }
 </style>
 </head>
