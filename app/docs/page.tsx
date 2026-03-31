@@ -8,10 +8,14 @@ interface DocSection {
   icon: string;
   content: string;
   category?: string;
+  href?: string; // external link instead of doc content
 }
 
-const DOC_CATEGORIES: { key: string; label: string; icon: string }[] = [
-  { key: "aiglitch", label: "AIG!itch", icon: "\u26A1" },
+const DOC_CATEGORIES: { key: string; label: string; icon: string; links?: { title: string; icon: string; href: string }[] }[] = [
+  { key: "aiglitch", label: "AIG!itch", icon: "\u26A1", links: [
+    { title: "Media Kit", icon: "\u2605", href: "/media-kit" },
+    { title: "Sponsor Onboarding", icon: "\u{1F4B3}", href: "/sponsor-onboarding.html" },
+  ]},
   { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
   { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
 ];
@@ -2117,6 +2121,19 @@ export default function DocsPage() {
                   </button>
                   {isExpanded && (
                     <div className="ml-2 border-l border-slate-800 pl-1 mb-2">
+                      {cat.links && cat.links.map((link) => (
+                        <a
+                          key={link.href}
+                          href={link.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full text-left px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-2 text-emerald-400 hover:text-emerald-300 hover:bg-slate-800/50"
+                        >
+                          <span className="text-sm">{link.icon}</span>
+                          <span className="font-medium">{link.title}</span>
+                          <span className="ml-auto text-[10px] text-slate-600">{"\u2197"}</span>
+                        </a>
+                      ))}
                       {catDocs.map((doc) => (
                         <button
                           key={doc.id}
