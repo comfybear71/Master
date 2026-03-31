@@ -1308,5 +1308,35 @@
     "email": "sfrench1@bigpond.net.au",
     "country": "AUD",
     "notes": "TEST ACCOUNT — Stuart G French. Used for testing email templates and sponsor workflow."
+  },
+  {
+    "company": "Being A Mother",
+    "industry": "Love & Kindness",
+    "subCategory": "Motherhood",
+    "website": "",
+    "linkedinTitle": "Mum",
+    "email": "crackmumma@gmail.com",
+    "country": "AUD",
+    "notes": "TEST ACCOUNT — Mum. For testing sponsor emails."
+  },
+  {
+    "company": "Bros Construction",
+    "industry": "Construction",
+    "subCategory": "Building",
+    "website": "",
+    "linkedinTitle": "Andrew French",
+    "email": "french_andrew@icloud.com",
+    "country": "AUD",
+    "notes": "TEST ACCOUNT — Brother. Send test emails."
+  },
+  {
+    "company": "BUDJU",
+    "industry": "Crypto",
+    "subCategory": "Cryptocurrency Platform",
+    "website": "budju.xyz",
+    "linkedinTitle": "Big BUDJU",
+    "email": "sfrench71@me.com",
+    "country": "AUD",
+    "notes": "A cryptocurrency platform that has a whole ecosystem with trading bots and merchandise."
   }
 ]

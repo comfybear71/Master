@@ -1,13 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { Resend } from "resend";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
-// Droplet email sender URL
-const EMAIL_SENDER_URL = process.env.EMAIL_SENDER_URL || "http://170.64.133.9:3456";
-const EMAIL_AUTH_TOKEN = process.env.TERMINAL_PASSWORD || "";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterhq.dev";
+
+const SENDERS: Record<string, { email: string; name: string }> = {
+  founder: {
+    email: "stuart.french@aiglitch.app",
+    name: "Stuie French",
+  },
+  architect: {
+    email: "architect@aiglitch.app",
+    name: "The Architect",
+  },
+  ads: {
+    email: "ads@aiglitch.app",
+    name: "AIG!itch Ads",
+  },
+};
 
 interface SendEmailBody {
   prospectId: string;
@@ -44,27 +57,33 @@ function extractSubject(persona: string, tone: string, company: string): string 
   return subjects[persona]?.[tone] || `Partnership Opportunity — ${company}`;
 }
 
-// getTemplatePersona is handled inside getTemplateHtml
-
 export async function GET() {
-  // Health check — test connection to droplet email sender
-  try {
-    const res = await fetch(`${EMAIL_SENDER_URL}/health`, { signal: AbortSignal.timeout(5000) });
-    const data = await res.json();
-    return NextResponse.json({ dropletStatus: "connected", ...data, emailSenderUrl: EMAIL_SENDER_URL });
-  } catch (err) {
-    return NextResponse.json({
-      dropletStatus: "unreachable",
-      emailSenderUrl: EMAIL_SENDER_URL,
-      error: err instanceof Error ? err.message : String(err),
-      setup: "Run on droplet: cd /path/to/Master && IMPROVMX_FOUNDER_PASSWORD=xxx IMPROVMX_ARCHITECT_PASSWORD=xxx IMPROVMX_ADS_PASSWORD=xxx node scripts/email-sender.js",
-    });
-  }
+  const hasResendKey = !!process.env.RESEND_API_KEY;
+  return NextResponse.json({
+    status: hasResendKey ? "ready" : "missing_api_key",
+    provider: "resend",
+    senders: Object.entries(SENDERS).map(([persona, s]) => ({
+      persona,
+      email: s.email,
+      name: s.name,
+    })),
+    note: hasResendKey
+      ? "Resend API configured and ready to send"
+      : "Add RESEND_API_KEY to Vercel env vars. Get one free at resend.com",
+  });
 }
 
 export async function POST(req: NextRequest) {
   const steps: string[] = [];
   try {
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) {
+      return NextResponse.json({
+        error: "RESEND_API_KEY not configured. Add it in Vercel env vars (free at resend.com, 100 emails/day).",
+        steps: ["No Resend API key found"],
+      }, { status: 500 });
+    }
+
     steps.push("1. Parsing request body");
     const body: SendEmailBody = await req.json();
     const { prospectId, tone, persona = "founder" } = body;
@@ -103,48 +122,31 @@ export async function POST(req: NextRequest) {
     const subject = extractSubject(persona, tone, prospect.company);
     steps.push(`8. Subject: ${subject}, Contact: ${contactName}`);
 
-    steps.push(`9. Sending to droplet at ${EMAIL_SENDER_URL}/send`);
-    let sendRes: Response;
-    try {
-      sendRes = await fetch(`${EMAIL_SENDER_URL}/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${EMAIL_AUTH_TOKEN}`,
-        },
-        body: JSON.stringify({
-          persona,
-          to: prospect.email,
-          subject,
-          html: templateHtml,
-          contactName,
-          company: prospect.company,
-        }),
-        signal: AbortSignal.timeout(25000),
-      });
-    } catch (fetchErr) {
-      const msg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr);
+    // Personalize template
+    let finalHtml = templateHtml;
+    if (contactName) finalHtml = finalHtml.replace(/\[NAME\]/g, contactName);
+    if (prospect.company) finalHtml = finalHtml.replace(/\[COMPANY\]/g, prospect.company);
+
+    const sender = SENDERS[persona] || SENDERS.founder;
+
+    steps.push(`9. Sending via Resend from ${sender.email}`);
+    const resend = new Resend(resendKey);
+    const { data, error } = await resend.emails.send({
+      from: `${sender.name} <${sender.email}>`,
+      to: [prospect.email],
+      subject,
+      html: finalHtml,
+    });
+
+    if (error) {
       return NextResponse.json({
-        error: `Droplet fetch failed: ${msg}`,
-        dropletUrl: EMAIL_SENDER_URL,
+        error: `Resend error: ${error.message}`,
+        resendError: error,
         steps,
       }, { status: 500 });
     }
 
-    steps.push(`10. Droplet responded: ${sendRes.status}`);
-    let sendData: Record<string, unknown>;
-    try {
-      sendData = await sendRes.json();
-    } catch {
-      const text = await sendRes.text();
-      return NextResponse.json({ error: `Droplet returned non-JSON: ${text.substring(0, 200)}`, steps }, { status: 500 });
-    }
-
-    if (!sendRes.ok) {
-      return NextResponse.json({ error: sendData.error || "Droplet send failed", dropletResponse: sendData, steps }, { status: 500 });
-    }
-
-    steps.push("11. Email sent successfully, logging to DB");
+    steps.push("10. Email sent successfully, logging to DB");
 
     // Log to database
     await db.collection("outreach_emails").insertOne({
@@ -156,8 +158,8 @@ export async function POST(req: NextRequest) {
       persona,
       tone,
       status: "sent",
-      messageId: (sendData.messageId as string) || "",
-      sentVia: "droplet-smtp",
+      messageId: data?.id || "",
+      sentVia: "resend",
       createdAt: new Date().toISOString(),
     });
 
@@ -173,15 +175,16 @@ export async function POST(req: NextRequest) {
       }
     );
 
-    steps.push("12. Done!");
+    steps.push("11. Done!");
 
     return NextResponse.json({
       success: true,
-      messageId: sendData.messageId,
+      messageId: data?.id,
       to: prospect.email,
       subject,
       persona,
       tone,
+      provider: "resend",
       steps,
     });
   } catch (error) {
