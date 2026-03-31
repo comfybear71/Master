@@ -322,8 +322,18 @@
   let selectedTier = 'glitch';
   const tierPrices = { glitch: 50, chaos: 100 };
 
-  // Check URL params for payment status
+  // Check URL params for tier pre-selection and payment status
   const params = new URLSearchParams(window.location.search);
+  if (params.get('tier') === 'chaos') {
+    selectedTier = 'chaos';
+    document.querySelectorAll('.pay-tier-btn').forEach(function(b, i) {
+      b.classList.toggle('active', i === 1);
+    });
+    document.getElementById('pay-btn').textContent = 'Pay $100 USD with Stripe \u2192';
+    setTimeout(function() { document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' }); }, 500);
+  } else if (params.get('tier') === 'glitch') {
+    setTimeout(function() { document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' }); }, 500);
+  }
   if (params.get('payment') === 'success') {
     document.getElementById('payment-success').style.display = 'block';
     document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' });
