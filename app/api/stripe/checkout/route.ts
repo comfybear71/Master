@@ -8,7 +8,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterhq.dev";
 export async function POST(req: NextRequest) {
   try {
     const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "");
+    const stripe = new Stripe(process.env.STRIPE_AIGLITCH_SECRET_KEY || process.env.STRIPE_SECRET_KEY || "");
 
     const priceMap: Record<string, string> = {
       glitch: process.env.STRIPE_PRICE_GLITCH || "",
