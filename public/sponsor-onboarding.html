@@ -263,13 +263,23 @@
   <div class="payment-box">
     <h3>Campaign Payment</h3>
 
+    <!-- Success/Cancel messages -->
+    <div id="payment-success" style="display:none;text-align:center;padding:24px;background:rgba(0,255,136,0.08);border:1px solid rgba(0,255,136,0.2);border-radius:12px;margin-bottom:24px;">
+      <div style="font-size:36px;margin-bottom:8px;">&#9989;</div>
+      <div style="font-size:18px;font-weight:700;color:#00ff88;">Payment Received!</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:8px;">Thank you! We'll have your campaign live within 24 hours. Check your email for confirmation.</div>
+    </div>
+    <div id="payment-cancelled" style="display:none;text-align:center;padding:16px;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.2);border-radius:12px;margin-bottom:24px;">
+      <div style="font-size:13px;color:#ff4444;">Payment cancelled. No worries — choose a tier below when you're ready.</div>
+    </div>
+
     <div class="pay-tier-toggle">
-      <div class="pay-tier-btn active" onclick="selectTier(this, 50)">
+      <div class="pay-tier-btn active" onclick="selectTier(this, 'glitch')">
         <div class="pay-tier-name">Glitch Tier</div>
         <div class="pay-tier-price">$50</div>
         <div class="pay-tier-desc">30% freq &middot; 7 days</div>
       </div>
-      <div class="pay-tier-btn" onclick="selectTier(this, 100)">
+      <div class="pay-tier-btn" onclick="selectTier(this, 'chaos')">
         <div class="pay-tier-name">Chaos Tier</div>
         <div class="pay-tier-price">$100</div>
         <div class="pay-tier-desc">80% freq &middot; 7 days</div>
@@ -278,31 +288,17 @@
 
     <div class="form-group">
       <label>Company / Brand Name</label>
-      <input type="text" placeholder="e.g. Red Bull, Nike, Your Brand...">
+      <input type="text" id="company-input" placeholder="e.g. Red Bull, Nike, Your Brand...">
     </div>
     <div class="form-group">
       <label>Email Address</label>
-      <input type="email" placeholder="you@company.com">
-    </div>
-    <div class="form-group">
-      <label>Card Number</label>
-      <input type="text" placeholder="4242 4242 4242 4242" maxlength="19">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Expiry</label>
-        <input type="text" placeholder="MM / YY" maxlength="7">
-      </div>
-      <div class="form-group">
-        <label>CVC</label>
-        <input type="text" placeholder="123" maxlength="4">
-      </div>
+      <input type="email" id="email-input" placeholder="you@company.com">
     </div>
 
-    <button class="pay-btn" id="pay-btn" onclick="handlePayment()">Pay $50 USD &rarr;</button>
-    <div class="pay-secure">&#128274; Secure payment <span class="pay-badge">MOCK</span></div>
+    <button class="pay-btn" id="pay-btn" onclick="handlePayment()">Pay $50 USD with Stripe &rarr;</button>
+    <div class="pay-secure">&#128274; Secure payment via Stripe <span class="pay-badge" style="background:rgba(0,240,255,0.1);color:var(--electric);border-color:rgba(0,240,255,0.2);">LIVE</span></div>
     <div style="text-align:center;margin-top:12px;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">
-      Payment gateway coming soon. For now, email us to start your campaign.
+      You'll be redirected to Stripe's secure checkout. Card details are never stored on our servers.
     </div>
   </div>
 </section>
@@ -323,27 +319,65 @@
 </footer>
 
 <script>
-  let selectedAmount = 50;
-  function selectTier(el, amount) {
-    document.querySelectorAll('.pay-tier-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    selectedAmount = amount;
-    document.getElementById('pay-btn').textContent = 'Pay $' + amount + ' USD \u2192';
+  let selectedTier = 'glitch';
+  const tierPrices = { glitch: 50, chaos: 100 };
+
+  // Check URL params for payment status
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('payment') === 'success') {
+    document.getElementById('payment-success').style.display = 'block';
+    document.querySelector('.payment-box').scrollIntoView({ behavior: 'smooth' });
+  } else if (params.get('payment') === 'cancelled') {
+    document.getElementById('payment-cancelled').style.display = 'block';
   }
-  function handlePayment() {
-    const btn = document.getElementById('pay-btn');
-    btn.textContent = 'Processing...';
+
+  function selectTier(el, tier) {
+    document.querySelectorAll('.pay-tier-btn').forEach(function(b) { b.classList.remove('active'); });
+    el.classList.add('active');
+    selectedTier = tier;
+    document.getElementById('pay-btn').textContent = 'Pay $' + tierPrices[tier] + ' USD with Stripe \u2192';
+  }
+
+  async function handlePayment() {
+    var btn = document.getElementById('pay-btn');
+    var company = document.getElementById('company-input').value.trim();
+    var email = document.getElementById('email-input').value.trim();
+
+    if (!company) { document.getElementById('company-input').focus(); return; }
+    if (!email) { document.getElementById('email-input').focus(); return; }
+
+    btn.textContent = 'Redirecting to Stripe...';
     btn.style.background = '#666';
-    setTimeout(() => {
-      btn.textContent = '\u2705 Payment Received (Mock)';
-      btn.style.background = '#00ff88';
-      btn.style.color = '#0a0a0a';
-      setTimeout(() => {
-        btn.textContent = 'Pay $' + selectedAmount + ' USD \u2192';
+    btn.disabled = true;
+
+    try {
+      var res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier: selectedTier, company: company, email: email }),
+      });
+      var data = await res.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        btn.textContent = 'Error: ' + (data.error || 'Try again');
+        btn.style.background = '#ff4444';
+        setTimeout(function() {
+          btn.textContent = 'Pay $' + tierPrices[selectedTier] + ' USD with Stripe \u2192';
+          btn.style.background = '#c8ff00';
+          btn.disabled = false;
+        }, 3000);
+      }
+    } catch (err) {
+      btn.textContent = 'Network error — try again';
+      btn.style.background = '#ff4444';
+      setTimeout(function() {
+        btn.textContent = 'Pay $' + tierPrices[selectedTier] + ' USD with Stripe \u2192';
         btn.style.background = '#c8ff00';
-        btn.style.color = '#0a0a0a';
+        btn.disabled = false;
       }, 3000);
-    }, 2000);
+    }
   }
 </script>
 
