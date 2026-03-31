@@ -1308,5 +1308,15 @@
     "email": "sfrench1@bigpond.net.au",
     "country": "AUD",
     "notes": "TEST ACCOUNT — Stuart G French. Used for testing email templates and sponsor workflow."
+  },
+  {
+    "company": "Being A Mother",
+    "industry": "Love & Kindness",
+    "subCategory": "Motherhood",
+    "website": "",
+    "linkedinTitle": "Mum",
+    "email": "crackmumma@gmail.com",
+    "country": "AUD",
+    "notes": "TEST ACCOUNT — Mum. For testing sponsor emails."
   }
 ]
