@@ -1328,5 +1328,15 @@
     "email": "french_andrew@icloud.com",
     "country": "AUD",
     "notes": "TEST ACCOUNT — Brother. Send test emails."
+  },
+  {
+    "company": "BUDJU",
+    "industry": "Crypto",
+    "subCategory": "Cryptocurrency Platform",
+    "website": "budju.xyz",
+    "linkedinTitle": "Big BUDJU",
+    "email": "sfrench71@me.com",
+    "country": "AUD",
+    "notes": "A cryptocurrency platform that has a whole ecosystem with trading bots and merchandise."
   }
 ]
