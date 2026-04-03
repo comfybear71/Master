@@ -2297,6 +2297,72 @@ const status = await client.batches.retrieve(batch.id);
 - 24 hour completion window
 - Same per-request token limits as real-time API`,
   },
+  {
+    id: "safety-protocol",
+    title: "Project Safety Protocol",
+    category: "master",
+    icon: "\u{1F6E1}",
+    content: `## Project Safety Protocol
+
+**Status:** MANDATORY for all projects
+**Created:** 2026-04-02 after Togogo incident
+
+---
+
+### Why This Exists
+On 2026-04-02, a Claude session working on Togogo did a blanket revert that deleted 1,798 lines of code including CLAUDE.md and HANDOFF.md. The production site went down. This protocol prevents it from happening again.
+
+### Branch Protection (MANDATORY)
+Every project MUST have:
+- \`main\` / \`master\` \u2014 **PRODUCTION ONLY**. Never push directly.
+- \`dev\` \u2014 where all work happens
+- Feature branches off \`dev\` for specific tasks
+
+**Workflow:** feature-branch \u2192 dev \u2192 test on preview URL \u2192 merge to main
+
+### Sacred Files
+CLAUDE.md and HANDOFF.md must NEVER be deleted. They exist in root of every repo. If a Claude session tries to delete them, it's a bug.
+
+### Claude Code Session Rules
+
+**Before Starting:**
+- Read CLAUDE.md and HANDOFF.md
+- Check which branch you're on
+- Create a new branch if on production
+- Confirm no trading projects affected
+
+**During Work:**
+- Commit frequently (small, atomic commits)
+- Never batch 10+ file changes in one commit
+- Test after each change
+- If something breaks, diagnose before fixing
+
+**Before Ending:**
+- Run build/type checks
+- Update HANDOFF.md
+- Push to feature branch (not production)
+- Tell user to test on preview URL before merging
+
+### NEVER Do:
+- Push directly to main/master
+- Change Vercel production branch to a feature branch
+- Delete CLAUDE.md or HANDOFF.md
+- Do blanket reverts (fix surgically instead)
+- Make changes to trading bots without explicit confirmation
+- Run destructive database operations without confirmation
+
+### Crisis Response
+1. STOP \u2014 don't let Claude keep trying to fix
+2. Check which branch Vercel is deploying from
+3. Switch back to production branch if changed
+4. Check git log for last known good commit
+5. Revert specific bad commits (not blanket revert)
+6. Check database for destructive migrations
+7. Restore from backup if needed
+
+### Full Protocol
+See \`docs/project-safety-protocol.md\` in the MasterHQ repo for complete details including database safety, dependency pinning, monitoring, and incident log.`,
+  },
 ];
 
 export default function DocsPage() {
