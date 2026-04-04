@@ -21,6 +21,7 @@ interface OnboardResult {
     category: string;
     hasCLAUDEmd: boolean;
     hasHANDOFFmd: boolean;
+    hasSafetyRules: boolean;
     vercelLinked: boolean;
     liveUrl: string;
   };
@@ -39,7 +40,7 @@ export default function ProjectsPage() {
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [editingProject, setEditingProject] = useState<string | null>(null);
   const [editData, setEditData] = useState<Partial<Project>>({});
-  const [projectDocs, setProjectDocs] = useState<{ claudeMd: string; handoffMd: string } | null>(null);
+  const [projectDocs, setProjectDocs] = useState<{ claudeMd: string; handoffMd: string; safetyRules: string } | null>(null);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
   // Form state
@@ -173,13 +174,15 @@ export default function ProjectsPage() {
     setProjectDocs(null);
 
     try {
-      const [claudeRes, handoffRes] = await Promise.allSettled([
+      const [claudeRes, handoffRes, safetyRes] = await Promise.allSettled([
         fetch(`/api/github?action=file&repo=${encodeURIComponent(project.repo)}&path=CLAUDE.md`),
         fetch(`/api/github?action=file&repo=${encodeURIComponent(project.repo)}&path=HANDOFF.md`),
+        fetch(`/api/github?action=file&repo=${encodeURIComponent(project.repo)}&path=SAFETY-RULES.md`),
       ]);
 
       let claudeMd = "";
       let handoffMd = "";
+      let safetyRules = "";
       if (claudeRes.status === "fulfilled" && claudeRes.value.ok) {
         const data = await claudeRes.value.json();
         claudeMd = data.content || "";
@@ -188,9 +191,13 @@ export default function ProjectsPage() {
         const data = await handoffRes.value.json();
         handoffMd = data.content || "";
       }
-      setProjectDocs({ claudeMd, handoffMd });
+      if (safetyRes.status === "fulfilled" && safetyRes.value.ok) {
+        const data = await safetyRes.value.json();
+        safetyRules = data.content || "";
+      }
+      setProjectDocs({ claudeMd, handoffMd, safetyRules });
     } catch {
-      setProjectDocs({ claudeMd: "Failed to load", handoffMd: "Failed to load" });
+      setProjectDocs({ claudeMd: "Failed to load", handoffMd: "Failed to load", safetyRules: "Failed to load" });
     }
     setLoadingDocs(false);
   };
@@ -281,6 +288,12 @@ export default function ProjectsPage() {
                   <span className="text-slate-500">HANDOFF.md:</span>
                   <span className={`ml-1 ${onboardResult.detected.hasHANDOFFmd ? "text-success" : "text-danger"}`}>
                     {onboardResult.detected.hasHANDOFFmd ? "Found" : "Missing"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500">SAFETY-RULES.md:</span>
+                  <span className={`ml-1 ${onboardResult.detected.hasSafetyRules ? "text-success" : "text-amber-400"}`}>
+                    {onboardResult.detected.hasSafetyRules ? "Found" : "Missing"}
                   </span>
                 </div>
                 <div>
@@ -390,9 +403,9 @@ export default function ProjectsPage() {
                 <button onClick={() => { setExpandedProject(null); setProjectDocs(null); }} className="text-xs text-slate-400 hover:text-white">Close</button>
               </div>
               {loadingDocs ? (
-                <div className="text-accent font-mono animate-pulse text-center p-4">Reading CLAUDE.md & HANDOFF.md from GitHub...</div>
+                <div className="text-accent font-mono animate-pulse text-center p-4">Reading CLAUDE.md, HANDOFF.md & SAFETY-RULES.md from GitHub...</div>
               ) : projectDocs ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <h3 className="text-sm font-semibold text-accent mb-2">CLAUDE.md</h3>
                     <pre className="bg-base rounded-lg p-3 text-xs text-slate-300 font-mono overflow-auto max-h-96 whitespace-pre-wrap">
@@ -403,6 +416,12 @@ export default function ProjectsPage() {
                     <h3 className="text-sm font-semibold text-success mb-2">HANDOFF.md</h3>
                     <pre className="bg-base rounded-lg p-3 text-xs text-slate-300 font-mono overflow-auto max-h-96 whitespace-pre-wrap">
                       {projectDocs.handoffMd || "Not found"}
+                    </pre>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-amber-400 mb-2">SAFETY-RULES.md</h3>
+                    <pre className="bg-base rounded-lg p-3 text-xs text-slate-300 font-mono overflow-auto max-h-96 whitespace-pre-wrap">
+                      {projectDocs.safetyRules || "Not found"}
                     </pre>
                   </div>
                 </div>

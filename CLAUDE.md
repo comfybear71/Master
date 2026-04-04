@@ -124,10 +124,20 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 7. **§GLITCH** — Always use the § symbol for GLITCH coin (§GLITCH), NEVER use $ for GLITCH. The $ is reserved for $BUDJU (Solana token) and real currency amounts.
 8. **NEVER use localStorage.** All persistent data goes in MongoDB. localStorage is unreliable, device-specific, and not accessible across sessions or devices. Use the `settings` collection for user preferences and editable values.
 
+### Branch Protection — MANDATORY (after Togogo incident 2026-04-02)
+9. **NEVER push directly to main/master** — always work on a feature branch
+10. **NEVER do blanket reverts** — fix issues surgically, one commit at a time
+11. **NEVER delete CLAUDE.md or HANDOFF.md** — these are sacred files
+12. **NEVER change Vercel production branch** to a feature branch
+13. **NEVER batch 10+ file deletions** in one commit — that's a blanket revert
+14. If something breaks, STOP and diagnose before attempting fixes
+15. If a fix spiral starts (3+ failed fix attempts), STOP and ask the user
+16. Full protocol: `docs/project-safety-protocol.md`
+
 ### Deployment
-7. Never deploy directly to production without showing the user a summary first
-8. Always verify the correct Vercel project is targeted before deploying
-9. After every deployment update the relevant project's HANDOFF.md
+17. Never deploy directly to production without showing the user a summary first
+18. Always verify the correct Vercel project is targeted before deploying
+19. After every deployment update the relevant project's HANDOFF.md
 
 ### Trading Projects — SPECIAL RULES
 10. ⚠️ NEVER make changes to any trading bot or trading platform without EXPLICIT written confirmation from the user
