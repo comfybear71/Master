@@ -97,11 +97,13 @@ async function checkRepo(repo: string) {
   if (commits) {
     for (const c of commits) {
       const msg = c.commit.message.toLowerCase();
-      // Check for blanket revert patterns
+      const firstLine = msg.split("\n")[0];
+      // Only flag if the first line (the actual action) starts with revert patterns
+      // Don't flag commits that merely mention reverts in their description
       if (
-        (msg.includes("revert") && msg.includes("all")) ||
-        msg.includes("blanket revert") ||
-        msg.includes("revert everything")
+        (firstLine.startsWith("revert") && (firstLine.includes("all") || firstLine.includes("everything"))) ||
+        firstLine.includes("blanket revert") ||
+        firstLine.startsWith("revert everything")
       ) {
         blanketRevertDetected = true;
         issues.push(`Blanket revert detected: "${c.commit.message.slice(0, 80)}" (${c.sha.slice(0, 7)})`);
