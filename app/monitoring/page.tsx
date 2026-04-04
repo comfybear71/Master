@@ -20,6 +20,9 @@ export default function MonitoringPage() {
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [errors, setErrors] = useState<DetectedError[]>([]);
   const [uptimeChecks, setUptimeChecks] = useState<UptimeCheck[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [repoHealth, setRepoHealth] = useState<any>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
@@ -69,6 +72,18 @@ export default function MonitoringPage() {
       // silently fail
     }
     setScanning(false);
+  };
+
+  const runRepoHealth = async () => {
+    setHealthLoading(true);
+    try {
+      const res = await fetch("/api/repo-health");
+      const data = await res.json();
+      setRepoHealth(data);
+    } catch {
+      // silently fail
+    }
+    setHealthLoading(false);
   };
 
   const runUptimeCheck = async () => {
@@ -152,6 +167,13 @@ export default function MonitoringPage() {
           >
             {scanning ? "Scanning..." : "Scan Errors"}
           </button>
+          <button
+            onClick={runRepoHealth}
+            disabled={healthLoading}
+            className="px-3 sm:px-4 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs sm:text-sm hover:bg-amber-500/20 transition-colors font-mono disabled:opacity-50"
+          >
+            {healthLoading ? "Checking..." : "Repo Health"}
+          </button>
           <button onClick={fetchAll} className="px-3 sm:px-4 py-2 bg-accent/10 text-accent border border-accent/20 rounded-lg text-xs sm:text-sm hover:bg-accent/20 transition-colors font-mono">
             Refresh
           </button>
@@ -170,6 +192,53 @@ export default function MonitoringPage() {
             <StatusCard label="Building" value={buildingDeploys.length} color="warning" />
             <StatusCard label="Active Issues" value={activeErrors.length} color={activeErrors.length > 0 ? "danger" : "success"} />
           </div>
+
+          {/* Repo Health Results */}
+          {repoHealth && (
+            <div className="mb-8">
+              <h2 className="text-lg font-semibold text-white mb-4">
+                Repo Health Check
+                <span className="ml-3 text-xs font-mono">
+                  <span className="text-success">{repoHealth.summary?.healthy || 0} healthy</span>
+                  {repoHealth.summary?.warning > 0 && <span className="text-amber-400 ml-2">{repoHealth.summary.warning} warning</span>}
+                  {repoHealth.summary?.critical > 0 && <span className="text-danger ml-2">{repoHealth.summary.critical} critical</span>}
+                </span>
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {repoHealth.projects?.map((r: any) => (
+                  <div key={r.repo} className={`bg-base-card rounded-xl border p-4 ${
+                    r.score === "healthy" ? "border-success/20" : r.score === "warning" ? "border-amber-500/20" : "border-danger/20"
+                  }`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-semibold text-white">{r.repo.split("/")[1]}</h3>
+                      <span className={`text-xs font-mono px-2 py-0.5 rounded ${
+                        r.score === "healthy" ? "bg-success/10 text-success" : r.score === "warning" ? "bg-amber-500/10 text-amber-400" : "bg-danger/10 text-danger"
+                      }`}>
+                        {r.score}
+                      </span>
+                    </div>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex gap-3">
+                        <span className={r.files.claude ? "text-success" : "text-danger"}>CLAUDE.md {r.files.claude ? "\u2713" : "\u2717"}</span>
+                        <span className={r.files.handoff ? "text-success" : "text-danger"}>HANDOFF.md {r.files.handoff ? "\u2713" : "\u2717"}</span>
+                        <span className={r.files.safety ? "text-amber-400" : "text-danger"}>SAFETY {r.files.safety ? "\u2713" : "\u2717"}</span>
+                      </div>
+                      <div className="text-slate-500">
+                        Branch: {r.defaultBranch} | {r.branchCount} branches
+                      </div>
+                      {r.issues.map((issue: string, i: number) => (
+                        <div key={i} className="text-danger">{"\u26A0"} {issue}</div>
+                      ))}
+                      {r.warnings.map((w: string, i: number) => (
+                        <div key={i} className="text-amber-400">{"\u26A0"} {w}</div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Project Deployment Status Grid */}
           <div className="mb-8">
