@@ -21,6 +21,7 @@ interface OnboardResult {
     category: string;
     hasCLAUDEmd: boolean;
     hasHANDOFFmd: boolean;
+    hasSafetyRules: boolean;
     vercelLinked: boolean;
     liveUrl: string;
   };
