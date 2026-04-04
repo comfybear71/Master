@@ -196,7 +196,7 @@ export default function ProjectsPage() {
       }
       setProjectDocs({ claudeMd, handoffMd, safetyRules });
     } catch {
-      setProjectDocs({ claudeMd: "Failed to load", handoffMd: "Failed to load" });
+      setProjectDocs({ claudeMd: "Failed to load", handoffMd: "Failed to load", safetyRules: "Failed to load" });
     }
     setLoadingDocs(false);
   };
