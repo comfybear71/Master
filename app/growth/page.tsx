@@ -822,32 +822,42 @@ export default function GrowthPage() {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {outreachEmails.map((email) => {
                     const id = String(email._id);
-                    const editable = getEditableEmail(email);
                     const prospectEmail = email.contactEmail || "";
-                    const isExpanded = expandedOutreach.has(id);
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const sentAt = (email as any).sentAt;
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const sentTo = (email as any).sentTo;
+                    const isSent = !!sentAt;
                     return (
-                    <div key={id} className="bg-base-card rounded-xl border border-slate-800 overflow-hidden">
-                      {/* Collapsed header — always visible */}
+                    <div key={id} className={`bg-base-card rounded-xl border overflow-hidden ${isSent ? "border-green-500/20" : "border-slate-800"}`}>
                       <div className="flex items-center justify-between px-5 py-3">
-                        <button onClick={() => setExpandedOutreach(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} className="flex items-center gap-3 text-left flex-1 min-w-0">
-                          <span className="text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>{"\u25B6"}</span>
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
                               {email.persona && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{email.persona}</span>}
                               {email.tone && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{email.tone}</span>}
+                              {isSent && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">Sent {new Date(sentAt).toLocaleDateString()}</span>}
                             </div>
-                            <p className="text-[10px] text-slate-500 truncate">{editable.subject}</p>
                             <p className="text-[10px] text-cyan-400">{prospectEmail || "No email address"}</p>
+                            {isSent && sentTo && <p className="text-[10px] text-green-400/60">Sent to {sentTo}</p>}
                           </div>
-                        </button>
+                        </div>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50">
-                            {sendingOutreachId === id ? "Sending..." : sendOutreachResult?.id === id ? (sendOutreachResult.success ? "Sent!" : "Failed") : "Send"}
-                          </button>
+                          {!isSent ? (
+                            <button
+                              onClick={() => sendOutreachEmail(id, prospectEmail, email.subject, email.body, email.companyName, email.tone, email.persona)}
+                              disabled={sendingOutreachId === id || !prospectEmail || prospectEmail === "Contact via website"}
+                              className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {sendingOutreachId === id ? "Sending..." : "Send"}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] font-mono text-green-400">Delivered</span>
+                          )}
                           <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[50px]">
                             {deletingOutreach === id ? (
                               <span className="inline-block w-3 h-3 border-2 border-danger/40 border-t-danger rounded-full animate-spin" />
@@ -855,51 +865,6 @@ export default function GrowthPage() {
                           </button>
                         </div>
                       </div>
-
-                      {/* Expandable content */}
-                      {isExpanded && (
-                        <div className="px-5 pb-5 space-y-3">
-                          {/* Initial Email — Editable */}
-                          <div className="bg-base rounded-lg border border-slate-800 p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-xs font-semibold text-accent">Initial Email</h4>
-                              <div className="flex gap-1">
-                                <button onClick={() => copyToClipboard(`Subject: ${editable.subject}\n\n${editable.body}`, `initial-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `initial-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-                                  {copiedEmail === `initial-${id}` ? "Copied!" : "Copy"}
-                                </button>
-                                <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50">
-                                  {sendingOutreachId === id ? "Sending..." : "Send"}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="mb-2">
-                              <span className="text-[10px] text-slate-500">Subject:</span>
-                              <input value={editable.subject} onChange={(e) => updateEditableEmail(id, "subject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
-                            </div>
-                            <textarea value={editable.body} onChange={(e) => updateEditableEmail(id, "body", e.target.value)} rows={10} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
-                          </div>
-
-                          {/* Follow-up Email — Editable */}
-                          <div className="bg-base rounded-lg border border-slate-800 p-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <h4 className="text-xs font-semibold text-amber-400">Follow-Up (5 days later)</h4>
-                              <div className="flex gap-1">
-                                <button onClick={() => copyToClipboard(`Subject: ${editable.followUpSubject}\n\n${editable.followUpBody}`, `followup-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `followup-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-                                  {copiedEmail === `followup-${id}` ? "Copied!" : "Copy"}
-                                </button>
-                                <button onClick={() => sendOutreachEmail(id + "-followup", prospectEmail, editable.followUpSubject, editable.followUpBody, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id + "-followup"} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50">
-                                  {sendingOutreachId === id + "-followup" ? "Sending..." : "Send"}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="mb-2">
-                              <span className="text-[10px] text-slate-500">Subject:</span>
-                              <input value={editable.followUpSubject} onChange={(e) => updateEditableEmail(id, "followUpSubject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
-                            </div>
-                            <textarea value={editable.followUpBody} onChange={(e) => updateEditableEmail(id, "followUpBody", e.target.value)} rows={4} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
-                          </div>
-                        </div>
-                      )}
                     </div>
                     );
                   })}
