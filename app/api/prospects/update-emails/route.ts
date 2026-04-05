@@ -36,7 +36,13 @@ export async function GET() {
       results.push({ company: u.company, email: u.email, prospectModified: result.modifiedCount, outreachModified: outreachResult.modifiedCount });
     }
 
-    return NextResponse.json({ success: true, results });
+    // Also set all outreach emails to persona: "architect" where missing
+    const personaResult = await db.collection("outreach_emails").updateMany(
+      { $or: [{ persona: { $exists: false } }, { persona: null }, { persona: "" }, { persona: "founder" }] },
+      { $set: { persona: "architect" } }
+    );
+
+    return NextResponse.json({ success: true, results, personaUpdated: personaResult.modifiedCount });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: msg }, { status: 500 });
