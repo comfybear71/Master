@@ -155,6 +155,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "update-details") {
+      const { emailId, contactEmail, persona, tone } = await req.json();
+      const db = await getDb();
+      const { ObjectId } = await import("mongodb");
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updates: Record<string, any> = {};
+      if (contactEmail) updates.contactEmail = contactEmail;
+      if (persona) updates.persona = persona;
+      if (tone) updates.tone = tone;
+      // Clear sent status so it can be resent
+      updates.sentAt = null;
+      updates.sentTo = null;
+      await db.collection("outreach_emails").updateOne(
+        { _id: new ObjectId(emailId) },
+        { $set: updates }
+      );
+      return NextResponse.json({ success: true });
+    }
+
     if (action === "delete") {
       const { emailId } = await req.json();
       const db = await getDb();

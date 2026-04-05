@@ -59,6 +59,10 @@ export default function GrowthPage() {
   const [showOutreachForm, setShowOutreachForm] = useState(false);
   const [expandedOutreach, setExpandedOutreach] = useState<Set<string>>(new Set());
   const [deletingOutreach, setDeletingOutreach] = useState<string | null>(null);
+  const [editingOutreachId, setEditingOutreachId] = useState<string | null>(null);
+  const [editEmail, setEditEmail] = useState("");
+  const [editPersona, setEditPersona] = useState("architect");
+  const [editTone, setEditTone] = useState("casual");
   const [outreachCompany, setOutreachCompany] = useState("");
   const [outreachIndustry, setOutreachIndustry] = useState("");
   const [outreachProduct, setOutreachProduct] = useState("");
@@ -854,7 +858,20 @@ export default function GrowthPage() {
                           </div>
                           <p className="text-[10px] text-cyan-400">{prospectEmail || "No email address"}</p>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            onClick={() => {
+                              if (editingOutreachId === id) { setEditingOutreachId(null); } else {
+                                setEditingOutreachId(id);
+                                setEditEmail(prospectEmail);
+                                setEditPersona(email.persona || "architect");
+                                setEditTone(email.tone || "casual");
+                              }
+                            }}
+                            className="text-[10px] font-mono px-2 py-1 rounded bg-slate-700/50 text-slate-400 hover:text-white transition-colors"
+                          >
+                            {editingOutreachId === id ? "Close" : "Edit"}
+                          </button>
                           {isSent && (
                             <select
                               value={outreachStatus}
@@ -909,6 +926,41 @@ export default function GrowthPage() {
                           </button>
                         </div>
                       </div>
+                      {/* Edit panel */}
+                      {editingOutreachId === id && (
+                        <div className="px-5 pb-3 flex items-center gap-2 flex-wrap border-t border-slate-800 pt-3">
+                          <input
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="Email address"
+                            className="text-xs bg-base border border-slate-700 rounded px-2 py-1.5 text-white flex-1 min-w-[180px] focus:border-accent focus:outline-none"
+                          />
+                          <select value={editPersona} onChange={(e) => setEditPersona(e.target.value)} className="text-xs bg-base border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:border-accent focus:outline-none">
+                            <option value="architect">Architect</option>
+                            <option value="founder">Founder</option>
+                            <option value="ads">Ads</option>
+                          </select>
+                          <select value={editTone} onChange={(e) => setEditTone(e.target.value)} className="text-xs bg-base border border-slate-700 rounded px-2 py-1.5 text-slate-300 focus:border-accent focus:outline-none">
+                            <option value="casual">Casual</option>
+                            <option value="formal">Formal</option>
+                            <option value="bold">Bold</option>
+                          </select>
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/outreach?action=update-details", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ emailId: id, contactEmail: editEmail, persona: editPersona, tone: editTone }),
+                              });
+                              setEditingOutreachId(null);
+                              fetchAll();
+                            }}
+                            className="text-xs font-mono px-3 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30 transition-colors"
+                          >
+                            Save & Reset
+                          </button>
+                        </div>
+                      )}
                     </div>
                     );
                   })}
