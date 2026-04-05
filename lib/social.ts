@@ -804,6 +804,34 @@ export async function getTikTokStats(): Promise<SocialStats> {
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : "TikTok API error";
     log(`FAILED: ${errMsg}`);
+
+    // Fall back to manual stats from MongoDB settings
+    try {
+      const { getDb } = await import("@/lib/mongodb");
+      const db = await getDb();
+      const manual = await db.collection("settings").findOne({ key: "tiktok_manual_stats" });
+      if (manual?.value) {
+        log("Using manual TikTok stats from MongoDB");
+        return {
+          platform: "tiktok" as const,
+          followers: manual.value.followers || 0,
+          posts: manual.value.posts || 0,
+          engagementRate: manual.value.engagementRate || 0,
+          recentPosts: [],
+          connected: true,
+          mode: "manual" as const,
+          logs,
+          fetchedAt: manual.value.updatedAt || new Date().toISOString(),
+          adCost: manual.value.adCost,
+          videoViews: manual.value.videoViews,
+          newFollowers: manual.value.newFollowers,
+          profileViews: manual.value.profileViews,
+        };
+      }
+    } catch {
+      // Fall through to default error response
+    }
+
     return {
       platform: "tiktok",
       followers: 0, posts: 0, engagementRate: 0, recentPosts: [],

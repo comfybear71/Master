@@ -624,6 +624,30 @@ export default function GrowthPage() {
                       {/* TikTok-specific controls */}
                       {platform === "tiktok" && (
                         <div className="mt-3 border-t border-slate-800 pt-3 space-y-2">
+                          {/* TikTok Ad Performance Metrics */}
+                          {(stat as Record<string, unknown>)?.adCost && (
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div className="bg-base rounded-lg p-2 border border-slate-800">
+                                <div className="text-xs text-slate-500">Ad Cost</div>
+                                <div className="text-sm font-bold font-mono text-white">{(stat as Record<string, unknown>).adCost as string}</div>
+                              </div>
+                              <div className="bg-base rounded-lg p-2 border border-slate-800">
+                                <div className="text-xs text-slate-500">Video Views</div>
+                                <div className="text-sm font-bold font-mono text-white">{(stat as Record<string, unknown>).videoViews as string}</div>
+                              </div>
+                              <div className="bg-base rounded-lg p-2 border border-slate-800">
+                                <div className="text-xs text-slate-500">New Followers</div>
+                                <div className="text-sm font-bold font-mono text-white">{((stat as Record<string, unknown>).newFollowers as number || 0).toLocaleString()}</div>
+                              </div>
+                              <div className="bg-base rounded-lg p-2 border border-slate-800">
+                                <div className="text-xs text-slate-500">Profile Views</div>
+                                <div className="text-sm font-bold font-mono text-white">{((stat as Record<string, unknown>).profileViews as number || 0).toLocaleString()}</div>
+                              </div>
+                            </div>
+                          )}
+                          {(stat as Record<string, unknown>)?.mode === "manual" && (
+                            <div className="text-[10px] font-mono text-amber-400 mb-1">Manual stats — TikTok API not available</div>
+                          )}
                           {/* Sandbox / Live Switch */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
