@@ -58,6 +58,7 @@ export default function GrowthPage() {
   const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string; contactEmail?: string }>>([]);
   const [showOutreachForm, setShowOutreachForm] = useState(false);
   const [expandedOutreach, setExpandedOutreach] = useState<Set<string>>(new Set());
+  const [deletingOutreach, setDeletingOutreach] = useState<string | null>(null);
   const [outreachCompany, setOutreachCompany] = useState("");
   const [outreachIndustry, setOutreachIndustry] = useState("");
   const [outreachProduct, setOutreachProduct] = useState("");
@@ -317,12 +318,20 @@ export default function GrowthPage() {
   };
 
   const deleteOutreachEmail = async (emailId: string) => {
-    await fetch("/api/outreach?action=delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ emailId }),
-    });
-    fetchAll();
+    setDeletingOutreach(emailId);
+    try {
+      await fetch("/api/outreach?action=delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailId }),
+      });
+      // Remove from local state immediately
+      setOutreachEmails(prev => prev.filter(e => String(e._id) !== emailId));
+    } catch {
+      // Refresh if delete failed
+      fetchAll();
+    }
+    setDeletingOutreach(null);
   };
 
   const copyToClipboard = async (text: string, id: string) => {
@@ -809,7 +818,11 @@ export default function GrowthPage() {
                           <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors">
                             Send
                           </button>
-                          <button onClick={() => deleteOutreachEmail(id)} className="text-xs text-danger hover:text-danger/80">Delete</button>
+                          <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[50px]">
+                            {deletingOutreach === id ? (
+                              <span className="inline-block w-3 h-3 border-2 border-danger/40 border-t-danger rounded-full animate-spin" />
+                            ) : "Delete"}
+                          </button>
                         </div>
                       </div>
 
