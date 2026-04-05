@@ -57,6 +57,7 @@ export default function GrowthPage() {
   // Outreach email form
   const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string; contactEmail?: string }>>([]);
   const [showOutreachForm, setShowOutreachForm] = useState(false);
+  const [expandedOutreach, setExpandedOutreach] = useState<Set<string>>(new Set());
   const [outreachCompany, setOutreachCompany] = useState("");
   const [outreachIndustry, setOutreachIndustry] = useState("");
   const [outreachProduct, setOutreachProduct] = useState("");
@@ -792,55 +793,70 @@ export default function GrowthPage() {
                     const id = String(email._id);
                     const editable = getEditableEmail(email);
                     const prospectEmail = email.contactEmail || "";
+                    const isExpanded = expandedOutreach.has(id);
                     return (
-                    <div key={id} className="bg-base-card rounded-xl border border-slate-800 p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
-                          <p className="text-xs text-slate-500">{email.industry} — {new Date(email.createdAt).toLocaleDateString()}</p>
+                    <div key={id} className="bg-base-card rounded-xl border border-slate-800 overflow-hidden">
+                      {/* Collapsed header — always visible */}
+                      <div className="flex items-center justify-between px-5 py-3">
+                        <button onClick={() => setExpandedOutreach(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} className="flex items-center gap-3 text-left flex-1">
+                          <span className="text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>{"\u25B6"}</span>
+                          <div>
+                            <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
+                            <p className="text-[10px] text-slate-500">{email.industry} — {editable.subject}</p>
+                          </div>
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors">
+                            Send
+                          </button>
+                          <button onClick={() => deleteOutreachEmail(id)} className="text-xs text-danger hover:text-danger/80">Delete</button>
                         </div>
-                        <button onClick={() => deleteOutreachEmail(id)} className="text-xs text-danger hover:text-danger/80">Delete</button>
                       </div>
 
-                      {/* Initial Email — Editable */}
-                      <div className="bg-base rounded-lg border border-slate-800 p-4 mb-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold text-accent">Initial Email</h4>
-                          <div className="flex gap-1">
-                            <button onClick={() => copyToClipboard(`Subject: ${editable.subject}\n\n${editable.body}`, `initial-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `initial-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-                              {copiedEmail === `initial-${id}` ? "Copied!" : "Copy"}
-                            </button>
-                            <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
-                              Send
-                            </button>
+                      {/* Expandable content */}
+                      {isExpanded && (
+                        <div className="px-5 pb-5 space-y-3">
+                          {/* Initial Email — Editable */}
+                          <div className="bg-base rounded-lg border border-slate-800 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-xs font-semibold text-accent">Initial Email</h4>
+                              <div className="flex gap-1">
+                                <button onClick={() => copyToClipboard(`Subject: ${editable.subject}\n\n${editable.body}`, `initial-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `initial-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                                  {copiedEmail === `initial-${id}` ? "Copied!" : "Copy"}
+                                </button>
+                                <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
+                                  Send
+                                </button>
+                              </div>
+                            </div>
+                            <div className="mb-2">
+                              <span className="text-[10px] text-slate-500">Subject:</span>
+                              <input value={editable.subject} onChange={(e) => updateEditableEmail(id, "subject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
+                            </div>
+                            <textarea value={editable.body} onChange={(e) => updateEditableEmail(id, "body", e.target.value)} rows={10} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
                           </div>
-                        </div>
-                        <div className="mb-2">
-                          <span className="text-[10px] text-slate-500">Subject:</span>
-                          <input value={editable.subject} onChange={(e) => updateEditableEmail(id, "subject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
-                        </div>
-                        <textarea value={editable.body} onChange={(e) => updateEditableEmail(id, "body", e.target.value)} rows={10} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
-                      </div>
 
-                      {/* Follow-up Email — Editable */}
-                      <div className="bg-base rounded-lg border border-slate-800 p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="text-xs font-semibold text-amber-400">Follow-Up (5 days later)</h4>
-                          <div className="flex gap-1">
-                            <button onClick={() => copyToClipboard(`Subject: ${editable.followUpSubject}\n\n${editable.followUpBody}`, `followup-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `followup-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
-                              {copiedEmail === `followup-${id}` ? "Copied!" : "Copy"}
-                            </button>
-                            <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.followUpSubject, editable.followUpBody)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
-                              Send
-                            </button>
+                          {/* Follow-up Email — Editable */}
+                          <div className="bg-base rounded-lg border border-slate-800 p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="text-xs font-semibold text-amber-400">Follow-Up (5 days later)</h4>
+                              <div className="flex gap-1">
+                                <button onClick={() => copyToClipboard(`Subject: ${editable.followUpSubject}\n\n${editable.followUpBody}`, `followup-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `followup-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
+                                  {copiedEmail === `followup-${id}` ? "Copied!" : "Copy"}
+                                </button>
+                                <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.followUpSubject, editable.followUpBody)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
+                                  Send
+                                </button>
+                              </div>
+                            </div>
+                            <div className="mb-2">
+                              <span className="text-[10px] text-slate-500">Subject:</span>
+                              <input value={editable.followUpSubject} onChange={(e) => updateEditableEmail(id, "followUpSubject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
+                            </div>
+                            <textarea value={editable.followUpBody} onChange={(e) => updateEditableEmail(id, "followUpBody", e.target.value)} rows={4} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
                           </div>
                         </div>
-                        <div className="mb-2">
-                          <span className="text-[10px] text-slate-500">Subject:</span>
-                          <input value={editable.followUpSubject} onChange={(e) => updateEditableEmail(id, "followUpSubject", e.target.value)} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white mt-1 focus:border-accent focus:outline-none" />
-                        </div>
-                        <textarea value={editable.followUpBody} onChange={(e) => updateEditableEmail(id, "followUpBody", e.target.value)} rows={4} className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300 leading-relaxed focus:border-accent focus:outline-none resize-y" />
-                      </div>
+                      )}
                     </div>
                     );
                   })}
