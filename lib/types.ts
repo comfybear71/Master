@@ -75,8 +75,13 @@ export interface SocialStats {
   fetchedAt: string;
   connected?: boolean;
   error?: string;
-  mode?: "sandbox" | "production";
+  mode?: "sandbox" | "production" | "manual";
   logs?: string[];
+  // TikTok manual stats
+  adCost?: string;
+  videoViews?: string;
+  newFollowers?: number;
+  profileViews?: number;
 }
 
 export interface SocialPost {
