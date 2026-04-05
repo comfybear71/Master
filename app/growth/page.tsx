@@ -894,7 +894,13 @@ export default function GrowthPage() {
                               {sendingOutreachId === id + "-followup" ? "Sending..." : "Follow-up"}
                             </button>
                           ) : isSent ? (
-                            <span className="text-[10px] font-mono text-green-400">{daysSinceSent}d ago</span>
+                            <button
+                              onClick={() => sendOutreachEmail(id, prospectEmail, email.subject, email.body, email.companyName, email.tone, email.persona)}
+                              disabled={sendingOutreachId === id}
+                              className="text-xs font-mono px-3 py-1.5 rounded bg-slate-500/20 text-slate-300 hover:bg-slate-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {sendingOutreachId === id ? "Sending..." : "Resend"}
+                            </button>
                           ) : null}
                           <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[40px]">
                             {deletingOutreach === id ? (
