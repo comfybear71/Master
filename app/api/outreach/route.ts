@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "send") {
-      const { emailId, subject, body, toEmail, companyName } = await req.json();
+      const { emailId, subject, body, toEmail, companyName, tone, persona } = await req.json();
       if (!toEmail || !subject || !body) {
         return NextResponse.json({ error: "Missing toEmail, subject, or body" }, { status: 400 });
       }
@@ -79,18 +79,20 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
       }
 
-      // Load the HTML email template (founder casual by default)
+      // Load the branded HTML email template matching persona + tone
       const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterhq.dev";
+      const templatePersona = persona || "founder";
+      const templateTone = tone || "casual";
       let html: string;
       try {
-        const templateRes = await fetch(`${SITE_URL}/email-founder-casual.html`);
+        const templateRes = await fetch(`${SITE_URL}/email-${templatePersona}-${templateTone}.html`);
+        if (!templateRes.ok) throw new Error(`Template not found: ${templatePersona}-${templateTone}`);
         html = await templateRes.text();
-        // Replace placeholders with actual content
         const contactName = companyName || "there";
         html = html.replace(/\[NAME\]/g, contactName);
         html = html.replace(/\[COMPANY\]/g, companyName || "your company");
       } catch {
-        // Fallback to styled plain text if template fails
+        // Fallback: wrap AI-generated text in branded styling
         html = `<div style="background:#0a0a0a;color:#f5f4f0;padding:40px;font-family:sans-serif;max-width:600px;margin:0 auto;">
           <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #c8ff00;">
             <h1 style="font-size:24px;font-weight:bold;color:#c8ff00;margin:0;">AIG!ITCH</h1>
@@ -104,9 +106,16 @@ export async function POST(req: NextRequest) {
         </div>`;
       }
 
+      const senders: Record<string, { email: string; name: string }> = {
+        founder: { email: "stuart.french@aiglitch.app", name: "Stuie French" },
+        architect: { email: "architect@aiglitch.app", name: "The Architect" },
+        ads: { email: "ads@aiglitch.app", name: "AIG!itch Ads" },
+      };
+      const sender = senders[templatePersona] || senders.founder;
+
       const resend = new Resend(resendKey);
       const { data, error } = await resend.emails.send({
-        from: "Stuie French <stuart.french@aiglitch.app>",
+        from: `${sender.name} <${sender.email}>`,
         to: toEmail,
         subject,
         html,

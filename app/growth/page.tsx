@@ -55,7 +55,7 @@ export default function GrowthPage() {
   const [campaignAudience, setCampaignAudience] = useState("");
 
   // Outreach email form
-  const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string; contactEmail?: string }>>([]);
+  const [outreachEmails, setOutreachEmails] = useState<Array<{ _id?: string; companyName: string; industry: string; subject: string; body: string; followUpSubject: string; followUpBody: string; createdAt: string; contactEmail?: string; tone?: string; persona?: string }>>([]);
   const [showOutreachForm, setShowOutreachForm] = useState(false);
   const [expandedOutreach, setExpandedOutreach] = useState<Set<string>>(new Set());
   const [deletingOutreach, setDeletingOutreach] = useState<string | null>(null);
@@ -355,7 +355,7 @@ export default function GrowthPage() {
   const [sendingOutreachId, setSendingOutreachId] = useState<string | null>(null);
   const [sendOutreachResult, setSendOutreachResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
 
-  const sendOutreachEmail = async (emailId: string, toEmail: string, subject: string, body: string) => {
+  const sendOutreachEmail = async (emailId: string, toEmail: string, subject: string, body: string, companyName?: string, tone?: string, persona?: string) => {
     if (!toEmail || toEmail === "Contact via website") {
       setSendOutreachResult({ id: emailId, success: false, message: "No email address" });
       setTimeout(() => setSendOutreachResult(null), 3000);
@@ -367,7 +367,7 @@ export default function GrowthPage() {
       const res = await fetch("/api/outreach?action=send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emailId, toEmail, subject, body }),
+        body: JSON.stringify({ emailId, toEmail, subject, body, companyName, tone, persona }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -840,7 +840,7 @@ export default function GrowthPage() {
                           </div>
                         </button>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body)} disabled={sendingOutreachId === id} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50">
+                          <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50">
                             {sendingOutreachId === id ? "Sending..." : sendOutreachResult?.id === id ? (sendOutreachResult.success ? "Sent!" : "Failed") : "Send"}
                           </button>
                           <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[50px]">
@@ -882,8 +882,8 @@ export default function GrowthPage() {
                                 <button onClick={() => copyToClipboard(`Subject: ${editable.followUpSubject}\n\n${editable.followUpBody}`, `followup-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `followup-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
                                   {copiedEmail === `followup-${id}` ? "Copied!" : "Copy"}
                                 </button>
-                                <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.followUpSubject, editable.followUpBody)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
-                                  Send
+                                <button onClick={() => sendOutreachEmail(id + "-followup", prospectEmail, editable.followUpSubject, editable.followUpBody, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id + "-followup"} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50">
+                                  {sendingOutreachId === id + "-followup" ? "Sending..." : "Send"}
                                 </button>
                               </div>
                             </div>
