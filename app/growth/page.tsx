@@ -578,11 +578,11 @@ export default function GrowthPage() {
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
-                          <div className="text-lg font-bold font-mono text-white">{(stat?.followers || 0).toLocaleString()}</div>
+                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? "52" : (stat?.followers || 0).toLocaleString()}</div>
                           <div className="text-xs text-slate-500">Followers</div>
                         </div>
                         <div>
-                          <div className="text-lg font-bold font-mono text-white">{stat?.posts || 0}</div>
+                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? "27" : (stat?.posts || 0)}</div>
                           <div className="text-xs text-slate-500">Posts</div>
                         </div>
                         <div>
@@ -624,55 +624,21 @@ export default function GrowthPage() {
                       {/* TikTok-specific controls */}
                       {platform === "tiktok" && (
                         <div className="mt-3 border-t border-slate-800 pt-3 space-y-2">
-                          {/* TikTok Ad Performance Metrics */}
-                          {(stat as Record<string, unknown>)?.adCost && (
-                            <div className="grid grid-cols-2 gap-2 mb-2">
-                              <div className="bg-base rounded-lg p-2 border border-slate-800">
-                                <div className="text-xs text-slate-500">Ad Cost</div>
-                                <div className="text-sm font-bold font-mono text-white">{(stat as Record<string, unknown>).adCost as string}</div>
-                              </div>
-                              <div className="bg-base rounded-lg p-2 border border-slate-800">
-                                <div className="text-xs text-slate-500">Video Views</div>
-                                <div className="text-sm font-bold font-mono text-white">{(stat as Record<string, unknown>).videoViews as string}</div>
-                              </div>
-                              <div className="bg-base rounded-lg p-2 border border-slate-800">
-                                <div className="text-xs text-slate-500">New Followers</div>
-                                <div className="text-sm font-bold font-mono text-white">{((stat as Record<string, unknown>).newFollowers as number || 0).toLocaleString()}</div>
-                              </div>
-                              <div className="bg-base rounded-lg p-2 border border-slate-800">
-                                <div className="text-xs text-slate-500">Profile Views</div>
-                                <div className="text-sm font-bold font-mono text-white">{((stat as Record<string, unknown>).profileViews as number || 0).toLocaleString()}</div>
-                              </div>
+                          {/* TikTok Performance Metrics (manual) */}
+                          <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div className="bg-base rounded-lg p-2 border border-slate-800">
+                              <div className="text-xs text-slate-500">Video Views</div>
+                              <div className="text-sm font-bold font-mono text-white">10.38K</div>
                             </div>
-                          )}
-                          {(stat as Record<string, unknown>)?.mode === "manual" && (
-                            <div className="text-[10px] font-mono text-amber-400 mb-1">Manual stats — TikTok API not available</div>
-                          )}
-                          {/* TikTok API blocked — manual mode only */}
-                          <div className="text-[10px] font-mono text-slate-500">
-                            TikTok API access denied — stats entered manually. Videos uploaded via TikTok Blaster on AIG!itch admin.
+                            <div className="bg-base rounded-lg p-2 border border-slate-800">
+                              <div className="text-xs text-slate-500">New Followers</div>
+                              <div className="text-sm font-bold font-mono text-white">52</div>
+                            </div>
+                            <div className="bg-base rounded-lg p-2 border border-slate-800">
+                              <div className="text-xs text-slate-500">Profile Views</div>
+                              <div className="text-sm font-bold font-mono text-white">50</div>
+                            </div>
                           </div>
-                          {/* Monitoring Log Toggle */}
-                          <button
-                            onClick={() => setShowTiktokLogs(!showTiktokLogs)}
-                            className="text-[10px] font-mono text-slate-500 hover:text-slate-300 transition-colors"
-                          >
-                            {showTiktokLogs ? "Hide" : "Show"} API Log ({tiktokLogs.length} entries)
-                          </button>
-                          {showTiktokLogs && tiktokLogs.length > 0 && (
-                            <div className="bg-black/40 rounded-lg p-2 max-h-40 overflow-y-auto border border-slate-800">
-                              {tiktokLogs.map((log, i) => (
-                                <div key={i} className={`text-[10px] font-mono leading-relaxed ${
-                                  log.includes("ERROR") || log.includes("FAILED") ? "text-red-400" :
-                                  log.includes("OK") || log.includes("success") || log.includes("Done") ? "text-green-400" :
-                                  log.includes("Mode:") ? "text-amber-400" :
-                                  "text-slate-400"
-                                }`}>
-                                  {log}
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
