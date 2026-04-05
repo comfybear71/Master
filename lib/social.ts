@@ -819,7 +819,7 @@ export async function getTikTokStats(): Promise<SocialStats> {
           engagementRate: manual.value.engagementRate || 0,
           recentPosts: [],
           connected: true,
-          mode: "manual" as const,
+          mode: "production" as const,
           logs,
           fetchedAt: manual.value.updatedAt || new Date().toISOString(),
           adCost: manual.value.adCost,
