@@ -832,11 +832,16 @@ export default function GrowthPage() {
                     <div key={id} className="bg-base-card rounded-xl border border-slate-800 overflow-hidden">
                       {/* Collapsed header — always visible */}
                       <div className="flex items-center justify-between px-5 py-3">
-                        <button onClick={() => setExpandedOutreach(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} className="flex items-center gap-3 text-left flex-1">
+                        <button onClick={() => setExpandedOutreach(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; })} className="flex items-center gap-3 text-left flex-1 min-w-0">
                           <span className="text-xs text-slate-500 transition-transform" style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)" }}>{"\u25B6"}</span>
-                          <div>
-                            <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
-                            <p className="text-[10px] text-slate-500">{email.industry} — {editable.subject}</p>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
+                              {email.persona && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{email.persona}</span>}
+                              {email.tone && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{email.tone}</span>}
+                            </div>
+                            <p className="text-[10px] text-slate-500 truncate">{editable.subject}</p>
+                            <p className="text-[10px] text-cyan-400">{prospectEmail || "No email address"}</p>
                           </div>
                         </button>
                         <div className="flex items-center gap-2">
