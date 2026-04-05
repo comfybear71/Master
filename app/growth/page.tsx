@@ -557,8 +557,8 @@ export default function GrowthPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {platform === "tiktok" && (
-                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${tiktokMode === "sandbox" ? "bg-amber-500/20 text-amber-400" : "bg-green-500/20 text-green-400"}`}>
-                              {tiktokMode === "sandbox" ? "SANDBOX" : "LIVE"}
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400">
+                              MANUAL
                             </span>
                           )}
                           {stat?.error === "quota_exceeded" ? (
@@ -648,26 +648,9 @@ export default function GrowthPage() {
                           {(stat as Record<string, unknown>)?.mode === "manual" && (
                             <div className="text-[10px] font-mono text-amber-400 mb-1">Manual stats — TikTok API not available</div>
                           )}
-                          {/* Sandbox / Live Switch */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => {
-                                  const newMode = tiktokMode === "sandbox" ? "production" : "sandbox";
-                                  setTiktokMode(newMode);
-                                  window.location.href = `/api/auth/tiktok?mode=${newMode}`;
-                                }}
-                                className={`relative w-10 h-5 rounded-full transition-colors ${tiktokMode === "sandbox" ? "bg-amber-500/40" : "bg-green-500/40"}`}
-                              >
-                                <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-transform ${tiktokMode === "sandbox" ? "left-0.5 bg-amber-400" : "left-5 bg-green-400"}`} />
-                              </button>
-                              <span className="text-[10px] font-mono text-slate-400">
-                                {tiktokMode === "sandbox" ? "Switch to LIVE" : "Switch to SANDBOX"}
-                              </span>
-                            </div>
-                            <a href={`/api/auth/tiktok?mode=${tiktokMode}`} className="text-[10px] text-cyan-400 font-mono hover:underline">
-                              Re-authorize
-                            </a>
+                          {/* TikTok API blocked — manual mode only */}
+                          <div className="text-[10px] font-mono text-slate-500">
+                            TikTok API access denied — stats entered manually. Videos uploaded via TikTok Blaster on AIG!itch admin.
                           </div>
                           {/* Monitoring Log Toggle */}
                           <button
