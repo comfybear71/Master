@@ -163,6 +163,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "update-email") {
+      const { prospectId, email } = body;
+      await db.collection("prospects").updateOne(
+        { _id: new ObjectId(prospectId) },
+        { $set: { email } }
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "bulk-update-emails") {
+      const { updates } = body;
+      for (const u of updates) {
+        await db.collection("prospects").updateOne(
+          { _id: new ObjectId(u.prospectId) },
+          { $set: { email: u.email } }
+        );
+      }
+      return NextResponse.json({ success: true, updated: updates.length });
+    }
+
     if (action === "generate-email") {
       const { prospectId, tone } = body;
       const prospect = await db.collection("prospects").findOne({ _id: new ObjectId(prospectId) });
