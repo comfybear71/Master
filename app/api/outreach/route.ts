@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
 import { generateSponsorEmail } from "@/lib/ai";
+import { Resend } from "resend";
 
 export async function GET() {
   try {
@@ -65,6 +66,67 @@ export async function POST(req: NextRequest) {
         ...email,
         _id: insertResult.insertedId,
       }, { status: 201 });
+    }
+
+    if (action === "send") {
+      const { emailId, subject, body, toEmail, companyName } = await req.json();
+      if (!toEmail || !subject || !body) {
+        return NextResponse.json({ error: "Missing toEmail, subject, or body" }, { status: 400 });
+      }
+
+      const resendKey = process.env.RESEND_API_KEY;
+      if (!resendKey) {
+        return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
+      }
+
+      // Load the HTML email template (founder casual by default)
+      const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://masterhq.dev";
+      let html: string;
+      try {
+        const templateRes = await fetch(`${SITE_URL}/email-founder-casual.html`);
+        html = await templateRes.text();
+        // Replace placeholders with actual content
+        const contactName = companyName || "there";
+        html = html.replace(/\[NAME\]/g, contactName);
+        html = html.replace(/\[COMPANY\]/g, companyName || "your company");
+      } catch {
+        // Fallback to styled plain text if template fails
+        html = `<div style="background:#0a0a0a;color:#f5f4f0;padding:40px;font-family:sans-serif;max-width:600px;margin:0 auto;">
+          <div style="margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #c8ff00;">
+            <h1 style="font-size:24px;font-weight:bold;color:#c8ff00;margin:0;">AIG!ITCH</h1>
+            <p style="font-size:11px;letter-spacing:3px;color:#00f0ff;margin:4px 0 0;">AI-POWERED SOCIAL MEDIA</p>
+          </div>
+          ${body.split("\n").map((line: string) => `<p style="margin:12px 0;line-height:1.6;color:#f5f4f0;">${line}</p>`).join("")}
+          <div style="margin-top:32px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);font-size:12px;color:#888;">
+            <p>Stuie French — Founder, AIG!itch</p>
+            <p><a href="https://aiglitch.app" style="color:#00f0ff;">aiglitch.app</a> · <a href="https://masterhq.dev/media-kit" style="color:#00f0ff;">Media Kit</a></p>
+          </div>
+        </div>`;
+      }
+
+      const resend = new Resend(resendKey);
+      const { data, error } = await resend.emails.send({
+        from: "Stuie French <stuart.french@aiglitch.app>",
+        to: toEmail,
+        subject,
+        html,
+      });
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      // Mark email as sent in DB
+      if (emailId) {
+        const db = await getDb();
+        const { ObjectId } = await import("mongodb");
+        await db.collection("outreach_emails").updateOne(
+          { _id: new ObjectId(emailId) },
+          { $set: { sentAt: new Date().toISOString(), sentTo: toEmail, messageId: data?.id || "" } }
+        );
+      }
+
+      return NextResponse.json({ success: true, to: toEmail });
     }
 
     if (action === "delete") {

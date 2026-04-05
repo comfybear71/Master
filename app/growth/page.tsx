@@ -352,9 +352,34 @@ export default function GrowthPage() {
     }));
   };
 
-  const openMailto = (toEmail: string, subject: string, body: string) => {
-    const mailto = `mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailto, "_blank");
+  const [sendingOutreachId, setSendingOutreachId] = useState<string | null>(null);
+  const [sendOutreachResult, setSendOutreachResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
+
+  const sendOutreachEmail = async (emailId: string, toEmail: string, subject: string, body: string) => {
+    if (!toEmail || toEmail === "Contact via website") {
+      setSendOutreachResult({ id: emailId, success: false, message: "No email address" });
+      setTimeout(() => setSendOutreachResult(null), 3000);
+      return;
+    }
+    setSendingOutreachId(emailId);
+    setSendOutreachResult(null);
+    try {
+      const res = await fetch("/api/outreach?action=send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emailId, toEmail, subject, body }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSendOutreachResult({ id: emailId, success: true, message: `Sent to ${data.to}` });
+      } else {
+        setSendOutreachResult({ id: emailId, success: false, message: data.error || "Failed" });
+      }
+    } catch {
+      setSendOutreachResult({ id: emailId, success: false, message: "Network error" });
+    }
+    setSendingOutreachId(null);
+    setTimeout(() => setSendOutreachResult(null), 4000);
   };
 
   const scanViral = async () => {
@@ -815,8 +840,8 @@ export default function GrowthPage() {
                           </div>
                         </button>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors">
-                            Send
+                          <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body)} disabled={sendingOutreachId === id} className="text-xs font-mono px-3 py-1.5 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors disabled:opacity-50">
+                            {sendingOutreachId === id ? "Sending..." : sendOutreachResult?.id === id ? (sendOutreachResult.success ? "Sent!" : "Failed") : "Send"}
                           </button>
                           <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[50px]">
                             {deletingOutreach === id ? (
