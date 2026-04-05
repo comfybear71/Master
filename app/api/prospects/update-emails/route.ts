@@ -23,11 +23,17 @@ export async function GET() {
 
     const results = [];
     for (const u of updates) {
+      // Update prospects table
       const result = await db.collection("prospects").updateOne(
         { _id: new ObjectId(u.id) },
         { $set: { email: u.email } }
       );
-      results.push({ company: u.company, email: u.email, matched: result.matchedCount, modified: result.modifiedCount });
+      // Also update outreach_emails that still say "Contact via website"
+      const outreachResult = await db.collection("outreach_emails").updateMany(
+        { companyName: u.company, contactEmail: "Contact via website" },
+        { $set: { contactEmail: u.email } }
+      );
+      results.push({ company: u.company, email: u.email, prospectModified: result.modifiedCount, outreachModified: outreachResult.modifiedCount });
     }
 
     return NextResponse.json({ success: true, results });

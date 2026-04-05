@@ -127,12 +127,18 @@ export async function POST(req: NextRequest) {
 
       // Mark email as sent in DB
       if (emailId) {
-        const db = await getDb();
-        const { ObjectId } = await import("mongodb");
-        await db.collection("outreach_emails").updateOne(
-          { _id: new ObjectId(emailId) },
-          { $set: { sentAt: new Date().toISOString(), sentTo: toEmail, messageId: data?.id || "" } }
-        );
+        try {
+          const db = await getDb();
+          const { ObjectId } = await import("mongodb");
+          if (emailId.length === 24) {
+            await db.collection("outreach_emails").updateOne(
+              { _id: new ObjectId(emailId) },
+              { $set: { sentAt: new Date().toISOString(), sentTo: toEmail, messageId: data?.id || "" } }
+            );
+          }
+        } catch {
+          // Don't fail the send if DB update fails
+        }
       }
 
       return NextResponse.json({ success: true, to: toEmail });
