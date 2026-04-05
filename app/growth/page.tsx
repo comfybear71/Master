@@ -862,8 +862,8 @@ export default function GrowthPage() {
                                 <button onClick={() => copyToClipboard(`Subject: ${editable.subject}\n\n${editable.body}`, `initial-${id}`)} className={`text-[10px] font-mono px-2 py-1 rounded transition-colors ${copiedEmail === `initial-${id}` ? "bg-success/20 text-success" : "bg-slate-800 text-slate-400 hover:text-white"}`}>
                                   {copiedEmail === `initial-${id}` ? "Copied!" : "Copy"}
                                 </button>
-                                <button onClick={() => openMailto(prospectEmail || "advertise@aiglitch.app", editable.subject, editable.body)} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30">
-                                  Send
+                                <button onClick={() => sendOutreachEmail(id, prospectEmail, editable.subject, editable.body, email.companyName, email.tone, email.persona)} disabled={sendingOutreachId === id} className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 disabled:opacity-50">
+                                  {sendingOutreachId === id ? "Sending..." : "Send"}
                                 </button>
                               </div>
                             </div>
