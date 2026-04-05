@@ -827,26 +827,56 @@ export default function GrowthPage() {
                     const id = String(email._id);
                     const prospectEmail = email.contactEmail || "";
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const sentAt = (email as any).sentAt;
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const sentTo = (email as any).sentTo;
+                    const e = email as any;
+                    const sentAt = e.sentAt;
                     const isSent = !!sentAt;
+                    const outreachStatus = e.outreachStatus || "";
+                    const daysSinceSent = sentAt ? Math.floor((Date.now() - new Date(sentAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                    const followUpDue = isSent && !outreachStatus && daysSinceSent >= 5;
+                    const statusColors: Record<string, string> = {
+                      interested: "bg-green-500/20 text-green-400 border-green-500/30",
+                      not_interested: "bg-red-500/20 text-red-400 border-red-500/30",
+                      no_reply: "bg-slate-500/20 text-slate-400 border-slate-500/30",
+                      meeting: "bg-amber-500/20 text-amber-400 border-amber-500/30",
+                      closed: "bg-accent/20 text-accent border-accent/30",
+                    };
                     return (
-                    <div key={id} className={`bg-base-card rounded-xl border overflow-hidden ${isSent ? "border-green-500/20" : "border-slate-800"}`}>
-                      <div className="flex items-center justify-between px-5 py-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
-                              {email.persona && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{email.persona}</span>}
-                              {email.tone && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{email.tone}</span>}
-                              {isSent && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">Sent {new Date(sentAt).toLocaleDateString()}</span>}
-                            </div>
-                            <p className="text-[10px] text-cyan-400">{prospectEmail || "No email address"}</p>
-                            {isSent && sentTo && <p className="text-[10px] text-green-400/60">Sent to {sentTo}</p>}
+                    <div key={id} className={`bg-base-card rounded-xl border overflow-hidden ${isSent ? followUpDue ? "border-amber-500/30" : "border-green-500/20" : "border-slate-800"}`}>
+                      <div className="flex items-center justify-between px-5 py-3 gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-white text-sm">{email.companyName}</h3>
+                            {email.persona && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-accent/10 text-accent border border-accent/20">{email.persona}</span>}
+                            {email.tone && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">{email.tone}</span>}
+                            {isSent && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">Sent {new Date(sentAt).toLocaleDateString()}</span>}
+                            {followUpDue && <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">Follow-up due</span>}
+                            {outreachStatus && <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${statusColors[outreachStatus] || "bg-slate-500/20 text-slate-400 border-slate-500/30"}`}>{outreachStatus.replace("_", " ")}</span>}
                           </div>
+                          <p className="text-[10px] text-cyan-400">{prospectEmail || "No email address"}</p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
+                          {isSent && (
+                            <select
+                              value={outreachStatus}
+                              onChange={async (ev) => {
+                                const val = ev.target.value;
+                                await fetch("/api/outreach?action=update-status", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ emailId: id, outreachStatus: val }),
+                                });
+                                fetchAll();
+                              }}
+                              className="text-[10px] bg-base border border-slate-700 rounded px-1 py-1 text-slate-300 focus:border-accent focus:outline-none"
+                            >
+                              <option value="">Status...</option>
+                              <option value="no_reply">No Reply</option>
+                              <option value="interested">Interested</option>
+                              <option value="not_interested">Not Interested</option>
+                              <option value="meeting">Meeting</option>
+                              <option value="closed">Closed</option>
+                            </select>
+                          )}
                           {!isSent ? (
                             <button
                               onClick={() => sendOutreachEmail(id, prospectEmail, email.subject, email.body, email.companyName, email.tone, email.persona)}
@@ -855,13 +885,21 @@ export default function GrowthPage() {
                             >
                               {sendingOutreachId === id ? "Sending..." : "Send"}
                             </button>
-                          ) : (
-                            <span className="text-[10px] font-mono text-green-400">Delivered</span>
-                          )}
-                          <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[50px]">
+                          ) : followUpDue ? (
+                            <button
+                              onClick={() => sendOutreachEmail(id + "-followup", prospectEmail, `Following up: ${email.subject}`, email.body, email.companyName, email.tone, email.persona)}
+                              disabled={sendingOutreachId === id + "-followup"}
+                              className="text-xs font-mono px-3 py-1.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+                            >
+                              {sendingOutreachId === id + "-followup" ? "Sending..." : "Follow-up"}
+                            </button>
+                          ) : isSent ? (
+                            <span className="text-[10px] font-mono text-green-400">{daysSinceSent}d ago</span>
+                          ) : null}
+                          <button onClick={() => deleteOutreachEmail(id)} disabled={deletingOutreach === id} className="text-xs text-danger hover:text-danger/80 disabled:opacity-50 min-w-[40px]">
                             {deletingOutreach === id ? (
                               <span className="inline-block w-3 h-3 border-2 border-danger/40 border-t-danger rounded-full animate-spin" />
-                            ) : "Delete"}
+                            ) : "Del"}
                           </button>
                         </div>
                       </div>

@@ -144,6 +144,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, to: toEmail });
     }
 
+    if (action === "update-status") {
+      const { emailId, outreachStatus } = await req.json();
+      const db = await getDb();
+      const { ObjectId } = await import("mongodb");
+      await db.collection("outreach_emails").updateOne(
+        { _id: new ObjectId(emailId) },
+        { $set: { outreachStatus } }
+      );
+      return NextResponse.json({ success: true });
+    }
+
     if (action === "delete") {
       const { emailId } = await req.json();
       const db = await getDb();
