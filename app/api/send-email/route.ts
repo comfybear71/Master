@@ -47,6 +47,7 @@ function extractSubject(persona: string, tone: string, company: string): string 
       casual: `Got an idea for ${company}`,
       formal: `Advertising Partnership Inquiry — ${company}`,
       bold: `${company} — your competitors will see this next`,
+      story: `Adding ${company} to the AIG!itch Lore`,
     },
     ads: {
       casual: `Hey! Quick idea for ${company}`,
