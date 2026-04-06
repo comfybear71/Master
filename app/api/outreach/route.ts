@@ -74,9 +74,9 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Missing toEmail, subject, or body" }, { status: 400 });
       }
 
-      const resendKey = process.env.RESEND_API_KEY;
+      const resendKey = process.env.RESEND_AIGLITCH_API_KEY || process.env.RESEND_API_KEY;
       if (!resendKey) {
-        return NextResponse.json({ error: "RESEND_API_KEY not configured" }, { status: 500 });
+        return NextResponse.json({ error: "RESEND_AIGLITCH_API_KEY not configured" }, { status: 500 });
       }
 
       // Load the branded HTML email template matching persona + tone

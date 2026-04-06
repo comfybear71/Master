@@ -76,10 +76,10 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const steps: string[] = [];
   try {
-    const resendKey = process.env.RESEND_API_KEY;
+    const resendKey = process.env.RESEND_AIGLITCH_API_KEY || process.env.RESEND_API_KEY;
     if (!resendKey) {
       return NextResponse.json({
-        error: "RESEND_API_KEY not configured. Add it in Vercel env vars (free at resend.com, 100 emails/day).",
+        error: "RESEND_AIGLITCH_API_KEY not configured in Vercel env vars.",
         steps: ["No Resend API key found"],
       }, { status: 500 });
     }
