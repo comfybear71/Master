@@ -211,7 +211,7 @@ export default function ProspectsPage() {
   const industries = stats?.byIndustry?.map((i) => i.industry).filter(Boolean) || [];
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
+    <div className="p-4 md:p-8 max-w-7xl mx-auto overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -306,8 +306,8 @@ export default function ProspectsPage() {
       )}
 
       {/* Prospect Table */}
-      <div className="bg-base-card rounded-xl border border-slate-800 overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+      <div className="bg-base-card rounded-xl border border-slate-800 overflow-x-auto w-full">
+        <table className="w-full text-sm min-w-[1000px]">
           <thead>
             <tr className="border-b border-slate-800">
               <th className="p-3 text-left">
