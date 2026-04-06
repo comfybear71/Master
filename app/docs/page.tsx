@@ -2298,6 +2298,62 @@ const status = await client.batches.retrieve(batch.id);
 - Same per-request token limits as real-time API`,
   },
   {
+    id: "new-session-prompt",
+    title: "New Session Starter Prompt",
+    category: "master",
+    icon: "\u{1F4CB}",
+    content: `## New Session Starter Prompt
+
+Copy and paste this into any new Claude Code conversation. Replace [PROJECT] and [TASK].
+
+---
+
+\`\`\`
+## MANDATORY: Read these files FIRST before doing anything
+
+1. SAFETY-RULES.md \u2014 Read this file in the project root. These rules override everything. Follow them strictly.
+2. CLAUDE.md \u2014 Read this file in the project root. This is the project's brain.
+3. HANDOFF.md \u2014 Read this file in the project root. This is the project's memory.
+
+Do NOT write any code until you have read all three files.
+
+## Branch Rules
+
+- You are working on project: [PROJECT]
+- Create a new branch from the current production branch for your work
+- Push your branch to GitHub when done \u2014 this branch will become the production branch on Vercel
+- NEVER push directly to main/master
+- NEVER change the Vercel production branch yourself
+- Commit frequently with clear, descriptive messages
+- Small atomic commits \u2014 one logical change per commit
+
+## Your Task
+
+[TASK]
+
+## Rules
+
+- Only work on what is asked. Do NOT touch, refactor, or "improve" anything else
+- Do NOT delete any files unless explicitly asked
+- Do NOT do blanket reverts \u2014 fix issues surgically
+- If something breaks after 3 attempts, STOP and tell me
+- Run the build/type checker before pushing
+- Update HANDOFF.md at the end of the session with what you did
+
+## When You're Done
+
+1. Run the build to confirm no errors
+2. Commit all changes
+3. Push to your branch on GitHub
+4. Update HANDOFF.md with a summary of what was done
+5. Tell me the branch name so I can set it as production on Vercel
+\`\`\`
+
+---
+
+**How to use:** Copy the text between the triple backticks above. Paste it into a new Claude Code session. Replace \`[PROJECT]\` with the project name (e.g. Togogo, AIG!itch, MasterHQ) and \`[TASK]\` with what you want done.`,
+  },
+  {
     id: "safety-protocol",
     title: "Project Safety Protocol",
     category: "master",
