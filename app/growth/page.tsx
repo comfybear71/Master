@@ -423,7 +423,7 @@ export default function GrowthPage() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto overflow-hidden">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -608,8 +608,8 @@ export default function GrowthPage() {
                             <span className="text-xs text-slate-500 font-mono">Coming soon</span>
                           ) : stat?.error?.includes("sandboxed") ? (
                             <span className="text-xs text-slate-500 font-mono">Sandboxed</span>
-                          ) : stat?.error?.includes("Authorize TikTok") ? (
-                            <a href="/api/auth/tiktok" className="text-xs text-accent font-mono hover:underline">Authorize TikTok</a>
+                          ) : stat?.error?.includes("Authorize TikTok") || (platform === "tiktok" && stat?.error) ? (
+                            <span className="text-xs text-cyan-400 font-mono">Manual</span>
                           ) : stat?.error ? (
                             <span className="text-xs text-error font-mono">Error</span>
                           ) : null}
