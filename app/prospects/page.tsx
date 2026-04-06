@@ -55,7 +55,7 @@ export default function ProspectsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [emailModal, setEmailModal] = useState<{ prospect: Prospect; email?: GeneratedEmail } | null>(null);
   const [generatingEmail, setGeneratingEmail] = useState(false);
-  const [emailTone, setEmailTone] = useState<"casual" | "formal" | "bold">("casual");
+  const [emailTone, setEmailTone] = useState<"casual" | "formal" | "bold" | "story">("casual");
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [bulkResults, setBulkResults] = useState<Array<{ company: string; success: boolean }> | null>(null);
@@ -276,7 +276,7 @@ export default function ProspectsPage() {
           ))}
         </div>
         <div className="flex gap-1">
-          {(["casual", "formal", "bold"] as const).map((t) => (
+          {(["casual", "formal", "bold", "story"] as const).map((t) => (
             <button key={t} onClick={() => setEmailTone(t)}
               className={`px-3 py-2 rounded-lg text-xs font-mono ${
                 emailTone === t ? "bg-accent/20 text-accent border border-accent/30" : "bg-slate-800 text-slate-400 border border-slate-700"

@@ -977,6 +977,7 @@ export default function GrowthPage() {
                             <option value="casual">Casual</option>
                             <option value="formal">Formal</option>
                             <option value="bold">Bold</option>
+                            <option value="story">Story</option>
                           </select>
                           <button
                             onClick={async () => {
