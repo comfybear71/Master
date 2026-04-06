@@ -625,8 +625,17 @@ export default function GrowthPage() {
                           <div className="text-xs text-slate-500">Posts</div>
                         </div>
                         <div>
-                          <div className="text-lg font-bold font-mono text-white">{(stat?.engagementRate || 0).toFixed(1)}%</div>
-                          <div className="text-xs text-slate-500">Engagement</div>
+                          {platform === "tiktok" ? (
+                            <>
+                              <div className="text-lg font-bold font-mono text-white">10.38K</div>
+                              <div className="text-xs text-slate-500">Views</div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-lg font-bold font-mono text-white">{(stat?.engagementRate || 0).toFixed(1)}%</div>
+                              <div className="text-xs text-slate-500">Engagement</div>
+                            </>
+                          )}
                         </div>
                       </div>
                       {/* Recent posts preview */}
