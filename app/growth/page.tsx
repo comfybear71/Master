@@ -73,10 +73,14 @@ export default function GrowthPage() {
   const [editingEmails, setEditingEmails] = useState<Record<string, { subject: string; body: string; followUpSubject: string; followUpBody: string }>>({});
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
 
-  // TikTok sandbox/production toggle
+  // TikTok
   const [tiktokMode, setTiktokMode] = useState<"sandbox" | "production">("production");
   const [tiktokLogs, setTiktokLogs] = useState<string[]>([]);
   const [showTiktokLogs, setShowTiktokLogs] = useState(false);
+  const [tiktokEditing, setTiktokEditing] = useState(false);
+  const [tiktokFollowers, setTiktokFollowers] = useState("52");
+  const [tiktokPosts, setTiktokPosts] = useState("27");
+  const [tiktokViews, setTiktokViews] = useState("10.38K");
 
   // TikTok auth status from OAuth callback redirect
   const [tiktokAuthMsg, setTiktokAuthMsg] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -617,17 +621,17 @@ export default function GrowthPage() {
                       </div>
                       <div className="grid grid-cols-3 gap-3 mb-3">
                         <div>
-                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? "52" : (stat?.followers || 0).toLocaleString()}</div>
+                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? tiktokFollowers : (stat?.followers || 0).toLocaleString()}</div>
                           <div className="text-xs text-slate-500">Followers</div>
                         </div>
                         <div>
-                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? "27" : (stat?.posts || 0)}</div>
+                          <div className="text-lg font-bold font-mono text-white">{platform === "tiktok" ? tiktokPosts : (stat?.posts || 0)}</div>
                           <div className="text-xs text-slate-500">Posts</div>
                         </div>
                         <div>
                           {platform === "tiktok" ? (
                             <>
-                              <div className="text-lg font-bold font-mono text-white">10.38K</div>
+                              <div className="text-lg font-bold font-mono text-white">{tiktokViews}</div>
                               <div className="text-xs text-slate-500">Views</div>
                             </>
                           ) : (
@@ -664,15 +668,49 @@ export default function GrowthPage() {
                       {stat?.error === "quota_exceeded" && (stat?.followers || 0) > 0 && (
                         <p className="text-[10px] text-slate-600 mt-1">Showing cached data — resets midnight PT</p>
                       )}
-                      {stat?.error && stat.error !== "quota_exceeded" && !stat.recentPosts?.length && (
+                      {stat?.error && stat.error !== "quota_exceeded" && !stat.recentPosts?.length && platform !== "tiktok" && (
                         <div className="mt-2">
                           <p className="text-xs text-slate-500">{stat.error}</p>
                         </div>
                       )}
                       {/* TikTok manual edit */}
                       {platform === "tiktok" && (
-                        <div className="mt-2 text-[10px] text-slate-500 font-mono">
-                          Manual stats — update via /api/social/tiktok-manual
+                        <div className="mt-2 border-t border-slate-800 pt-2">
+                          {tiktokEditing ? (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div>
+                                <div className="text-[9px] text-slate-500 mb-0.5">Followers</div>
+                                <input value={tiktokFollowers} onChange={(e) => setTiktokFollowers(e.target.value)} className="w-20 text-xs bg-base border border-slate-700 rounded px-2 py-1 text-white focus:border-accent focus:outline-none" />
+                              </div>
+                              <div>
+                                <div className="text-[9px] text-slate-500 mb-0.5">Posts</div>
+                                <input value={tiktokPosts} onChange={(e) => setTiktokPosts(e.target.value)} className="w-20 text-xs bg-base border border-slate-700 rounded px-2 py-1 text-white focus:border-accent focus:outline-none" />
+                              </div>
+                              <div>
+                                <div className="text-[9px] text-slate-500 mb-0.5">Views</div>
+                                <input value={tiktokViews} onChange={(e) => setTiktokViews(e.target.value)} className="w-20 text-xs bg-base border border-slate-700 rounded px-2 py-1 text-white focus:border-accent focus:outline-none" />
+                              </div>
+                              <button
+                                onClick={async () => {
+                                  await fetch("/api/social/tiktok-manual", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ followers: Number(tiktokFollowers) || 0, posts: Number(tiktokPosts) || 0, videoViews: tiktokViews }),
+                                  });
+                                  setTiktokEditing(false);
+                                  fetchAll();
+                                }}
+                                className="text-[10px] font-mono px-2 py-1 rounded bg-green-500/20 text-green-400 hover:bg-green-500/30 mt-3"
+                              >
+                                Save
+                              </button>
+                              <button onClick={() => setTiktokEditing(false)} className="text-[10px] text-slate-500 hover:text-white mt-3">Cancel</button>
+                            </div>
+                          ) : (
+                            <button onClick={() => setTiktokEditing(true)} className="text-[10px] font-mono text-slate-500 hover:text-accent transition-colors">
+                              Edit stats
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
