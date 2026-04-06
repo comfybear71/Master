@@ -49,6 +49,7 @@ export default function ProspectsPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterIndustry, setFilterIndustry] = useState("all");
+  const [sortByEmail, setSortByEmail] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -315,7 +316,9 @@ export default function ProspectsPage() {
               </th>
               <th className="p-3 text-left text-slate-400 font-medium text-xs">Company</th>
               <th className="p-3 text-left text-slate-400 font-medium text-xs">Industry</th>
-              <th className="p-3 text-left text-slate-400 font-medium text-xs">Contact</th>
+              <th className="p-3 text-left text-slate-400 font-medium text-xs cursor-pointer hover:text-white transition-colors" onClick={() => setSortByEmail(!sortByEmail)}>
+                Contact {sortByEmail ? "\u2191" : "\u2195"}
+              </th>
               <th className="p-3 text-left text-slate-400 font-medium text-xs">Country</th>
               <th className="p-3 text-left text-slate-400 font-medium text-xs">Status</th>
               <th className="p-3 text-left text-slate-400 font-medium text-xs">Emails</th>
@@ -323,7 +326,12 @@ export default function ProspectsPage() {
             </tr>
           </thead>
           <tbody>
-            {prospects.map((p) => (
+            {[...prospects].sort((a, b) => {
+              if (!sortByEmail) return 0;
+              const aHas = a.email && a.email !== "Contact via website" ? 0 : 1;
+              const bHas = b.email && b.email !== "Contact via website" ? 0 : 1;
+              return aHas - bHas;
+            }).map((p) => (
               <tr key={p._id} className="border-b border-slate-800/50 hover:bg-slate-800/20">
                 <td className="p-3">
                   <input type="checkbox" checked={selected.has(p._id)}
