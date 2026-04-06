@@ -53,6 +53,7 @@ body {
 .light .border-slate-700 { border-color: #cbd5e1 !important; }
 .light .bg-base { background-color: var(--base) !important; }
 .light .bg-base-card { background-color: var(--base-card) !important; }
+.light .bg-base-light { background-color: var(--base-light) !important; }
 .light .bg-slate-800 { background-color: #e2e8f0 !important; }
 .light .bg-slate-800\/50 { background-color: rgba(226,232,240,0.5) !important; }
 .light .bg-slate-800\/20 { background-color: rgba(226,232,240,0.2) !important; }
