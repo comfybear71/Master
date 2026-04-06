@@ -2339,6 +2339,7 @@ Do NOT write any code until you have read all three files.
 - If something breaks after 3 attempts, STOP and tell me
 - Run the build/type checker before pushing
 - Update HANDOFF.md at the end of the session with what you did
+- Do NOT ask me if I have checked the deployment or tested the preview URL. Just push and move on.
 
 ## When You're Done
 

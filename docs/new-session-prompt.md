@@ -35,6 +35,7 @@ Do NOT write any code until you have read all three files.
 - If something breaks after 3 attempts, STOP and tell me
 - Run the build/type checker before pushing (`npm run build` or `npx tsc --noEmit`)
 - Update HANDOFF.md at the end of the session with what you did
+- Do NOT ask me if I have checked the deployment, verified the build, or tested the preview URL. I will tell you if something is wrong. Just push and move on.
 
 ## When You're Done
 
