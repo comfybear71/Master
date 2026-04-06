@@ -669,24 +669,10 @@ export default function GrowthPage() {
                           <p className="text-xs text-slate-500">{stat.error}</p>
                         </div>
                       )}
-                      {/* TikTok-specific controls */}
+                      {/* TikTok manual edit */}
                       {platform === "tiktok" && (
-                        <div className="mt-3 border-t border-slate-800 pt-3 space-y-2">
-                          {/* TikTok Performance Metrics (manual) */}
-                          <div className="grid grid-cols-2 gap-2 mb-2">
-                            <div className="bg-base rounded-lg p-2 border border-slate-800">
-                              <div className="text-xs text-slate-500">Video Views</div>
-                              <div className="text-sm font-bold font-mono text-white">10.38K</div>
-                            </div>
-                            <div className="bg-base rounded-lg p-2 border border-slate-800">
-                              <div className="text-xs text-slate-500">New Followers</div>
-                              <div className="text-sm font-bold font-mono text-white">52</div>
-                            </div>
-                            <div className="bg-base rounded-lg p-2 border border-slate-800">
-                              <div className="text-xs text-slate-500">Profile Views</div>
-                              <div className="text-sm font-bold font-mono text-white">50</div>
-                            </div>
-                          </div>
+                        <div className="mt-2 text-[10px] text-slate-500 font-mono">
+                          Manual stats — update via /api/social/tiktok-manual
                         </div>
                       )}
                     </div>
