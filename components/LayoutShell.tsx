@@ -97,7 +97,6 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
             { href: "/costs", label: "Costs", icon: "\u{1F4B0}" },
             { href: "/growth", label: "Growth", icon: "\u25B3" },
             { href: "/prospects", label: "Prospects", icon: "\u2691" },
-            { href: "/grant-pitch.html", label: "Grant Pitch", icon: "\u{1F393}" },
             { href: "/terminal", label: "Terminal", icon: "\u{1F5A5}" },
             { href: "/docs", label: "Docs", icon: "\u25A1" },
           ].map((item) => (
