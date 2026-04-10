@@ -2549,11 +2549,174 @@ STOP. Re-read the session starter rules:
 What's the current state, and what are you trying to do?
 \`\`\`
 
+### End-of-session PR handoff format (MANDATORY)
+Every session must end with a complete PR handoff package:
+
+\`\`\`
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
+
+### PR Title
+<one-line, max 70 chars>
+
+### PR Description (copy-paste block)
+<markdown block with Summary, Changes, Test plan>
+
+### Merge instructions
+Squash and merge → Confirm → Delete branch
+
+### Suggested release tag
+- Tag name: v<semver>-<YYYY-MM-DD>
+- Tag title + description
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+\`\`\`
+
+**Every PR gets a suggested tag, even small changes.** User decides whether to create it. Look at existing tags first to pick the next version number.
+
 ### Full template
-Complete starter prompt with all project-specific notes, workflow diagrams, and a cheat sheet of what Claude can and cannot do is at \`docs/prompts/starter-prompt.md\` in the MasterHQ repo.
+Complete starter prompt with all project-specific notes, workflow diagrams, PR handoff format, release tag conventions, and a cheat sheet of what Claude can and cannot do is at \`docs/prompts/starter-prompt.md\` in the MasterHQ repo.
 
 ### Adding future prompts
 This "Prompts" category is a home for future copy-paste templates. Add new prompts under \`docs/prompts/\` and register them in \`app/docs/page.tsx\` with \`category: "prompts"\`.`,
+  },
+  {
+    id: "resume-after-crash",
+    title: "Resume After Crash Prompt",
+    category: "prompts",
+    icon: "\u{1F198}",
+    content: `## Resume After Crash Prompt
+
+**Use this when the previous Claude Code session crashed mid-task and you need a new Claude to pick up safely.**
+
+### Why it's different from the starter prompt
+The starter prompt is for fresh tasks — new branch, new feature, no prior state. The resume prompt is for the moment when a session crashes mid-task and you need a new Claude to continue WITHOUT breaking anything already in progress.
+
+**This is the highest-risk scenario** because:
+- The previous Claude may have been mid-fix-spiral when it crashed
+- There may be uncommitted changes or a branch in an unclean state
+- The new Claude has no memory of what was being attempted
+- The new Claude may "clean up" something important by accident
+- The new Claude may restart the fix spiral that caused the crash
+
+The resume prompt protects against all of this by forcing the new Claude to STOP and orient itself before touching anything.
+
+### The prompt (copy-paste into the new Claude session)
+
+\`\`\`
+# RESUME AFTER CRASH — read this first before ANY action
+
+The previous Claude Code session on this project crashed or disconnected.
+You are picking up mid-task. DO NOT assume anything about the state of
+the repo. DO NOT make any changes until you've completed Steps 1-4 below.
+
+## Project
+[PROJECT NAME: aiglitch / Master / budju-xyz / mathly / togogo / propfolio / glitch-app]
+
+## What the previous session was working on (my summary)
+[BRIEF DESCRIPTION from me — what the previous Claude was trying to do,
+roughly how far it got, and whether it was in a fix spiral when it
+crashed.]
+
+## Step 1 — Read the sacred files (MANDATORY)
+1. CLAUDE.md in the repo root
+2. HANDOFF.md in the repo root
+3. SAFETY-RULES.md if it exists
+4. https://github.com/comfybear71/Master/blob/master/docs/code-preservation-protocol.md
+
+## Step 2 — Orient yourself to git state (MANDATORY)
+Run these and report the output verbatim:
+1. git branch --show-current
+2. git status
+3. git log --oneline -10
+4. git log master..HEAD --oneline
+5. git diff master..HEAD --stat
+
+Do NOT interpret yet — just show me.
+
+## Step 3 — Wait for my confirmation
+Once you've shown me the git state, STOP. I will:
+1. Confirm the branch state matches what I remember
+2. Tell you whether the previous Claude was mid-fix-spiral
+3. Give you the exact next step
+
+DO NOT:
+- Commit anything
+- Delete any files
+- "Clean up" the working tree
+- Continue the previous task on your own
+- Revert anything (especially not blanket reverts)
+
+## Step 4 — Branch protection is ACTIVE
+Same rules as any other session:
+- No direct pushes to master
+- No force pushes
+- Linear history, squash-merge only
+- 0 required approvals
+
+## Step 5 — Sacred files (NEVER delete during recovery)
+- CLAUDE.md, HANDOFF.md, SAFETY-RULES.md, README.md
+- If any are corrupted, STOP and tell me. We restore from a previous commit.
+
+## Step 6 — Fix spiral prevention (extra emphasis during recovery)
+Crashes often happen DURING fix spirals. If the previous Claude was in one:
+- The correct move is usually to REVERT, not continue forward
+- DO NOT attempt the same fix that caused the crash
+- If first 1-2 careful attempts don't work, STOP and tell me
+
+## Step 7 — Recovery workflow
+1. Work on the existing feature branch (do NOT create new unless I say so)
+2. Small atomic commits
+3. Push when ready — I merge via GitHub web UI
+
+## Step 8 — Acknowledge and show me the git state
+Acknowledge these rules, then run the 5 git commands from Step 2 and
+paste the output. Do NOT take any other action until I've confirmed.
+\`\`\`
+
+### Usage tips
+
+**The more context you give about what the previous session was doing, the safer the recovery.** Include:
+- The task being attempted
+- The branch name (if known)
+- How far it got
+- Whether it was in a fix spiral when it crashed
+- Any error messages you remember
+
+**If you don't remember, just say so:**
+> "I don't remember what the previous Claude was working on — please figure it out from the git state and HANDOFF.md, then tell me what you think was happening."
+
+### End-of-recovery PR handoff format (MANDATORY)
+Same format as the starter prompt — every recovery session ends with:
+
+\`\`\`
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
+
+### PR Title
+<one-line, max 70 chars — mention "recovery" if relevant>
+
+### PR Description (copy-paste block)
+<markdown block with Summary, Context (crash recovery note), Changes, Test plan>
+
+### Merge instructions
+Squash and merge → Confirm → Delete branch
+
+### Suggested release tag
+- Tag name: v<semver>-recovery-<YYYY-MM-DD>
+- Tag title + description (mention it was a recovery)
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+\`\`\`
+
+Use \`-recovery-\` in the tag name so the release history makes the recovery context clear.
+
+### Full template
+Complete resume-after-crash prompt with usage tips, concrete examples, handling of uncommitted changes, PR handoff format, and release tag conventions is at \`docs/prompts/resume-after-crash-prompt.md\` in the MasterHQ repo.`,
   },
 ];
 
