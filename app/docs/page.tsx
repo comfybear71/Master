@@ -15,6 +15,7 @@ const DOC_CATEGORIES: { key: string; label: string; icon: string; links?: { titl
   { key: "aiglitch", label: "AIG!itch", icon: "\u26A1", links: [
     { title: "Media Kit", icon: "\u2605", href: "/media-kit" },
     { title: "Sponsor Onboarding", icon: "\u{1F4B3}", href: "/sponsor-onboarding.html" },
+    { title: "Grant Pitch Email", icon: "\u{1F393}", href: "/grant-pitch.html" },
   ]},
   { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
   { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
