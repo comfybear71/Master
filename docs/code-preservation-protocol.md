@@ -252,23 +252,101 @@ Vercel Blob has **no automatic backups**. All our videos, NFT art, logos, and
 user-uploaded content live in exactly one place. If the Blob Store is deleted
 or corrupted, that content is gone forever.
 
-### Options (pick at least one)
+### The MasterHQ Blob Mirror (implemented 2026-04-10)
 
-**Option A — Selective weekly download (pragmatic, recommended)**
-- Most Blob content can be re-generated (AI videos, generic ad clips)
-- Identify the IRREPLACEABLE items: logos, hero videos, best NFT art, brand assets
-- Download only those to a Windows PC folder via the Vercel dashboard
-- Re-download any new irreplaceable content weekly
+**Endpoint:** `GET /api/backup/blob-mirror`
+**Schedule:** Weekly cron, Sundays 03:00 UTC (configured in `vercel.json`)
+**Destination:** Cloudflare R2 (first 10 GB free, free egress, S3-compatible)
+**Auth:** Accepts either `?password=$TERMINAL_PASSWORD` (manual) or
+`Authorization: Bearer $CRON_SECRET` (auto from Vercel Cron)
+**Idempotent:** Uses HEAD + size comparison to skip files already backed up,
+so re-running is cheap and safe.
 
-**Option B — Automated mirror to Backblaze B2 (set-and-forget)**
-- Set up a weekly cron job on MasterHQ that copies Blob → Backblaze B2
-  (~$0.005/GB/month) or AWS S3 Glacier (~$0.004/GB/month)
-- Add to MasterHQ as a new cron endpoint: `/api/backup/blob-mirror`
-- Zero manual work after initial setup
+### Usage
 
-**Option C — Manual full download (simplest but heavy)**
-- Once a week, download the entire Blob folder via the Vercel dashboard
-- Store the dump on an external drive
+| Action | URL |
+|---|---|
+| Dry run (preview what would be mirrored) | `/api/backup/blob-mirror?password=XXX&dryRun=true` |
+| Full manual run | `/api/backup/blob-mirror?password=XXX` |
+| Single store | `/api/backup/blob-mirror?password=XXX&store=aiglitch-media` |
+| Status & last run log | `/api/backup/blob-mirror/status?password=XXX` |
+
+### Stores mirrored
+
+| Store | Env var for token | Notes |
+|---|---|---|
+| `aiglitch-media` | `BLOB_TOKEN_AIGLITCH_MEDIA` | AI videos, NFTs, ads, sponsor uploads |
+| `propfolio-docs` | `BLOB_TOKEN_PROPFOLIO_DOCS` | Private documents — also in iCloud, this is defense in depth |
+| `master` | `BLOB_TOKEN_MASTER` | MasterHQ misc uploads |
+| `graphics-store` | `BLOB_TOKEN_GRAPHICS_STORE` | Brand assets, logos |
+| `ship-app` | `BLOB_TOKEN_SHIP_APP` | To be documented |
+
+**Excluded:** `budju-blob` — legacy project, scheduled for deletion.
+
+### Required env vars
+
+Set these in Vercel once R2 and the per-store Blob tokens are provisioned:
+
+```
+# Cloudflare R2
+R2_ACCOUNT_ID=<cloudflare account id>
+R2_ACCESS_KEY_ID=<r2 api token key id>
+R2_SECRET_ACCESS_KEY=<r2 api token secret>
+R2_BUCKET_NAME=masterhq-blob-backup
+
+# Per-store Vercel Blob read tokens (one per store being mirrored)
+BLOB_TOKEN_AIGLITCH_MEDIA=vercel_blob_rw_...
+BLOB_TOKEN_PROPFOLIO_DOCS=vercel_blob_rw_...
+BLOB_TOKEN_MASTER=vercel_blob_rw_...
+BLOB_TOKEN_GRAPHICS_STORE=vercel_blob_rw_...
+BLOB_TOKEN_SHIP_APP=vercel_blob_rw_...
+```
+
+### Cloudflare R2 setup (one-time, ~5 minutes)
+
+1. Sign up at https://cloudflare.com (free, no credit card for first 10 GB)
+2. Go to **R2 Object Storage** in the left sidebar
+3. Click **Create bucket** → name it `masterhq-blob-backup` → default settings
+4. In the bucket, click **Settings → R2 API tokens** → **Create API token**
+5. Permissions: **Object Read & Write** on the `masterhq-blob-backup` bucket
+6. Copy the **Access Key ID** and **Secret Access Key** (shown only once)
+7. Copy the **Account ID** from the R2 overview page
+8. Add all 4 values to Vercel env vars as shown above
+
+### Getting per-store Blob tokens
+
+For each Vercel Blob Store you want to mirror:
+1. Vercel dashboard → Storage → click the store → **Settings** tab
+2. Under **Tokens**, click **Create a new token**
+3. Choose **Read-only** (no need for write during backup)
+4. Copy the token (starts with `vercel_blob_rw_` or similar)
+5. Add to Vercel env vars with the matching name (see table above)
+
+### Weekly "Never Lose It" update
+
+The cron handles Blob backup automatically every Sunday at 03:00 UTC. You can
+still run the Sunday checklist to glance at `/api/backup/blob-mirror/status`
+and verify the last run was recent and error-free.
+
+### Note on propfolio-docs (private documents)
+
+Propfolio's Blob Store contains private legal documents (payslips, bank
+statements, birth certificates). These are ALSO stored in iCloud on the user's
+iPhone, so the three-copies rule is satisfied by:
+
+1. **iCloud** — primary (phone + Apple Cloud sync)
+2. **Vercel Blob (propfolio-docs)** — app-uploaded copy
+3. **Cloudflare R2 (masterhq-blob-backup)** — automated weekly mirror (this layer)
+
+Even if the Vercel Blob Store is deleted, iCloud has the originals. Even if
+iCloud is compromised, R2 has the copies Vercel had. Defense in depth.
+
+### Fallback options (if R2 ever goes away)
+
+If Cloudflare R2 becomes unavailable or we outgrow the free tier:
+- **Backblaze B2** — ~$0.005/GB/month, also S3-compatible (swap env vars, same code)
+- **AWS S3 Glacier Instant Retrieval** — ~$0.004/GB/month deep archive
+- **Manual Vercel dashboard downloads** — last resort, selective irreplaceable items only
 
 ---
 
@@ -330,23 +408,22 @@ When onboarding a new project to MasterHQ, walk through this checklist:
 
 ---
 
-## Current State (as of 2026-04-10)
+## Current State (as of 2026-04-10 end of day)
 
 | Layer | Status |
 |-------|--------|
-| 1. Branch protection | ✅ AIG!itch, ⏳ 6 more repos (Master, BUDJU, mathly, togogo, propfolio, glitch-app) |
+| 1. Branch protection | ✅ **All 7 repos** (aiglitch, Master, budju-xyz, mathly, togogo, propfolio, glitch-app) |
 | 2. Web-only PR workflow | ✅ Documented and in use |
-| 3. Stable release tags | ✅ AIG!itch `v1.1-2026-04-10`, ⏳ 6 more repos |
-| 4. Backup mirror repos | ⏳ Not yet set up |
+| 3. Stable release tags | ✅ All 7 repos tagged (various per-project versions) |
+| 4. Backup mirror repos | ⏳ Not yet set up (optional — GitHub + Vercel deploy history is primary) |
 | 5. Second machine clone | ➖ Optional, not planned |
-| 6. Paid database backups | ⏳ Neon upgrade pending |
-| 7. Vercel Blob backup | ⏳ Weakest link, strategy TBD |
+| 6. Paid database backups | ✅ Neon Launch tier active (7-day PITR) |
+| 7. Vercel Blob backup | ✅ **R2 mirror endpoint implemented, weekly cron scheduled** |
 
-**Next priorities in order:**
-1. Apply branch protection to the remaining 6 repos (~6 min total) — start with Master
-2. Upgrade Neon to Launch tier (~2 min online)
-3. Set up the auto-mirror GitHub Action for AIG!itch first, then others
-4. Decide Blob backup strategy
+**Remaining optional improvements:**
+1. Provision Cloudflare R2 account + API token + per-store Blob tokens → env vars → first live run
+2. Set up GitHub Action auto-mirror for 1-2 highest-value repos (Layer 4)
+3. Clean up `budju-blob` legacy Blob Store (confirmed for deletion 2026-04-10)
 
 ---
 
