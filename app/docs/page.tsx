@@ -2363,6 +2363,101 @@ CLAUDE.md and HANDOFF.md must NEVER be deleted. They exist in root of every repo
 ### Full Protocol
 See \`docs/project-safety-protocol.md\` in the MasterHQ repo for complete details including database safety, dependency pinning, monitoring, and incident log.`,
   },
+  {
+    id: "code-preservation",
+    title: "Code Preservation Protocol",
+    category: "master",
+    icon: "\u{1F512}",
+    content: `## Code Preservation Protocol
+
+**Status:** MANDATORY for all production projects
+**Created:** 2026-04-10
+
+---
+
+### Why This Exists
+Our code is now too valuable to rely on any single source. A crashed Claude session, a force-push, a malicious actor, or a 3am mistake could destroy work with no way back. This protocol defines the multi-layer redundancy strategy.
+
+### Where Code Lives Today
+| Location | Protection |
+|----------|-----------|
+| GitHub | Distributed \u2014 every clone is a full backup |
+| Vercel | Deploy history, can rollback any build |
+| Neon Postgres | 24hr PITR (free) / 7-day PITR (paid) |
+| MongoDB Atlas | Snapshots on paid tiers |
+| **Vercel Blob** | \u26A0\uFE0F **NO auto-backup \u2014 weakest link** |
+
+---
+
+### Layer 1: GitHub Branch Protection (MANDATORY)
+Go to GitHub \u2192 [repo] \u2192 Settings \u2192 Branches \u2192 Add rule for \`master\`:
+- Require a pull request before merging
+- Require linear history
+- Do not allow force pushes
+- Do not allow deletions
+- Include administrators
+
+Nothing \u2014 not a crashed Claude, not you at 3am \u2014 can destroy master.
+
+### Layer 2: Merge to master frequently
+Don't let \`claude/*\` branches drift for days. Merge at natural milestones. Start each session fresh from master.
+
+### Layer 3: Tag stable releases
+\`\`\`bash
+git tag -a v1.0-2026-04-10 -m "Stable: all features working"
+git push origin v1.0-2026-04-10
+\`\`\`
+Tags are immutable bookmarks. \`git checkout v1.0-2026-04-10\` gets you back to that exact state.
+
+### Layer 4: Second GitHub remote (backup mirror)
+Create \`[repo]-backup\` private repo, then:
+\`\`\`bash
+git remote add backup https://github.com/comfybear71/[repo]-backup.git
+git push backup --all
+git push backup --tags
+\`\`\`
+Even if the main repo is corrupted, the backup has everything.
+
+### Layer 5: Local clones on multiple machines
+Git is distributed \u2014 every clone is a complete backup. Maintain clones on your primary dev machine, a secondary machine, and ideally cold storage.
+
+### Layer 6: Database backups
+- Neon: upgrade to Launch tier ($19/mo) for 7-day PITR
+- MongoDB Atlas: M10+ for continuous backups
+
+### Layer 7: Vercel Blob backup (WEAKEST LINK)
+Vercel Blob has NO automatic backups. Pick at least one:
+- **Manual weekly download** via Vercel dashboard
+- **Automated mirror** to Backblaze B2 (~$0.005/GB/mo)
+- **Selective download** of irreplaceable content only
+
+---
+
+### Weekly "Never Lose It" Checklist
+Every Sunday, 5 minutes per project:
+- \`git push origin --all && git push origin --tags\`
+- \`git push backup --all && git push backup --tags\`
+- \`git fetch --all\` on every local clone
+- Tag a stable release if things are working
+- Download any irreplaceable new Blob content
+- Verify database backup is recent
+
+---
+
+### Crisis Recovery
+**Bad commit shipped:** \`git revert <bad-sha>\` via PR \u2014 branch protection prevents force-push.
+
+**Master destroyed:** Fetch from backup remote, check local clones, restore via PR.
+
+**Database corrupted:** Neon PITR / Mongo snapshot restore.
+
+**Blob content lost:** Re-upload from local archive, re-generate AI content from DB prompts.
+
+---
+
+### Full Protocol
+See \`docs/code-preservation-protocol.md\` in the MasterHQ repo for the complete protocol, adoption checklist, and repo tracking list.`,
+  },
 ];
 
 export default function DocsPage() {
