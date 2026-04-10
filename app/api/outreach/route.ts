@@ -269,6 +269,58 @@ function buildGrantPitchEmail(name: string): string {
     <p style="font-size:15px;color:${s.text};line-height:1.8;margin:0;">Happy to jump on a call or come into the Hub anytime.</p>
   </div>
 
+  <!-- Links Section -->
+  <div style="${s.section}">
+    <div style="${s.label}">EXPLORE</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:6px 0;"><a href="https://masterhq.dev/media-kit.html" style="color:${s.lime};font-size:14px;text-decoration:none;font-weight:600;">Media Kit</a> <span style="color:${s.gray};font-size:12px;">&mdash; full platform overview for partners &amp; investors</span></td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;"><a href="https://masterhq.dev/sponsor-onboarding.html" style="color:${s.lime};font-size:14px;text-decoration:none;font-weight:600;">Sponsor Onboarding</a> <span style="color:${s.gray};font-size:12px;">&mdash; become an AIG!itch advertiser</span></td>
+      </tr>
+      <tr>
+        <td style="padding:6px 0;"><a href="https://aiglitch.app" style="color:${s.lime};font-size:14px;text-decoration:none;font-weight:600;">AIG!itch Live</a> <span style="color:${s.gray};font-size:12px;">&mdash; see the platform in action</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Social Links -->
+  <div style="${s.section}padding-top:0;">
+    <div style="${s.label}">FOLLOW THE GLITCH</div>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr>
+        <td style="padding:4px 0;font-size:13px;">
+          <a href="https://x.com/spiritary" style="color:${s.cyan};text-decoration:none;font-weight:600;">X / Twitter</a>
+          <span style="color:${s.gray};"> &mdash; @spiritary</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:13px;">
+          <a href="https://www.youtube.com/@frekin31" style="color:${s.cyan};text-decoration:none;font-weight:600;">YouTube</a>
+          <span style="color:${s.gray};"> &mdash; @frekin31</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:13px;">
+          <a href="https://www.instagram.com/sfrench71" style="color:${s.cyan};text-decoration:none;font-weight:600;">Instagram</a>
+          <span style="color:${s.gray};"> &mdash; @sfrench71</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:13px;">
+          <a href="https://www.tiktok.com/@aiglicthed" style="color:${s.cyan};text-decoration:none;font-weight:600;">TikTok</a>
+          <span style="color:${s.gray};"> &mdash; @aiglicthed</span>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:4px 0;font-size:13px;">
+          <a href="https://www.facebook.com/profile.php?id=61584376583578" style="color:${s.cyan};text-decoration:none;font-weight:600;">Facebook</a>
+        </td>
+      </tr>
+    </table>
+  </div>
+
   <!-- Divider -->
   <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(0,240,255,0.3),transparent);margin:8px 0;"></div>
 
@@ -281,15 +333,6 @@ function buildGrantPitchEmail(name: string): string {
       <a href="https://aiglitch.app" style="font-size:10px;color:${s.lime};text-decoration:none;letter-spacing:1px;font-weight:600;">AIGLITCH.APP</a>
       <span style="color:${s.gray};"> &middot; </span>
       <a href="https://masterhq.dev" style="font-size:10px;color:${s.lime};text-decoration:none;letter-spacing:1px;font-weight:600;">MASTERHQ.DEV</a>
-    </div>
-    <div style="margin-top:8px;font-size:10px;">
-      <a href="https://youtube.com/@aiglitch-ai" style="color:${s.gray};text-decoration:none;">YouTube</a>
-      <span style="color:#444;"> &middot; </span>
-      <a href="https://www.tiktok.com/@aiglicthed" style="color:${s.gray};text-decoration:none;">TikTok</a>
-      <span style="color:#444;"> &middot; </span>
-      <a href="https://www.instagram.com/aiglitch_" style="color:${s.gray};text-decoration:none;">Instagram</a>
-      <span style="color:#444;"> &middot; </span>
-      <a href="https://x.com/spiritary" style="color:${s.gray};text-decoration:none;">X</a>
     </div>
   </div>
 
