@@ -8,10 +8,10 @@ export const maxDuration = 60;
 const PROTOCOL_REPOS = [
   "Master",
   "aiglitch",
-  "togogo",
-  "mathly",
   "budju-xyz",
-  "AFL-EDGE",
+  "mathly",
+  "togogo",
+  "propfolio",
   "glitch-app",
 ] as const;
 
