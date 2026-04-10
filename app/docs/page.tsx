@@ -19,6 +19,7 @@ const DOC_CATEGORIES: { key: string; label: string; icon: string; links?: { titl
   ]},
   { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
   { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
+  { key: "prompts", label: "Prompts", icon: "\u{1F680}" },
 ];
 
 const docs: DocSection[] = [
@@ -2458,6 +2459,101 @@ Every Sunday, 5 minutes per project:
 
 ### Full Protocol
 See \`docs/code-preservation-protocol.md\` in the MasterHQ repo for the complete protocol, adoption checklist, and repo tracking list.`,
+  },
+  {
+    id: "new-session-starter",
+    title: "New Session Starter Prompt",
+    category: "prompts",
+    icon: "\u{1F680}",
+    content: `## New Session Starter Prompt
+
+**Use this to start every new Claude Code session on every project.**
+
+### Why it exists
+Every Claude session starts fresh with no memory of the preservation protocol, branch protection, or sacred files. Without a starter prompt, Claude will push to master, delete CLAUDE.md, or spiral through fixes — because it doesn't know the rules exist until it reads them.
+
+### The prompt (copy-paste at the start of every session)
+
+\`\`\`
+# Session start — read this first before ANY work
+
+## Project
+[PROJECT NAME: aiglitch / Master / budju-xyz / mathly / togogo / propfolio / glitch-app]
+
+## Step 1 — Read the sacred files
+Before doing anything, please read:
+1. CLAUDE.md in the repo root
+2. HANDOFF.md in the repo root
+3. SAFETY-RULES.md if it exists
+4. Code Preservation Protocol: https://github.com/comfybear71/Master/blob/master/docs/code-preservation-protocol.md
+
+## Step 2 — Acknowledge the rules
+This repo has branch protection ACTIVE on master under the ruleset "Protect Master":
+- You CANNOT push directly to master. Ever.
+- You CANNOT force-push anything
+- You CANNOT delete master
+- Linear history is enforced — squash-merge only
+- Required PR approvals = 0
+
+## Step 3 — Workflow
+1. Create a new branch: claude/<feature-name> off master
+2. Small atomic commits
+3. Push to feature branch freely
+4. STOP and tell me when ready. I open PR + squash-merge + delete branch + tag release via GitHub web UI.
+5. You do NOT open PRs, merge, delete branches, or tag releases yourself.
+
+## Step 4 — Sacred files (NEVER delete)
+- CLAUDE.md
+- HANDOFF.md
+- SAFETY-RULES.md
+- README.md
+
+## Step 5 — Fix spiral prevention
+- STOP and diagnose before fixing
+- Max 3 failed attempts, then STOP and tell me
+- NEVER blanket-revert 5+ files
+- NEVER batch-delete files
+
+## Step 6 — Trading/money warnings (if applicable)
+For budju-xyz (trading) or togogo (real customer money): do NOT modify trading logic or payment code without explicit written confirmation.
+
+## Step 7 — End of session
+Push all commits, give me a PR title + description summary, wait for me to merge via web UI. Next session, update HANDOFF.md.
+
+Please acknowledge these rules, then wait for me to give you the specific task.
+\`\`\`
+
+### Project-specific notes
+
+| Project | Branch | Notes |
+|---------|--------|-------|
+| **aiglitch** | master | AI social platform, Neon, aiglitch-media Blob |
+| **Master** | master | This repo, MasterHQ command centre |
+| **budju-xyz** | master | ⚠️ TRADING BOT — extra caution required |
+| **mathly** | master | Duolingo-for-math PWA |
+| **togogo** | master | ⚠️ E-commerce, real customers — extra caution |
+| **propfolio** | master | Property tool + propfolio-docs (private personal documents) |
+| **glitch-app** | master | Expo/EAS mobile app, production = TestFlight/App Store |
+
+### When Claude forgets mid-session
+If Claude tries to push to master, delete sacred files, start a fix spiral, or say "sorry" repeatedly, paste this reminder:
+
+\`\`\`
+STOP. Re-read the session starter rules:
+- No direct master pushes
+- No fix spirals (stop at 3 attempts)
+- Sacred files stay sacred
+- Work on a branch, I merge via web UI
+- Tell me what's wrong, don't try to fix everything at once
+
+What's the current state, and what are you trying to do?
+\`\`\`
+
+### Full template
+Complete starter prompt with all project-specific notes, workflow diagrams, and a cheat sheet of what Claude can and cannot do is at \`docs/prompts/starter-prompt.md\` in the MasterHQ repo.
+
+### Adding future prompts
+This "Prompts" category is a home for future copy-paste templates. Add new prompts under \`docs/prompts/\` and register them in \`app/docs/page.tsx\` with \`category: "prompts"\`.`,
   },
 ];
 
