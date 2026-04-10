@@ -46,4 +46,12 @@ If the user asks you to:
 - NEVER restart, redeploy, or modify trading logic
 - Read-only monitoring only
 
+## Code Preservation — Backup & Redundancy
+- Every production repo MUST have branch protection on `master`/`main`
+- Every production repo MUST have a backup GitHub remote (`backup`)
+- Tag stable releases weekly: `git tag -a v1.0-YYYY-MM-DD`
+- Merge `claude/*` branches to master frequently — don't let them drift
+- Full protocol: `docs/code-preservation-protocol.md`
+- Run the weekly "Never Lose It" checklist every Sunday
+
 ---

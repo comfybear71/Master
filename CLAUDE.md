@@ -134,6 +134,17 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 15. If a fix spiral starts (3+ failed fix attempts), STOP and ask the user
 16. Full protocol: `docs/project-safety-protocol.md`
 
+### Code Preservation — MANDATORY (added 2026-04-10)
+Code is now too valuable to rely on any single source. Every production project must have multi-layer redundancy.
+- Every production repo MUST have GitHub branch protection on `master`/`main` (require PR, no force pushes, no deletions, include admins)
+- Every production repo MUST have a second `backup` GitHub remote (e.g. `aiglitch-backup`)
+- Tag stable releases regularly: `git tag -a v1.0-YYYY-MM-DD -m "description"`
+- Merge `claude/*` branches to master at natural milestones — don't let them drift for days
+- Weekly: run the "Never Lose It" checklist (`git push --all`, `git push --tags`, `git fetch --all` on all clones)
+- Vercel Blob has NO auto-backup — manually archive irreplaceable content weekly
+- Production databases MUST be on paid tiers with backups enabled (Neon $19/mo for 7-day PITR)
+- Full protocol: `docs/code-preservation-protocol.md`
+
 ### Deployment
 17. Never deploy directly to production without showing the user a summary first
 18. Always verify the correct Vercel project is targeted before deploying
