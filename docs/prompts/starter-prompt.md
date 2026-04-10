@@ -84,13 +84,78 @@ If this repo is budju-xyz (trading) or togogo (payment processing, real customer
 - Branch protection changes, docs updates, and UI fixes are usually fine
 - When in doubt, ask before acting
 
-## Step 7 — At end of session
-Before we wrap up:
-- Push all commits to the feature branch
-- Tell me: "Branch ready for PR: claude/<name>, here's a summary of what changed"
-- Include a suggested PR title and description
-- I'll handle merge, branch delete, and release tagging via GitHub web UI
-- Then update HANDOFF.md with today's session log on the next session
+## Step 7 — At end of session (PR handoff format — MANDATORY)
+Before we wrap up, you MUST give me a complete PR handoff package in this
+exact format. This is non-negotiable — every session ends this way.
+
+### Format (copy this structure exactly)
+
+```
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH-NAME>
+
+### PR Title
+<one-line descriptive title, max 70 chars>
+
+### PR Description (copy-paste block)
+​```markdown
+## Summary
+<1-3 sentence overview of what changed and why>
+
+## Changes
+- <bullet list of the actual changes made>
+- <include file names and what was modified>
+- <be specific, not vague>
+
+## Test plan
+- [x] Type check passes (npx tsc --noEmit)
+- [x] Build passes (if applicable)
+- [ ] <any manual verification steps the user should do after deploy>
+- [ ] <links to preview URL once Vercel builds it>
+​```
+
+### Merge instructions
+1. Open the Compare URL above
+2. Click green "Create pull request"
+3. Scroll to bottom → dropdown ▼ next to "Merge pull request"
+4. Select "Squash and merge" (linear history enforced)
+5. Click "Confirm squash and merge"
+6. Click "Delete branch" button after merge
+
+### Suggested release tag
+- Tag name: v<semver>-<YYYY-MM-DD>  (or v<semver>-<feature-name> for major releases)
+- Tag title: <short title, e.g. "v1.2.3 — bug fixes and UX improvements">
+- Tag description: <brief description of what's in this release>
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+```
+
+### Rules about release tags
+- **Every PR gets a suggested tag in the handoff.** You always suggest one,
+  even for small changes. I decide whether to actually create it.
+- **Tag naming:**
+  - Small incremental changes (fixes, tweaks): `v<current-major>.<current-minor>.<bumped-patch>-YYYY-MM-DD`
+  - New features: `v<current-major>.<bumped-minor>.0-YYYY-MM-DD` or `v<current-major>.<bumped-minor>-<feature-name>`
+  - Breaking changes or major milestones: `v<bumped-major>.0.0-<feature-name>`
+  - Docs-only: use a date-based tag like `v<current>-docs-YYYY-MM-DD`
+- **Look at the repo's existing tags first** via `git tag --list` or the
+  Releases page to see the current version and pick the next number
+- **Never create the tag yourself** — always just suggest it. I create tags
+  via the GitHub web UI after merging.
+
+### Why this format matters
+I drive the merge + release process via the GitHub web UI on my phone/iPad.
+If you give me unstructured output I have to rewrite it. If you give me this
+exact format, I can copy each block into the GitHub UI directly without
+editing anything. That saves me time and prevents mistakes.
+
+## Step 8 — HANDOFF.md update (next session)
+After the PR is merged, next session should append a new row to HANDOFF.md's
+Session Log table summarising what changed. This is part of the next
+session's task, not this one — don't update HANDOFF.md mid-session unless
+that IS the task.
 
 ## Confirm you've read this
 Please acknowledge these rules in your next message, then wait for me to give

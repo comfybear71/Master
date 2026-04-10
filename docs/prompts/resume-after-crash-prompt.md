@@ -139,7 +139,75 @@ If the existing branch is unsalvageable, I'll tell you to:
 - Cherry-pick or re-create the good commits from the broken branch
 - Abandon the broken branch (I'll delete it via web UI later)
 
-## Step 8 — Acknowledge and show me the git state
+## Step 8 — PR handoff format (MANDATORY at end of recovery session)
+When the recovery work is complete and pushed, give me a complete PR
+handoff package in this exact format. This is non-negotiable:
+
+```
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH-NAME>
+
+### PR Title
+<one-line descriptive title, max 70 chars — mention "recovery" if relevant>
+
+### PR Description (copy-paste block)
+​```markdown
+## Summary
+<1-3 sentence overview of what the recovery accomplished>
+
+## Context
+<brief note that this was a crash-recovery session, what the previous
+Claude was attempting, what state we found, and what we did to complete>
+
+## Changes
+- <bullet list of the actual changes made during recovery>
+- <include file names and what was modified>
+
+## Test plan
+- [x] Type check passes (npx tsc --noEmit)
+- [ ] <any manual verification steps>
+​```
+
+### Merge instructions
+1. Open the Compare URL above
+2. Click green "Create pull request"
+3. Scroll to bottom → dropdown ▼ → "Squash and merge"
+4. Click "Confirm squash and merge"
+5. Click "Delete branch" after merge
+
+### Suggested release tag
+- Tag name: v<semver>-<YYYY-MM-DD>  (or v<semver>-recovery-<feature>)
+- Tag title: <short title>
+- Tag description: <brief description, mention it was a recovery>
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+```
+
+### Rules about release tags during recovery
+- **Every recovery PR gets a suggested tag.** Same as normal sessions.
+- Tag naming for recoveries: consider using `-recovery-` in the name so it's
+  clear in the release history this was a recovery session, e.g.
+  `v1.2.3-recovery-2026-04-10` or `v2.0.1-recovery-ml-crash`
+- **Never create the tag yourself** — always just suggest. I create tags
+  via the GitHub web UI after merging.
+- **Look at existing tags first** to pick the next version number.
+
+### Why this format matters
+I drive the merge + release process via the GitHub web UI on my phone/iPad.
+If you give me unstructured output I have to rewrite it. If you give me
+this exact format, I can copy each block directly into GitHub without
+editing. That saves me time and prevents mistakes — especially during
+recovery when there's already enough to worry about.
+
+## Step 9 — HANDOFF.md update (after merge, next session)
+A recovery session is a great time to update HANDOFF.md with what happened
+and what was recovered. Do this in the NEXT session as its own task — not
+during the recovery itself. Include: what crashed, what state we found,
+how we recovered, and any lessons for avoiding it next time.
+
+## Step 10 — Acknowledge and show me the git state
 Please acknowledge these rules, then immediately run the 5 git commands
 from Step 2 and paste the output. Do NOT take any other action until
 I've confirmed the state and given you the next step.

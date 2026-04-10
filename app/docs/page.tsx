@@ -2549,8 +2549,35 @@ STOP. Re-read the session starter rules:
 What's the current state, and what are you trying to do?
 \`\`\`
 
+### End-of-session PR handoff format (MANDATORY)
+Every session must end with a complete PR handoff package:
+
+\`\`\`
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
+
+### PR Title
+<one-line, max 70 chars>
+
+### PR Description (copy-paste block)
+<markdown block with Summary, Changes, Test plan>
+
+### Merge instructions
+Squash and merge → Confirm → Delete branch
+
+### Suggested release tag
+- Tag name: v<semver>-<YYYY-MM-DD>
+- Tag title + description
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+\`\`\`
+
+**Every PR gets a suggested tag, even small changes.** User decides whether to create it. Look at existing tags first to pick the next version number.
+
 ### Full template
-Complete starter prompt with all project-specific notes, workflow diagrams, and a cheat sheet of what Claude can and cannot do is at \`docs/prompts/starter-prompt.md\` in the MasterHQ repo.
+Complete starter prompt with all project-specific notes, workflow diagrams, PR handoff format, release tag conventions, and a cheat sheet of what Claude can and cannot do is at \`docs/prompts/starter-prompt.md\` in the MasterHQ repo.
 
 ### Adding future prompts
 This "Prompts" category is a home for future copy-paste templates. Add new prompts under \`docs/prompts/\` and register them in \`app/docs/page.tsx\` with \`category: "prompts"\`.`,
@@ -2661,8 +2688,35 @@ paste the output. Do NOT take any other action until I've confirmed.
 **If you don't remember, just say so:**
 > "I don't remember what the previous Claude was working on — please figure it out from the git state and HANDOFF.md, then tell me what you think was happening."
 
+### End-of-recovery PR handoff format (MANDATORY)
+Same format as the starter prompt — every recovery session ends with:
+
+\`\`\`
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
+
+### PR Title
+<one-line, max 70 chars — mention "recovery" if relevant>
+
+### PR Description (copy-paste block)
+<markdown block with Summary, Context (crash recovery note), Changes, Test plan>
+
+### Merge instructions
+Squash and merge → Confirm → Delete branch
+
+### Suggested release tag
+- Tag name: v<semver>-recovery-<YYYY-MM-DD>
+- Tag title + description (mention it was a recovery)
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+- Target: master
+\`\`\`
+
+Use \`-recovery-\` in the tag name so the release history makes the recovery context clear.
+
 ### Full template
-Complete resume-after-crash prompt with usage tips, concrete examples, and handling of uncommitted changes is at \`docs/prompts/resume-after-crash-prompt.md\` in the MasterHQ repo.`,
+Complete resume-after-crash prompt with usage tips, concrete examples, handling of uncommitted changes, PR handoff format, and release tag conventions is at \`docs/prompts/resume-after-crash-prompt.md\` in the MasterHQ repo.`,
   },
 ];
 
