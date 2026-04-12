@@ -177,7 +177,7 @@ Claude was attempting, what state we found, and what we did to complete>
 4. Click "Confirm squash and merge"
 5. Click "Delete branch" after merge
 
-### Suggested release tag
+### Release tag (MANDATORY)
 - Tag name: v<semver>-<YYYY-MM-DD>  (or v<semver>-recovery-<feature>)
 - Tag title: <short title>
 - Tag description: <brief description, mention it was a recovery>

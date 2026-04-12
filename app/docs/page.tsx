@@ -2567,7 +2567,7 @@ https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
 ### Merge instructions
 Squash and merge → Confirm → Delete branch
 
-### Suggested release tag
+### Release tag (MANDATORY)
 - Tag name: v<semver>-<YYYY-MM-DD>
 - Tag title + description
 - Create via: https://github.com/comfybear71/<REPO>/releases/new
@@ -2706,7 +2706,7 @@ https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH>
 ### Merge instructions
 Squash and merge → Confirm → Delete branch
 
-### Suggested release tag
+### Release tag (MANDATORY)
 - Tag name: v<semver>-recovery-<YYYY-MM-DD>
 - Tag title + description (mention it was a recovery)
 - Create via: https://github.com/comfybear71/<REPO>/releases/new
@@ -2717,6 +2717,92 @@ Use \`-recovery-\` in the tag name so the release history makes the recovery con
 
 ### Full template
 Complete resume-after-crash prompt with usage tips, concrete examples, handling of uncommitted changes, PR handoff format, and release tag conventions is at \`docs/prompts/resume-after-crash-prompt.md\` in the MasterHQ repo.`,
+  },
+  {
+    id: "circuit-breaker",
+    title: "Circuit Breaker (Stop Fix Spirals)",
+    category: "prompts",
+    icon: "\u{1F6D1}",
+    content: `## Circuit Breaker \u2014 Stop a Fix Spiral in Progress
+
+**Paste this into a Claude session when you see it spiralling** \u2014 same bug, multiple failed attempts, "let me just try one more thing."
+
+### Warning signs
+
+| Warning sign | Action |
+|---|---|
+| Claude says "let me just try one more thing" | Paste circuit breaker NOW |
+| Same file edited 3+ times for the same bug | Paste circuit breaker |
+| Claude says "sorry, that didn\u2019t work, let me..." | Paste circuit breaker |
+| Build keeps failing after each "fix" | Paste circuit breaker |
+| Claude apologizes more than twice in a row | Paste circuit breaker |
+
+### The circuit breaker prompt (copy-paste this)
+
+\`\`\`
+## \u{1F6D1} CIRCUIT BREAKER \u2014 I think you're in a fix spiral
+
+STOP writing code. Before your next message, answer these questions:
+
+1. What was the ORIGINAL task I gave you?
+2. How many times have you tried to fix something that didn't work?
+   Count honestly \u2014 each code change counts as 1 attempt.
+3. Are you past attempt 3?
+4. Is the codebase in a BETTER or WORSE state than when we started?
+5. What's the actual error right now? (paste it, don't summarize)
+
+If you're at 3+ attempts: output the FIX SPIRAL STOPPED template and hand back to me.
+If you're under 3: continue, but COUNT OUT LOUD. Type "FIX ATTEMPT [N] OF 3" before every fix.
+
+Do NOT write any code in this message. Only answer the 5 questions.
+\`\`\`
+
+### Quick one-liners
+
+\`\`\`
+You forgot to count. What attempt number is this? If it's 3+, STOP.
+\`\`\`
+
+\`\`\`
+STOP. No more code. Tell me: 1) How many fix attempts? 2) Current error? 3) Root cause guess?
+\`\`\`
+
+\`\`\`
+Stop. End this session. Give me the PR handoff for whatever IS working. List unresolved issues as known bugs.
+\`\`\`
+
+### The FIX SPIRAL STOPPED template
+
+\`\`\`
+---
+## \u{1F6D1} FIX SPIRAL STOPPED \u2014 3 ATTEMPTS EXHAUSTED
+
+**What I was trying to fix:** [description]
+**What I tried:**
+1. Attempt 1: [what] \u2192 [result]
+2. Attempt 2: [what] \u2192 [result]
+3. Attempt 3: [what] \u2192 [result]
+
+**What I think the real issue is:** [honest assessment]
+**What I don't know:** [gaps]
+**What the next session should check before writing any code:**
+- [specific diagnostic steps]
+
+I am now STOPPED. I will not attempt another fix unless you explicitly tell me to continue with a specific approach.
+---
+\`\`\`
+
+### Defense layers
+
+| Layer | Effectiveness |
+|---|---|
+| Rules in starter prompt | ~60% |
+| **Counting out loud (FIX ATTEMPT N OF 3)** | **~85%** |
+| **This circuit breaker prompt** | **~95%** |
+| Starting a fresh session | 100% |
+
+### Full template
+Complete circuit breaker prompt with all variants is at \`docs/prompts/circuit-breaker-prompt.md\`.`,
   },
 ];
 
@@ -2812,6 +2898,48 @@ export default function DocsPage() {
   );
 }
 
+function CodeBlock({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      const textArea = document.createElement("textarea");
+      textArea.value = code;
+      textArea.style.position = "fixed";
+      textArea.style.opacity = "0";
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  return (
+    <div className="relative group">
+      <button
+        onClick={handleCopy}
+        className={`absolute top-2 right-2 px-2 py-1 rounded text-[10px] font-mono transition-all z-10 ${
+          copied
+            ? "bg-green-500/20 text-green-400 border border-green-500/30"
+            : "bg-slate-700/80 hover:bg-accent/20 text-slate-400 hover:text-accent border border-slate-600 opacity-100 md:opacity-0 md:group-hover:opacity-100"
+        }`}
+        title="Copy to clipboard"
+      >
+        {copied ? "\u2713 Copied" : "\u{1F4CB} Copy"}
+      </button>
+      <pre className="bg-black/40 rounded-lg p-3 pr-20 my-3 overflow-x-auto border border-slate-800">
+        <code className="text-[11px] font-mono text-cyan-300 leading-relaxed">{code}</code>
+      </pre>
+    </div>
+  );
+}
+
 function DocRenderer({ content }: { content: string }) {
   const lines = content.split("\n");
   const elements: React.ReactNode[] = [];
@@ -2895,9 +3023,7 @@ function DocRenderer({ content }: { content: string }) {
     if (line.trim().startsWith("```")) {
       if (inCodeBlock) {
         elements.push(
-          <pre key={`code-${elements.length}`} className="bg-black/40 rounded-lg p-3 my-3 overflow-x-auto border border-slate-800">
-            <code className="text-[11px] font-mono text-cyan-300 leading-relaxed">{codeLines.join("\n")}</code>
-          </pre>
+          <CodeBlock key={`code-${elements.length}`} code={codeLines.join("\n")} />
         );
         codeLines = [];
         inCodeBlock = false;

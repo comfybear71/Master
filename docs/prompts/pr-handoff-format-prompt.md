@@ -87,7 +87,7 @@ compose page directly, so it MUST be a real working URL.)
 5. Click "Confirm squash and merge"
 6. Click "Delete branch" after merge
 
-### Suggested release tag
+### Release tag (MANDATORY)
 - **Tag name:** v<semver>-<YYYY-MM-DD>  (or v<semver>-<feature-name> for major)
 - **Target:** <default branch>
 - **Title:** <short release title>
@@ -99,8 +99,8 @@ compose page directly, so it MUST be a real working URL.)
 1. **Every session ends with this handoff package.** No exceptions. Even
    tiny changes (typo fixes, comment updates) get the full format.
 
-2. **Every PR gets a suggested release tag.** Even small changes. I decide
-   whether to actually create the tag — you just suggest one every time.
+2. **Every PR MUST include a release tag.** This is mandatory, not optional.
+   Every change gets a tag — small or large. I create it via GitHub web UI.
 
 3. **Check existing tags first** before suggesting a tag name. Look at
    the repo's Releases page or run `git tag --list` and pick the next
