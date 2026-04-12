@@ -2719,6 +2719,102 @@ Use \`-recovery-\` in the tag name so the release history makes the recovery con
 Complete resume-after-crash prompt with usage tips, concrete examples, handling of uncommitted changes, PR handoff format, and release tag conventions is at \`docs/prompts/resume-after-crash-prompt.md\` in the MasterHQ repo.`,
   },
   {
+    id: "pr-handoff-format",
+    title: "PR Handoff Format (Standalone Rule)",
+    category: "prompts",
+    icon: "\u{1F4CB}",
+    content: `## PR Handoff Format \u2014 Standalone Rule
+
+**Paste this into any Claude Code session to teach it the clean PR handoff format.** Works standalone \u2014 drop it into an existing mid-flow session and Claude picks up the new rule immediately.
+
+### When to use this vs the starter prompt
+
+| Prompt | Use when |
+|---|---|
+| **Starter Prompt** | Starting a fresh session with full preservation rules |
+| **PR Handoff Format** (this one) | Only want the handoff format, mid-session, or on a project without the full preservation protocol |
+
+### The prompt (copy-paste this)
+
+\`\`\`
+## New rule for how you deliver work at the end of every session
+
+From now on, whenever you finish a task and the branch is ready, give me a
+PR handoff package in this EXACT format. No variations, no extra text,
+no skipping sections. I drive the merge + release via GitHub web UI on
+my phone/iPad, so I need to copy-paste each block directly into GitHub
+without editing anything.
+
+### Required format
+
+## Branch ready for PR
+
+### Compare URL
+https://github.com/comfybear71/<REPO>/compare/<DEFAULT-BRANCH>...<BRANCH-NAME>
+
+(Use the actual repo name and branch \u2014 this MUST be a real working URL.)
+
+### PR Title
+<one-line descriptive title, max 70 characters>
+
+### PR Description (copy-paste block)
+## Summary
+<1-3 sentence overview of what changed and why>
+
+## Changes
+- <specific bullet list of what was actually modified>
+- <include file names and what was changed in each>
+
+## Test plan
+- [x] Type check passes
+- [ ] <manual verification steps>
+
+### Merge instructions
+1. Open the Compare URL above
+2. Click green "Create pull request"
+3. Scroll to bottom \u2192 dropdown \u2192 "Squash and merge"
+4. Click "Confirm squash and merge"
+5. Click "Delete branch" after merge
+
+### Release tag (MANDATORY)
+- Tag name: v<semver>-<YYYY-MM-DD>
+- Target: <default branch>
+- Title: <short release title>
+- Description: <brief summary>
+- Create via: https://github.com/comfybear71/<REPO>/releases/new
+
+### Rules
+1. Every session ends with this handoff package. No exceptions.
+2. Every PR MUST include a release tag. Mandatory, not optional.
+3. Check existing tags first before suggesting a tag name.
+4. Tag naming: patch v1.2.3, minor v1.3.0, major v2.0.0
+5. Never create the tag yourself \u2014 always just suggest it.
+6. The Compare URL must be clickable and correct.
+
+Please acknowledge this new rule.
+\`\`\`
+
+### Per-project substitutions
+
+- \`<REPO>\` \u2192 actual repo name (\`aiglitch\`, \`Master\`, \`budju-xyz\`, \`mathly\`, \`togogo\`, \`propfolio\`, \`glitch-app\`)
+- \`<DEFAULT-BRANCH>\` \u2192 usually \`master\` (all 7 repos use master)
+- \`<BRANCH-NAME>\` \u2192 the feature branch Claude created this session
+
+### Mid-session reinforcement
+
+If Claude gives unstructured output anyway, paste:
+
+\`\`\`
+You forgot the handoff format. Please re-read the rule I gave you and
+give me the handoff package in the exact required format \u2014 Compare URL,
+PR Title, PR Description in a code block, Merge instructions, and
+Release tag (MANDATORY). Every section is required.
+\`\`\`
+
+### Full template
+Complete PR handoff format prompt with all usage notes is at \`docs/prompts/pr-handoff-format-prompt.md\` in the MasterHQ repo.`,
+  },
+  {
     id: "circuit-breaker",
     title: "Circuit Breaker (Stop Fix Spirals)",
     category: "prompts",
