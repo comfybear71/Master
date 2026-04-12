@@ -69,12 +69,35 @@ This repo has branch protection ACTIVE on master under the ruleset "Protect Mast
 If you ever want to delete or rewrite one of these, STOP and ask me first.
 These have been destroyed by past Claude sessions. It's the #1 rule.
 
-## Step 5 — Fix spiral prevention
-- If something breaks, STOP and diagnose before attempting a fix
-- If you've made 3 failed fix attempts in a row, STOP and tell me — do not keep
-  trying. We'll investigate together.
-- NEVER do a "blanket revert" or "reset to a clean state" touching 5+ files. Fix
-  surgically, one commit at a time.
+## Step 5 — Fix spiral prevention (MANDATORY COUNTING RULE)
+When fixing a bug or error, you MUST count every attempt out loud:
+
+1. Type this header BEFORE each fix attempt:
+   ## FIX ATTEMPT [N] OF 3: [what I'm trying]
+
+2. At attempt 3, include a warning:
+   ## FIX ATTEMPT 3 OF 3 (FINAL): [what I'm trying]
+   ⚠️ This is my last attempt.
+
+3. After attempt 3 fails, output this EXACT template:
+   ## 🛑 FIX SPIRAL STOPPED — 3 ATTEMPTS EXHAUSTED
+   **What I was trying to fix:** [description]
+   **What I tried:**
+   1. Attempt 1: [what] → [result]
+   2. Attempt 2: [what] → [result]
+   3. Attempt 3: [what] → [result]
+   **What I think the real issue is:** [assessment]
+   **What the next session should check:** [steps]
+
+4. Do NOT restart the counter. If it's the SAME underlying task
+   (same bug, same build failure), the counter keeps going. It
+   resets ONLY for a completely different, unrelated task.
+
+5. "Each fix felt trivial" is NOT an excuse to skip counting.
+   The whole point is to force you to notice attempt 4+.
+
+Other rules:
+- NEVER do a "blanket revert" touching 5+ files. Fix surgically.
 - NEVER batch-delete files to "start fresh" — that destroys work.
 
 ## Step 6 — Trading and money warnings (if relevant)
@@ -124,7 +147,7 @@ https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH-NAME>
 5. Click "Confirm squash and merge"
 6. Click "Delete branch" button after merge
 
-### Suggested release tag
+### Release tag (MANDATORY)
 - Tag name: v<semver>-<YYYY-MM-DD>  (or v<semver>-<feature-name> for major releases)
 - Tag title: <short title, e.g. "v1.2.3 — bug fixes and UX improvements">
 - Tag description: <brief description of what's in this release>
@@ -133,8 +156,8 @@ https://github.com/comfybear71/<REPO>/compare/master...claude/<BRANCH-NAME>
 ```
 
 ### Rules about release tags
-- **Every PR gets a suggested tag in the handoff.** You always suggest one,
-  even for small changes. I decide whether to actually create it.
+- **Every PR MUST include a release tag in the handoff.** This is mandatory,
+  not optional. Every change gets a tag — small or large.
 - **Tag naming:**
   - Small incremental changes (fixes, tweaks): `v<current-major>.<current-minor>.<bumped-patch>-YYYY-MM-DD`
   - New features: `v<current-major>.<bumped-minor>.0-YYYY-MM-DD` or `v<current-major>.<bumped-minor>-<feature-name>`
