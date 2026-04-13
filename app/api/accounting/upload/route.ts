@@ -72,7 +72,14 @@ export async function POST(req: NextRequest) {
       const path = `accounting/${monthFolder}/${Date.now()}-${safeName}`;
 
       // Upload to Vercel Blob
-      const blob = await put(path, file, { access: "private" });
+      // Uses BLOB_TOKEN_ACCOUNTING for a private store if available,
+      // falls back to default BLOB_READ_WRITE_TOKEN (public) with a warning
+      const accountingToken = process.env.BLOB_TOKEN_ACCOUNTING;
+      const isPrivate = !!accountingToken;
+      const blob = await put(path, file, {
+        access: isPrivate ? "private" : "public",
+        ...(accountingToken ? { token: accountingToken } : {}),
+      });
 
       // Save metadata to MongoDB
       const invoice = {
@@ -98,11 +105,15 @@ export async function POST(req: NextRequest) {
       results.push({ ...invoice, _id: insertResult.insertedId });
     }
 
+    const accountingToken = process.env.BLOB_TOKEN_ACCOUNTING;
     return NextResponse.json(
       {
         success: true,
         count: results.length,
         invoices: results,
+        storageWarning: !accountingToken
+          ? "Using public Blob Store (BLOB_TOKEN_ACCOUNTING not set). Create a private Blob Store called 'accounting-vault' in Vercel for secure invoice storage."
+          : undefined,
       },
       { status: 201 }
     );
