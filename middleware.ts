@@ -1,10 +1,32 @@
-export { default } from "next-auth/middleware";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-// Protect page routes only — NOT API routes
-// API routes handle their own auth (TERMINAL_PASSWORD, CRON_SECRET, session checks)
-// Redirecting API calls to a login page doesn't make sense — they should return 401
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+
+  // Skip auth for these paths
+  if (
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/_next/") ||
+    pathname === "/favicon.ico" ||
+    pathname === "/manifest.json" ||
+    pathname.endsWith(".html") // public HTML files (media-kit, sponsor-onboarding, grant-pitch)
+  ) {
+    return NextResponse.next();
+  }
+
+  // Check for session cookie
+  const session = req.cookies.get("masterhq_session");
+  if (!session?.value) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("callbackUrl", req.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
+}
+
 export const config = {
-  matcher: [
-    "/((?!login|api|_next/static|_next/image|favicon\\.ico|manifest\\.json|media-kit\\.html|sponsor-onboarding\\.html|grant-pitch\\.html).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico).*)"],
 };
