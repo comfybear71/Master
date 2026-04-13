@@ -22,6 +22,20 @@ interface Invoice {
   gstAmount: number | null;
   status: string;
   ocrStatus: string;
+  documentType?: "invoice" | "payslip";
+  payslipData?: {
+    grossPay: number | null;
+    netPay: number | null;
+    payg: number | null;
+    superannuation: number | null;
+    superRate: number | null;
+    payPeriodStart: string | null;
+    payPeriodEnd: string | null;
+    ytdGross: number | null;
+    ytdTax: number | null;
+    ytdSuper: number | null;
+    employer: string | null;
+  };
   notes: string | null;
   createdAt: string;
 }
@@ -46,7 +60,7 @@ interface Summary {
   expenseCount: number;
 }
 
-type Tab = "invoices" | "ledger" | "summary";
+type Tab = "invoices" | "ledger" | "summary" | "tax";
 
 export default function AccountingPage() {
   const [tab, setTab] = useState<Tab>("invoices");
@@ -166,16 +180,20 @@ export default function AccountingPage() {
 
   const handleConfirmInvoice = async (inv: Invoice) => {
     if (!inv.amount || !inv.date) return;
+    const isPayslip = inv.documentType === "payslip";
     try {
-      // Create a transaction from the confirmed invoice
+      // Create a transaction from the confirmed document
+      // Payslips → income (gross pay), Invoices → expense
       await fetch("/api/accounting/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          type: "expense",
-          amount: inv.amount,
+          type: isPayslip ? "income" : "expense",
+          amount: isPayslip && inv.payslipData?.grossPay ? inv.payslipData.grossPay : inv.amount,
           date: inv.date,
-          description: inv.vendor ? `${inv.vendor} invoice` : inv.fileName,
+          description: isPayslip
+            ? `${inv.vendor || "Salary"} — gross $${inv.payslipData?.grossPay || inv.amount}, PAYG $${inv.payslipData?.payg || 0}, super $${inv.payslipData?.superannuation || 0}`
+            : inv.vendor ? `${inv.vendor} invoice` : inv.fileName,
           categoryId: inv.categoryId || "",
           invoiceId: inv._id,
         }),
@@ -320,7 +338,7 @@ export default function AccountingPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-base-card rounded-lg border border-slate-800 p-1 w-fit">
-        {(["invoices", "ledger", "summary"] as Tab[]).map((t) => (
+        {(["invoices", "ledger", "summary", "tax"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -330,7 +348,7 @@ export default function AccountingPage() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            {t === "invoices" ? "Invoices" : t === "ledger" ? "Ledger" : "P&L Summary"}
+            {t === "invoices" ? "Invoices" : t === "ledger" ? "Ledger" : t === "summary" ? "P&L Summary" : "ATO Tax Guide"}
           </button>
         ))}
       </div>
@@ -414,11 +432,21 @@ export default function AccountingPage() {
                           {inv.fileType === "application/pdf" ? "📄" : "🖼️"}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-white text-sm font-medium truncate">{inv.vendor || inv.fileName}</div>
+                          <div className="text-white text-sm font-medium truncate">
+                            {inv.documentType === "payslip" && <span className="text-purple-400 mr-1">[PAYSLIP]</span>}
+                            {inv.vendor || inv.fileName}
+                          </div>
                           <div className="text-slate-500 text-[11px] flex items-center gap-2 flex-wrap">
                             {inv.vendor && <span className="text-slate-600 truncate">{inv.fileName}</span>}
                             {inv.date && <span>{inv.date}</span>}
-                            {inv.amount != null && <span className="text-green-400 font-medium">{fmt(inv.amount)}</span>}
+                            {inv.amount != null && <span className={`font-medium ${inv.documentType === "payslip" ? "text-purple-400" : "text-green-400"}`}>{fmt(inv.amount)}</span>}
+                            {inv.payslipData && (
+                              <>
+                                {inv.payslipData.grossPay != null && <span className="text-green-400">Gross: {fmt(inv.payslipData.grossPay)}</span>}
+                                {inv.payslipData.payg != null && <span className="text-red-400">PAYG: {fmt(inv.payslipData.payg)}</span>}
+                                {inv.payslipData.superannuation != null && <span className="text-amber-400">Super: {fmt(inv.payslipData.superannuation)}</span>}
+                              </>
+                            )}
                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase ${
                               inv.status === "confirmed" ? "bg-green-500/10 text-green-400"
                                 : inv.ocrStatus === "processing" || ocrProcessing.has(inv._id) ? "bg-blue-500/10 text-blue-400"
@@ -760,6 +788,261 @@ export default function AccountingPage() {
             <p className="text-slate-600 text-[10px] mt-2">
               Tenant names can be updated later. Rent receipts and automated tracking coming in a future session.
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ATO TAX GUIDE TAB */}
+      {tab === "tax" && (
+        <div className="space-y-4">
+          {/* Disclaimer */}
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+            <div className="text-amber-400 text-sm font-semibold mb-1">Disclaimer</div>
+            <div className="text-amber-400/70 text-xs">
+              This is general information based on ATO published rates for 2025-26. It is NOT tax advice.
+              Always confirm with your accountant before claiming deductions or making tax decisions.
+            </div>
+          </div>
+
+          {/* Tax Brackets */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Australian Tax Brackets 2025-26</h2>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+                    <th className="p-2">Taxable Income</th>
+                    <th className="p-2">Tax Rate</th>
+                    <th className="p-2">Tax on This Bracket</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300">$0 – $18,200</td>
+                    <td className="p-2 text-green-400">0%</td>
+                    <td className="p-2 text-slate-400">Nil</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300">$18,201 – $45,000</td>
+                    <td className="p-2 text-accent">16%</td>
+                    <td className="p-2 text-slate-400">$0 + 16c per $1 over $18,200</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300">$45,001 – $135,000</td>
+                    <td className="p-2 text-amber-400">30%</td>
+                    <td className="p-2 text-slate-400">$4,288 + 30c per $1 over $45,000</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300">$135,001 – $190,000</td>
+                    <td className="p-2 text-orange-400">37%</td>
+                    <td className="p-2 text-slate-400">$31,288 + 37c per $1 over $135,000</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 text-slate-300">$190,001+</td>
+                    <td className="p-2 text-red-400">45%</td>
+                    <td className="p-2 text-slate-400">$51,638 + 45c per $1 over $190,000</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-slate-600 text-[10px] mt-3">
+              Plus Medicare Levy of 2% on taxable income. Low-income earners may get a reduction/exemption.
+            </p>
+          </div>
+
+          {/* Superannuation */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Superannuation 2025-26</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="text-[10px] text-slate-500 uppercase">SG Rate</div>
+                <div className="text-lg font-bold text-accent">11.5%</div>
+                <div className="text-[10px] text-slate-600">of ordinary time earnings</div>
+              </div>
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="text-[10px] text-slate-500 uppercase">Concessional Cap</div>
+                <div className="text-lg font-bold text-white">$30,000</div>
+                <div className="text-[10px] text-slate-600">per year (pre-tax contributions)</div>
+              </div>
+              <div className="bg-black/20 rounded-lg p-3">
+                <div className="text-[10px] text-slate-500 uppercase">Non-Concessional Cap</div>
+                <div className="text-lg font-bold text-white">$120,000</div>
+                <div className="text-[10px] text-slate-600">per year (after-tax contributions)</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Home Office Deductions */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Home Office Deductions</h2>
+            <p className="text-slate-400 text-sm mb-3">
+              Since you work from home on AIG!itch and your other projects, you can claim home office expenses.
+              Two methods available:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="bg-black/20 rounded-lg p-4 border border-accent/10">
+                <div className="text-accent text-sm font-semibold mb-2">Fixed Rate Method (Simpler)</div>
+                <div className="text-2xl font-bold text-white mb-1">67c <span className="text-sm text-slate-400">per hour</span></div>
+                <ul className="text-slate-400 text-xs space-y-1 mt-2">
+                  <li>- Covers electricity, internet, phone, stationery</li>
+                  <li>- Keep a log of hours worked from home</li>
+                  <li>- Can ALSO claim separate deductions for:</li>
+                  <li className="text-accent ml-2">• Office equipment (desk, chair, monitor)</li>
+                  <li className="text-accent ml-2">• Technology (laptop, iPad, software)</li>
+                  <li className="text-accent ml-2">• Depreciation on assets over $300</li>
+                </ul>
+              </div>
+              <div className="bg-black/20 rounded-lg p-4">
+                <div className="text-slate-300 text-sm font-semibold mb-2">Actual Cost Method (More work)</div>
+                <div className="text-slate-400 text-xs space-y-1">
+                  <p>Calculate the actual cost of running your home office:</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>- Internet: business % of total bill</li>
+                    <li>- Electricity: floor area % of total bill</li>
+                    <li>- Phone: business % of total bill</li>
+                    <li>- Office furniture depreciation</li>
+                    <li>- Computer equipment depreciation</li>
+                    <li>- Repairs and maintenance (office area)</li>
+                  </ul>
+                  <p className="mt-2 text-slate-500">Requires detailed records of all costs</p>
+                </div>
+              </div>
+            </div>
+            <p className="text-slate-600 text-[10px] mt-3">
+              ATO reference: ato.gov.au/individuals-and-families/income-deductions-offsets-and-records/deductions-you-can-claim/working-from-home-expenses
+            </p>
+          </div>
+
+          {/* Common Deductions for Tech/SaaS Business */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Common Deductions for Your Business</h2>
+            <p className="text-slate-400 text-sm mb-3">
+              As a tech entrepreneur running AI projects (AIG!itch, MasterHQ, etc.), these are typical deductible expenses:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-slate-500 text-xs uppercase tracking-wider border-b border-slate-800">
+                    <th className="p-2">Category</th>
+                    <th className="p-2">Examples</th>
+                    <th className="p-2">Deductible?</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Cloud / API costs</td>
+                    <td className="p-2 text-slate-400">Anthropic, xAI/Grok, Vercel, DigitalOcean</td>
+                    <td className="p-2 text-green-400">100%</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Software subscriptions</td>
+                    <td className="p-2 text-slate-400">Claude Max, GitHub, domain names, ImprovMX</td>
+                    <td className="p-2 text-green-400">100%</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Internet (Starlink)</td>
+                    <td className="p-2 text-slate-400">Monthly Starlink subscription</td>
+                    <td className="p-2 text-amber-400">Business % only</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Social media</td>
+                    <td className="p-2 text-slate-400">X/Twitter subscription (for marketing)</td>
+                    <td className="p-2 text-green-400">100% if business use</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Hardware (under $20k)</td>
+                    <td className="p-2 text-slate-400">Laptop, iPad, monitors, keyboard, desk</td>
+                    <td className="p-2 text-green-400">Instant asset write-off</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Hardware (over $20k)</td>
+                    <td className="p-2 text-slate-400">High-end workstation, server</td>
+                    <td className="p-2 text-amber-400">Depreciate over useful life</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Stripe / payment fees</td>
+                    <td className="p-2 text-slate-400">Transaction fees on sponsor payments</td>
+                    <td className="p-2 text-green-400">100%</td>
+                  </tr>
+                  <tr className="border-b border-slate-800/50">
+                    <td className="p-2 text-slate-300 font-medium">Email / communication</td>
+                    <td className="p-2 text-slate-400">Resend, ImprovMX, phone (business %)</td>
+                    <td className="p-2 text-green-400">100% or business %</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 text-slate-300 font-medium">Professional development</td>
+                    <td className="p-2 text-slate-400">Courses, books, conferences (tech related)</td>
+                    <td className="p-2 text-green-400">100%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Instant Asset Write-off */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Instant Asset Write-off</h2>
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4 mb-3">
+              <div className="text-green-400 text-sm font-semibold">Threshold: $20,000 per asset</div>
+              <div className="text-green-400/70 text-xs mt-1">
+                Small businesses can immediately deduct the full cost of assets under $20,000 in the year of purchase.
+                No need to depreciate over multiple years.
+              </div>
+            </div>
+            <div className="text-slate-400 text-sm">
+              <p className="mb-2">For your business, this likely covers:</p>
+              <ul className="space-y-1 text-xs">
+                <li className="flex gap-2"><span className="text-accent">-</span> MacBook / laptop</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> iPad</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> External monitors</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> Desk and office chair</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> Keyboard, mouse, accessories</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> Headphones, webcam</li>
+                <li className="flex gap-2"><span className="text-accent">-</span> Starlink dish (hardware component)</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Rental Income Notes */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">Rental Income — Tax Impact</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-slate-800">
+                <span className="text-slate-400">Your rental income (2 tenants)</span>
+                <span className="text-green-400 font-medium">$23,400/year</span>
+              </div>
+              <div className="text-slate-400 text-xs space-y-1">
+                <p>Rental income is added to your total assessable income. You can deduct rental expenses such as:</p>
+                <ul className="mt-2 space-y-1">
+                  <li className="flex gap-2"><span className="text-accent">-</span> Council rates (tenant&apos;s share)</li>
+                  <li className="flex gap-2"><span className="text-accent">-</span> Water charges (tenant&apos;s share)</li>
+                  <li className="flex gap-2"><span className="text-accent">-</span> Insurance (landlord&apos;s share)</li>
+                  <li className="flex gap-2"><span className="text-accent">-</span> Repairs and maintenance (tenant areas)</li>
+                  <li className="flex gap-2"><span className="text-accent">-</span> Depreciation of furnishings (if furnished)</li>
+                </ul>
+                <p className="mt-2 text-slate-500">Keep all receipts for rental-related expenses. Your accountant will offset these against rental income.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* GST Note */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-6">
+            <h2 className="text-white font-semibold mb-4">GST — Do You Need to Register?</h2>
+            <div className="bg-black/20 rounded-lg p-4">
+              <div className="text-slate-400 text-sm">
+                <p className="mb-2">
+                  You must register for GST if your business turnover (not profit) is <strong className="text-white">$75,000 or more</strong> per year.
+                </p>
+                <p className="mb-2">
+                  Rental income is generally <strong className="text-white">not included</strong> in the GST turnover threshold
+                  (residential rent is input-taxed, not subject to GST).
+                </p>
+                <p>
+                  If your business income (sponsor payments, etc.) is under $75,000/year, GST registration is <strong className="text-green-400">optional</strong>.
+                  Your accountant can advise whether voluntary registration benefits you.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}

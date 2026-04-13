@@ -19,6 +19,7 @@ const DEFAULT_CATEGORIES = [
   { name: "Home Office", type: "expense", icon: "🏠" },
   { name: "Hardware", type: "expense", icon: "💻" },
   { name: "Other Expense", type: "expense", icon: "📦" },
+  { name: "Employment Income", type: "income", icon: "💼" },
   { name: "Rental Income", type: "income", icon: "🏘️" },
   { name: "Sponsor Payments", type: "income", icon: "💰" },
   { name: "Other Income", type: "income", icon: "📈" },
