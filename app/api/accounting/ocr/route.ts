@@ -92,10 +92,15 @@ export async function POST(req: NextRequest) {
         );
     }
 
-    // Fetch the file and convert to base64
-    const fileResponse = await fetch(fileUrl);
+    // Fetch the file — private Blob Store URLs need the token
+    const accountingToken = process.env.BLOB_ACCOUNTING_READ_WRITE_TOKEN;
+    const fileResponse = await fetch(fileUrl, {
+      headers: accountingToken
+        ? { Authorization: `Bearer ${accountingToken}` }
+        : {},
+    });
     if (!fileResponse.ok) {
-      throw new Error(`Failed to fetch file: ${fileResponse.status}`);
+      throw new Error(`Failed to fetch file: ${fileResponse.status} ${fileResponse.statusText}`);
     }
 
     const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
