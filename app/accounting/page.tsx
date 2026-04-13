@@ -82,6 +82,15 @@ export default function AccountingPage() {
   const [editForm, setEditForm] = useState({ vendor: "", amount: "", date: "", categoryId: "", notes: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Invoice filters, pagination, search, sort, bulk select
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoiceFilter, setInvoiceFilter] = useState<"all" | "pending" | "confirmed">("all");
+  const [invoiceVendorFilter, setInvoiceVendorFilter] = useState("");
+  const [invoiceSort, setInvoiceSort] = useState<"newest" | "oldest" | "amount-high" | "amount-low">("newest");
+  const [invoicePage, setInvoicePage] = useState(0);
+  const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
+  const INVOICES_PER_PAGE = 25;
+
   // New transaction form
   const [showTxForm, setShowTxForm] = useState(false);
   const [txForm, setTxForm] = useState({
@@ -297,6 +306,71 @@ export default function AccountingPage() {
   };
 
   const fmt = (n: number) => `$${n.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  // Computed: unique vendors for the vendor filter dropdown
+  const uniqueVendors = Array.from(new Set(invoices.map((i) => i.vendor).filter((v): v is string => !!v)));
+
+  // Computed: filtered, searched, sorted, paginated invoices
+  const filteredInvoices = invoices
+    .filter((inv) => {
+      if (invoiceFilter === "pending" && inv.status === "confirmed") return false;
+      if (invoiceFilter === "confirmed" && inv.status !== "confirmed") return false;
+      if (invoiceVendorFilter && inv.vendor !== invoiceVendorFilter) return false;
+      if (invoiceSearch) {
+        const q = invoiceSearch.toLowerCase();
+        const match =
+          inv.fileName.toLowerCase().includes(q) ||
+          (inv.vendor && inv.vendor.toLowerCase().includes(q)) ||
+          (inv.date && inv.date.includes(q)) ||
+          (inv.amount != null && inv.amount.toString().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      if (invoiceSort === "newest") return (b.createdAt || "").localeCompare(a.createdAt || "");
+      if (invoiceSort === "oldest") return (a.createdAt || "").localeCompare(b.createdAt || "");
+      if (invoiceSort === "amount-high") return (b.amount || 0) - (a.amount || 0);
+      if (invoiceSort === "amount-low") return (a.amount || 0) - (b.amount || 0);
+      return 0;
+    });
+
+  const totalPages = Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE);
+  const paginatedInvoices = filteredInvoices.slice(
+    invoicePage * INVOICES_PER_PAGE,
+    (invoicePage + 1) * INVOICES_PER_PAGE
+  );
+
+  // Filtered totals
+  const filteredTotal = filteredInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+
+  // Bulk select helpers
+  const toggleSelectInvoice = (id: string) => {
+    setSelectedInvoices((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAllOnPage = () => {
+    const ids = paginatedInvoices.filter((i) => i.status !== "confirmed" && i.ocrStatus === "complete").map((i) => i._id);
+    setSelectedInvoices((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelectedInvoices(new Set());
+
+  const handleBulkConfirm = async () => {
+    if (selectedInvoices.size === 0) return;
+    const toConfirm = invoices.filter((i) => selectedInvoices.has(i._id) && i.amount && i.date);
+    for (const inv of toConfirm) {
+      await handleConfirmInvoice(inv);
+    }
+    setSelectedInvoices(new Set());
+  };
   const getCatName = (id: string | null) => {
     if (!id) return "Uncategorised";
     const cat = categories.find((c) => c._id === id);
@@ -358,7 +432,7 @@ export default function AccountingPage() {
         <div className="space-y-4">
           {/* Upload zone */}
           <div
-            className="bg-base-card rounded-xl border-2 border-dashed border-slate-700 hover:border-accent/40 p-8 text-center transition-colors cursor-pointer"
+            className="bg-base-card rounded-xl border-2 border-dashed border-slate-700 hover:border-accent/40 p-6 text-center transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={(e) => { e.preventDefault(); e.stopPropagation(); handleUpload(e.dataTransfer.files); }}
@@ -371,30 +445,141 @@ export default function AccountingPage() {
               className="hidden"
               onChange={(e) => handleUpload(e.target.files)}
             />
-            <div className="text-3xl mb-2">{uploading ? "..." : "📄"}</div>
-            <div className="text-white font-medium mb-1">
+            <div className="text-2xl mb-1">{uploading ? "..." : "📄"}</div>
+            <div className="text-white font-medium text-sm">
               {uploading ? "Uploading..." : "Drop invoices here or tap to upload"}
             </div>
-            <div className="text-slate-500 text-xs">PDF, JPEG, PNG, WebP, HEIC — up to 20MB each — bulk upload supported</div>
+            <div className="text-slate-500 text-[10px]">PDF, JPEG, PNG, WebP, HEIC — up to 20MB each — bulk upload</div>
             {uploadMsg && (
-              <div className={`mt-3 text-sm ${uploadMsg.startsWith("Upload") ? "text-green-400" : "text-red-400"}`}>
+              <div className={`mt-2 text-xs ${uploadMsg.startsWith("Upload") ? "text-green-400" : "text-red-400"}`}>
                 {uploadMsg}
               </div>
             )}
           </div>
 
+          {/* Filters + Search + Sort bar */}
+          <div className="bg-base-card rounded-xl border border-slate-800 p-3">
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Search */}
+              <input
+                type="text"
+                placeholder="Search invoices..."
+                value={invoiceSearch}
+                onChange={(e) => { setInvoiceSearch(e.target.value); setInvoicePage(0); }}
+                className="flex-1 min-w-[150px] bg-black/40 border border-slate-700 rounded-lg px-3 py-1.5 text-white text-sm focus:border-accent outline-none"
+              />
+              {/* Status filter */}
+              <select
+                value={invoiceFilter}
+                onChange={(e) => { setInvoiceFilter(e.target.value as "all" | "pending" | "confirmed"); setInvoicePage(0); }}
+                className="bg-black/40 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-sm focus:border-accent outline-none"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending Review</option>
+                <option value="confirmed">Confirmed</option>
+              </select>
+              {/* Vendor filter */}
+              <select
+                value={invoiceVendorFilter}
+                onChange={(e) => { setInvoiceVendorFilter(e.target.value); setInvoicePage(0); }}
+                className="bg-black/40 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-sm focus:border-accent outline-none"
+              >
+                <option value="">All Vendors</option>
+                {uniqueVendors.sort().map((v) => (
+                  <option key={v} value={v}>{v}</option>
+                ))}
+              </select>
+              {/* Sort */}
+              <select
+                value={invoiceSort}
+                onChange={(e) => setInvoiceSort(e.target.value as typeof invoiceSort)}
+                className="bg-black/40 border border-slate-700 rounded-lg px-2 py-1.5 text-white text-sm focus:border-accent outline-none"
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="amount-high">Amount (High→Low)</option>
+                <option value="amount-low">Amount (Low→High)</option>
+              </select>
+            </div>
+            {/* Results summary + bulk actions */}
+            <div className="flex items-center justify-between mt-2 text-[11px] text-slate-500">
+              <span>
+                {filteredInvoices.length} invoices {invoiceSearch || invoiceFilter !== "all" || invoiceVendorFilter ? "(filtered)" : ""} — {fmt(filteredTotal)} total
+              </span>
+              <div className="flex gap-2 items-center">
+                {selectedInvoices.size > 0 && (
+                  <>
+                    <span className="text-accent font-medium">{selectedInvoices.size} selected</span>
+                    <button
+                      onClick={handleBulkConfirm}
+                      className="px-2 py-1 rounded text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20"
+                    >
+                      Confirm Selected
+                    </button>
+                    <button onClick={clearSelection} className="px-2 py-1 rounded text-[10px] text-slate-400 hover:text-white">
+                      Clear
+                    </button>
+                  </>
+                )}
+                {selectedInvoices.size === 0 && paginatedInvoices.some((i) => i.status !== "confirmed" && i.ocrStatus === "complete") && (
+                  <button onClick={selectAllOnPage} className="px-2 py-1 rounded text-[10px] text-slate-400 hover:text-accent">
+                    Select All Reviewable
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Invoice list */}
           <div className="bg-base-card rounded-xl border border-slate-800">
-            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-              <h2 className="text-white font-semibold text-sm">{invoices.length} Invoices</h2>
+            <div className="p-3 border-b border-slate-800 flex items-center justify-between">
+              <h2 className="text-white font-semibold text-sm">
+                Page {invoicePage + 1} of {Math.max(totalPages, 1)} — showing {paginatedInvoices.length} of {filteredInvoices.length}
+              </h2>
+              {/* Pagination controls */}
+              {totalPages > 1 && (
+                <div className="flex gap-1 items-center">
+                  <button
+                    onClick={() => setInvoicePage(0)}
+                    disabled={invoicePage === 0}
+                    className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent disabled:opacity-30 disabled:cursor-default"
+                  >
+                    First
+                  </button>
+                  <button
+                    onClick={() => setInvoicePage((p) => Math.max(0, p - 1))}
+                    disabled={invoicePage === 0}
+                    className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent disabled:opacity-30 disabled:cursor-default"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-slate-500 text-[10px] px-2">{invoicePage + 1}/{totalPages}</span>
+                  <button
+                    onClick={() => setInvoicePage((p) => Math.min(totalPages - 1, p + 1))}
+                    disabled={invoicePage >= totalPages - 1}
+                    className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent disabled:opacity-30 disabled:cursor-default"
+                  >
+                    Next
+                  </button>
+                  <button
+                    onClick={() => setInvoicePage(totalPages - 1)}
+                    disabled={invoicePage >= totalPages - 1}
+                    className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent disabled:opacity-30 disabled:cursor-default"
+                  >
+                    Last
+                  </button>
+                </div>
+              )}
             </div>
-            {invoices.length === 0 ? (
+            {paginatedInvoices.length === 0 ? (
               <div className="p-8 text-center text-slate-500 text-sm">
-                No invoices uploaded yet. Drop files above to get started.
+                {invoices.length === 0
+                  ? "No invoices uploaded yet. Drop files above to get started."
+                  : "No invoices match your filters."}
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {invoices.map((inv) => (
+                {paginatedInvoices.map((inv) => (
                   <div key={inv._id} className="p-3 hover:bg-slate-800/30 transition-colors">
                     {editingInvoice === inv._id ? (
                       /* Edit mode */
@@ -427,8 +612,20 @@ export default function AccountingPage() {
                       </div>
                     ) : (
                       /* View mode */
-                      <div className="flex items-center gap-3">
-                        <div className="text-xl shrink-0">
+                      <div className="flex items-center gap-2">
+                        {/* Bulk select checkbox */}
+                        {inv.status !== "confirmed" && inv.ocrStatus === "complete" && (
+                          <input
+                            type="checkbox"
+                            checked={selectedInvoices.has(inv._id)}
+                            onChange={() => toggleSelectInvoice(inv._id)}
+                            className="w-3.5 h-3.5 shrink-0 accent-accent cursor-pointer"
+                          />
+                        )}
+                        {(inv.status === "confirmed" || inv.ocrStatus !== "complete") && (
+                          <div className="w-3.5 shrink-0" />
+                        )}
+                        <div className="text-lg shrink-0">
                           {inv.fileType === "application/pdf" ? "📄" : "🖼️"}
                         </div>
                         <div className="flex-1 min-w-0">
