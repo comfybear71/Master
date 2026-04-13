@@ -192,6 +192,9 @@ All environment variables are configured in Vercel's project settings. The deplo
 - `NEWS_API_KEY` for real news headlines (fictionalized for AIGlitch topics)
 - `TTYD_URL` and `TERMINAL_PASSWORD` for browser terminal
 - `CRON_SECRET` for cron job authentication
+- `MASTER_GOOGLE_CLIENT_ID` and `MASTER_GOOGLE_CLIENT_SECRET` for Google OAuth login
+- `ALLOWED_EMAIL` for single-user whitelist (sfrench71@gmail.com)
+- `BLOB_ACCOUNTING_READ_WRITE_TOKEN` for private accounting invoice storage
 
 ### TheMaster's Access Scope
 
@@ -289,6 +292,65 @@ AIGlitch has a fully automated **Ad Campaign system** managed from `/admin/perso
 - **Frontend spec:** `docs/ad-campaigns-frontend-spec.md` in AIGlitch repo
 - **Branding:** AIG!ITCH logo must appear prominently, neon purple/cyan palette, never mention Solana/blockchain
 
+### Accounting System (`/accounting`)
+
+Slim-down accounting for Australian tax compliance. Tracks money in (employment income, rental income, sponsors) and money out (SaaS costs, hosting, ISP, subscriptions). Designed for handing a clean package to an accountant at end of financial year (Jul 1 – Jun 30).
+
+**Pages/Tabs:**
+- **Invoices** — upload (single/bulk drag-drop), Claude Vision OCR auto-reads vendor/amount/date/GST, review + confirm flow, pagination (25/page), search, filters (vendor/status), sort, bulk confirm
+- **Ledger** — income + expense entries, editable categories, manual entry
+- **P&L Summary** — total income vs expenses vs net profit/loss, category breakdowns, rental income schedule
+- **ATO Tax Guide** — 2025-26 tax brackets, superannuation rates, home office deductions (67c/hr), common business deductions, instant asset write-off, GST threshold
+
+**OCR:** Claude Vision (claude-sonnet-4) auto-detects invoices vs payslips. Payslips extract gross pay, PAYG tax, superannuation, pay period, YTD totals. Invoices extract vendor, amount, date, GST.
+
+**Storage:** Private Vercel Blob Store (`accounting-vault`) for invoice files. Env var: `BLOB_ACCOUNTING_READ_WRITE_TOKEN`.
+
+**MongoDB collections:**
+- `accounting_categories` — expense/income categories (auto-seeded with 18 defaults, fully editable)
+- `accounting_invoices` — uploaded invoice metadata, OCR data, file URLs
+- `accounting_transactions` — income/expense ledger entries
+
+**API endpoints:**
+- `POST /api/accounting/upload` — multipart invoice upload to private Blob Store
+- `GET/PATCH/DELETE /api/accounting/invoices` — CRUD with filters (vendor, category, status, date range)
+- `POST /api/accounting/ocr` — Claude Vision OCR (auto-triggered on upload)
+- `GET/POST/PATCH/DELETE /api/accounting/transactions` — income/expense ledger
+- `GET/POST/DELETE /api/accounting/categories` — editable categories
+- `GET /api/accounting/file?id=X` — proxy for viewing private Blob files
+
+**Tenants:** 2 tenants — $250/wk + $200/wk = $450/wk ($23,400/yr)
+
+### Authentication (Google OAuth)
+
+Entire site is behind Google OAuth login. Single-user access — only the whitelisted email can sign in.
+
+**Implementation:** Manual Google OAuth (NOT NextAuth — NextAuth had persistent token exchange failures). Direct `fetch()` calls to Google's authorization and token endpoints.
+
+**Flow:**
+1. Visit any page → middleware checks `masterhq_session` cookie
+2. No cookie → redirect to `/login`
+3. Click "Sign in with Google" → `/api/auth/login` → Google OAuth
+4. Google callback → `/api/auth/callback/google` → exchange code for tokens → verify email → set encrypted cookie (AES-256-CBC)
+5. Session cookie valid for 7 days
+
+**Routes:**
+- `GET /api/auth/login` — starts OAuth flow (redirects to Google)
+- `GET /api/auth/callback/google` — handles callback, exchanges code, sets cookie
+- `GET /api/auth/session` — returns current session
+- `GET /api/auth/logout` — clears session cookie
+- `middleware.ts` — protects all page routes (skips /login, /api/*, static assets, public HTML files)
+
+**Env vars:**
+- `MASTER_GOOGLE_CLIENT_ID` — OAuth client ID for MasterHQ Login
+- `MASTER_GOOGLE_CLIENT_SECRET` — OAuth client secret
+- `NEXTAUTH_SECRET` — used for AES encryption of session cookie
+- `ALLOWED_EMAIL` — whitelisted Google email (sfrench71@gmail.com)
+
+**Google Cloud Console:** Project 837829119225, OAuth client "MasterHQ Login" (Web application type), redirect URI: `https://masterhq.dev/api/auth/callback/google`
+
+**Public pages (no login required):** `/media-kit.html`, `/sponsor-onboarding.html`, `/grant-pitch.html`, all `/api/*` routes
+
 ---
 
 ## Folder Structure
@@ -297,16 +359,27 @@ AIGlitch has a fully automated **Ad Campaign system** managed from `/admin/perso
 TheMaster/
 ├── app/
 │   ├── page.tsx                  # Main dashboard
-│   ├── costs/                    # Monthly costs tracker
-│   ├── docs/                     # Documentation & guides
+│   ├── accounting/               # Accounting system (invoices, ledger, P&L, ATO guide)
+│   ├── costs/                    # Monthly costs tracker (legacy — accounting extends this)
+│   ├── docs/                     # Documentation & guides (with copy buttons + prompts)
+│   ├── login/                    # Google OAuth login page
 │   ├── projects/                 # Project registry
 │   ├── growth/                   # Campaigns & social
 │   ├── monitoring/               # Errors & uptime
 │   ├── cicd/                     # Deployment controls
-│   └── api/                      # All API routes
-│       └── costs/                # Cost API routes (settings, digitalocean, vercel, anthropic, xai, mongodb)
-├── components/                   # UI components
-├── lib/                          # API client libraries
+│   └── api/
+│       ├── accounting/           # Accounting APIs (upload, invoices, transactions, categories, ocr, file)
+│       ├── auth/                 # Google OAuth (login, callback, session, logout)
+│       ├── backup/               # Blob → R2 mirror + status
+│       ├── admin/                # Branch protection admin
+│       ├── costs/                # Cost API routes
+│       └── ...                   # Other API routes
+├── components/                   # UI components (LayoutShell, etc.)
+├── lib/                          # API client libraries (mongodb, ai, types)
+├── docs/
+│   └── prompts/                  # Copy-paste session prompts (starter, resume, PR handoff, circuit breaker)
+├── middleware.ts                 # Auth middleware (cookie check, redirect to /login)
+├── .npmrc                        # legacy-peer-deps=true (nodemailer compat)
 ├── CLAUDE.md                     # This file
 ├── HANDOFF.md                    # Current state
 └── .env.local                    # Secrets (not committed)

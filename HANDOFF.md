@@ -240,46 +240,50 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Next Session — Start Here
 
-### 🛡️ Preservation Protocol status (post-2026-04-10 rollout)
-**All 7 production repos are now protected** under the "Protect Master" ruleset.
-Work on every repo must follow the web-only PR workflow:
-1. Create feature branch from master
-2. Commit + push
-3. Open PR via GitHub web UI → master
-4. Squash and merge (linear history enforced — merge commits blocked)
-5. Delete branch
-6. Tag stable releases via GitHub Releases page when milestones ship
+### 🛡️ How to start a session on MasterHQ
+Paste the starter prompt from `docs/prompts/starter-prompt.md` (or copy from masterhq.dev/docs → Prompts → New Session Starter). All sessions follow the web-only PR workflow:
+feature branch → PR → squash-merge → delete branch → tag release.
 
-Full protocol: `docs/code-preservation-protocol.md`
+### 🔐 Authentication
+Site is behind Google OAuth (manual implementation, NOT NextAuth). Only `sfrench71@gmail.com` can access. Session cookie lasts 7 days. Public pages (media-kit, sponsor-onboarding, grant-pitch) accessible without login.
 
-### 🔒 Pending: Cloudflare R2 provisioning (Layer 7)
+### 📊 Accounting System — current state
+- **22+ Anthropic invoices uploaded** — OCR'd and in the system
+- **~96 more Anthropic invoices to add** — user will bulk upload from PC via Invoice Radar
+- **Invoices from other vendors still pending:** xAI, Vercel, DigitalOcean, Starlink, Resend, ImprovMX
+- **Payslip OCR ready** — auto-detects payslips vs invoices, extracts gross/PAYG/super
+- **ATO Tax Guide tab live** — brackets, super, home office, deductions, instant asset write-off
+- **Pagination + filters live** — search, vendor filter, status filter, sort, bulk confirm (25/page)
+
+### 🔒 Pending: Cloudflare R2 provisioning (Layer 7 blob backup)
 The blob mirror endpoint is built and deployed (`/api/backup/blob-mirror`) but
 inert until R2 env vars are set. ~10 minutes of web work to finish:
-
 1. Sign up at https://cloudflare.com (free)
-2. Enable R2 Object Storage (free tier: 10 GB)
-3. Create bucket `masterhq-blob-backup`
-4. Generate R2 API token (Object Read & Write scope)
-5. Copy Account ID, Access Key ID, Secret Access Key
-6. Extract per-store read tokens from Vercel Blob Stores (aiglitch-media,
-   propfolio-docs, master, graphics-store, ship-app)
-7. Add 9 env vars to Vercel (MasterHQ project):
-   `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
-   `R2_BUCKET_NAME=masterhq-blob-backup`, and 5 `BLOB_TOKEN_*` tokens
-8. Test dry run: `curl "https://masterhq.dev/api/backup/blob-mirror?password=XXX&dryRun=true"`
-9. First real mirror: remove `&dryRun=true`
-10. Cron auto-runs every Sunday 03:00 UTC from then on
-
+2. Enable R2 → Create bucket `masterhq-blob-backup`
+3. Generate R2 API token → Add 9 env vars to Vercel
+4. Test: `masterhq.dev/api/backup/blob-mirror?password=XXX&dryRun=true`
 Full setup guide: `docs/code-preservation-protocol.md` Layer 7 section.
 
-### Optional follow-ups after R2 is live
-- `budju-blob` legacy Vercel Blob Store — scheduled for deletion per user instruction
-- Update CLAUDE.md files on mathly/togogo/propfolio/glitch-app to prepend the universal safety block (mathly done today, 4 more to go on a future session)
-- Audit togogo's "Goodbye World" top commit from Apr 8 — looks like test code that shipped to production
-- Fix Upstash Redis archived-due-to-inactivity state (may affect AIGlitch if something depends on it)
+### Accounting — next phases to build
+| Phase | Feature | Status |
+|---|---|---|
+| Session 4 | CSV/PDF export for accountant (end-of-year package) | ⏳ |
+| Session 5 | Rent receipt generator + email to tenants via Resend | ⏳ |
+| Session 6 | Home office hours logger (for 67c/hr ATO claim) | ⏳ |
+| Session 7 | Monthly expense dashboard + trend charts | ⏳ |
 
-### Priority: AIG!itch Sponsor Auto-Import
-Give AIG!itch the prompt at `docs/aiglitch-sponsor-prompt.md` — it builds the auto-import from MasterHQ so paid sponsors appear in admin with zero manual handling.
+### Invoice Radar (when on PC)
+User plans to install Invoice Radar on Windows PC to bulk-download all
+Anthropic/xAI invoices, then drag-drop the entire folder onto
+masterhq.dev/accounting for bulk upload + OCR.
+
+### Other pending items
+- Provision Cloudflare R2 (blob backup — ~10 min)
+- `budju-blob` legacy Blob Store — scheduled for deletion
+- CLAUDE.md safety blocks on togogo/propfolio/glitch-app (mathly done)
+- Audit togogo's "Goodbye World" commit from Apr 8
+- Upstash Redis archived-due-to-inactivity state (may affect AIG!itch)
+- AIG!itch Sponsor Auto-Import: `docs/aiglitch-sponsor-prompt.md`
 
 ### Current State
 1. **Sponsor Onboarding Pipeline COMPLETE** — Email → Stripe payment → asset upload → MongoDB + Blob Store → AIG!itch auto-import API
@@ -341,7 +345,8 @@ Prospect receives email → clicks $50/$100 tier link
 | 2026-03-30 | Costs page: Entered March 2026 costs manually via live API — Anthropic $1,281.80 (summed from invoices), xAI Grok $215.44, Vercel $38.07. Total March: $1,697.02 (live $1,538.02 + fixed $159.00). Updated CLAUDE.md with costs page docs and HANDOFF.md with session log. Pushed branch to GitHub. | Claude Code |
 | 2026-03-31 | SPONSOR ONBOARDING PIPELINE: Full end-to-end sponsor flow — Stripe payment ($50 Glitch / $100 Chaos tiers), asset upload (logo + 5 images to Vercel Blob Store), MongoDB metadata storage. Built: sponsor-onboarding page (public HTML), /api/stripe/checkout, /api/sponsor/upload (Blob Store + MongoDB), /api/sponsor/list (AIG!itch auto-import API with pending filter + mark-as-imported). Connected aiglitch-media Blob Store to MasterHQ (shared storage). Updated aiglitch-sponsor-prompt.md with MasterHQ auto-import, multiple images, $50/$100 tiers. BUDJU tested as first sponsor ($50 payment). 6 branded HTML email templates (3 tones x 2 personas). Session log: docs/session-2026-03-31. | Claude Code |
 | 2026-04-10 | Grant pitch email page: fixed mobile UI (non-sticky controls, full-width inputs, iOS Safari 16px font fix, 2x2 stats grid, horizontal table scroll). Added send action to `/api/outreach` with proper inline-styled email template (email clients strip CSS classes) + recipient name personalization + media kit/sponsor onboarding/social links sections. **CODE PRESERVATION PROTOCOL:** Created `docs/code-preservation-protocol.md` — 7-layer backup strategy (branch protection, backup remote, tags, local clones, DB backups, Blob backups, weekly checklist). Added to SAFETY-RULES.md, CLAUDE.md rules #17-24, and docs page. Every production project must now have branch protection + backup remote. | Claude Code |
-| 2026-04-10 (cont) | **FULL PRESERVATION PROTOCOL ROLLOUT (epic session).** Branch protection ruleset "Protect Master" applied to all 7 production repos (aiglitch, Master, budju-xyz, mathly, togogo, propfolio, glitch-app). Same template everywhere: 0 approvals, dismiss stale, linear history, no force pushes, no deletions, empty bypass list. **Stable release tags:** aiglitch v1.1-2026-04-10, Master v1.0-2026-04-10, budju-xyz v2.0.0-intelligent-trading, mathly v0.1-2026-04-10, togogo v0-baseline + v1.0-2026-04-10, propfolio v0-baseline + v1.0-2026-04-10, glitch-app v0-baseline + v0.9-2026-04-10. **Careful-dance merges executed:** togogo (80 commits from claude/project-setup-docs-PLbC2, Vercel production branch switched from feature branch to master), propfolio (39 commits from claude/review-handoff-safety-tY8ju, same dance). Both required fixing Rule #12 violations where Vercel production branch was pointing at a feature branch. Safety anchor tags created before each dance. **New MasterHQ tooling:** `/api/admin/branch-protection` (GitHub API helper for future project onboarding, uses GITHUB_TOKEN from env). **Layer 7 Blob backup built (PR #35):** `/api/backup/blob-mirror` and `/api/backup/blob-mirror/status` endpoints, Cloudflare R2 destination, weekly cron Sundays 03:00 UTC in vercel.json, idempotent (HEAD + size comparison), dry run mode, single-store filter, per-store BLOB_TOKEN_<NAME> env vars, dual auth (TERMINAL_PASSWORD + CRON_SECRET Bearer), MongoDB audit log, budju-blob excluded (legacy). **Neon Launch tier** already active (7-day PITR) — verified not an action item. **Vercel URL format corrected** in docs: stuarts-projects-e0d342be not comfybear71s-projects, /settings/environments/production not /settings/git. **Preservation doc revised for web-only workflow** — removed local clone assumptions, added canonical ruleset spec, direct ruleset creation links per repo, GitHub Releases for tagging. 5 PRs merged to Master today (#34 grant pitch + preservation protocol, #35 blob mirror). Multiple stale feature branches cleaned up across all 7 repos. **Pending from this session:** Cloudflare R2 provisioning (account signup, bucket creation, API token, 9 env vars in Vercel) — not urgent, endpoint is inert until env vars are set. | Claude Code |
+| 2026-04-10 (cont) | **FULL PRESERVATION PROTOCOL ROLLOUT (epic session).** Branch protection ruleset "Protect Master" applied to all 7 production repos. Stable release tags on all 7. Careful-dance merges for togogo + propfolio (Vercel production branch switches). Blob mirror endpoint + weekly cron. Prompts collection (starter, resume, PR handoff, circuit breaker) with copy buttons. Fix-spiral counting rule. Docs page improvements. Full details in prior session log entry. | Claude Code |
+| 2026-04-13 | **GOOGLE AUTH + ACCOUNTING SYSTEM.** Built manual Google OAuth for entire site (replaced NextAuth after 5+ failed attempts — NextAuth had persistent "invalid_client" token exchange error despite correct credentials). Only sfrench71@gmail.com can access. 7-day encrypted session cookie (AES-256-CBC). Dark-themed login page. **Accounting system expanded:** Claude Vision OCR auto-reads invoices AND payslips (gross pay, PAYG tax, super, pay period, YTD). 22+ Anthropic invoices uploaded and OCR'd. Private Blob Store (accounting-vault) for secure invoice storage + proxy endpoint for viewing. ATO Tax Guide tab (2025-26 brackets, super rates, home office 67c/hr, business deductions, instant asset write-off $20k, GST threshold). Pagination (25/page) + search + vendor/status filters + sort + bulk confirm for invoice list. Employment Income category added. Cleanup: removed dead NextAuth code (AuthProvider.tsx, next-auth dependency). Fixed Vercel MasterHQ production branch (was on old feature branch — same Rule #12 pattern as togogo/propfolio). PRs merged: #44-#58. Tags: v1.0 through v1.8-2026-04-13. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
