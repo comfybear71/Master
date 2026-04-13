@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       // Upload to Vercel Blob
       // Uses BLOB_TOKEN_ACCOUNTING for a private store if available,
       // falls back to default BLOB_READ_WRITE_TOKEN (public) with a warning
-      const accountingToken = process.env.BLOB_TOKEN_ACCOUNTING;
+      const accountingToken = process.env.BLOB_ACCOUNTING_READ_WRITE_TOKEN;
       const isPrivate = !!accountingToken;
       const blob = await put(path, file, {
         access: isPrivate ? "private" : "public",
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       results.push({ ...invoice, _id: insertResult.insertedId });
     }
 
-    const accountingToken = process.env.BLOB_TOKEN_ACCOUNTING;
+    const accountingToken = process.env.BLOB_ACCOUNTING_READ_WRITE_TOKEN;
     return NextResponse.json(
       {
         success: true,
