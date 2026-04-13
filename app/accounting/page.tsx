@@ -63,6 +63,9 @@ export default function AccountingPage() {
   const [invoiceTotals, setInvoiceTotals] = useState({ amount: 0, count: 0 });
   const [uploading, setUploading] = useState(false);
   const [uploadMsg, setUploadMsg] = useState("");
+  const [ocrProcessing, setOcrProcessing] = useState<Set<string>>(new Set());
+  const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ vendor: "", amount: "", date: "", categoryId: "", notes: "" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // New transaction form
@@ -128,8 +131,12 @@ export default function AccountingPage() {
       const res = await fetch("/api/accounting/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
-        setUploadMsg(`Uploaded ${data.count} invoice${data.count > 1 ? "s" : ""}`);
+        setUploadMsg(`Uploaded ${data.count} invoice${data.count > 1 ? "s" : ""}. Running OCR...`);
         fetchInvoices();
+        // Auto-trigger OCR for each uploaded invoice
+        for (const inv of data.invoices) {
+          triggerOcr(inv._id);
+        }
       } else {
         setUploadMsg(data.error || "Upload failed");
       }
@@ -138,6 +145,80 @@ export default function AccountingPage() {
     }
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const triggerOcr = async (invoiceId: string) => {
+    setOcrProcessing((prev) => new Set(prev).add(invoiceId));
+    try {
+      await fetch("/api/accounting/ocr", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId }),
+      });
+      fetchInvoices();
+    } catch { /* ignore — invoice will show ocrStatus: "error" */ }
+    setOcrProcessing((prev) => {
+      const next = new Set(prev);
+      next.delete(invoiceId);
+      return next;
+    });
+  };
+
+  const handleConfirmInvoice = async (inv: Invoice) => {
+    if (!inv.amount || !inv.date) return;
+    try {
+      // Create a transaction from the confirmed invoice
+      await fetch("/api/accounting/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "expense",
+          amount: inv.amount,
+          date: inv.date,
+          description: inv.vendor ? `${inv.vendor} invoice` : inv.fileName,
+          categoryId: inv.categoryId || "",
+          invoiceId: inv._id,
+        }),
+      });
+      // Mark invoice as confirmed
+      await fetch("/api/accounting/invoices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: inv._id, status: "confirmed" }),
+      });
+      fetchInvoices();
+      fetchTransactions();
+    } catch { /* ignore */ }
+  };
+
+  const handleStartEdit = (inv: Invoice) => {
+    setEditingInvoice(inv._id);
+    setEditForm({
+      vendor: inv.vendor || "",
+      amount: inv.amount?.toString() || "",
+      date: inv.date || "",
+      categoryId: inv.categoryId || "",
+      notes: inv.notes || "",
+    });
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    try {
+      await fetch("/api/accounting/invoices", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id,
+          vendor: editForm.vendor,
+          amount: editForm.amount ? parseFloat(editForm.amount) : null,
+          date: editForm.date,
+          categoryId: editForm.categoryId,
+          notes: editForm.notes,
+        }),
+      });
+      setEditingInvoice(null);
+      fetchInvoices();
+    } catch { /* ignore */ }
   };
 
   const handleAddTransaction = async () => {
@@ -296,42 +377,94 @@ export default function AccountingPage() {
             ) : (
               <div className="divide-y divide-slate-800">
                 {invoices.map((inv) => (
-                  <div key={inv._id} className="p-3 flex items-center gap-3 hover:bg-slate-800/30 transition-colors">
-                    <div className="text-xl shrink-0">
-                      {inv.fileType === "application/pdf" ? "📄" : "🖼️"}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-white text-sm font-medium truncate">{inv.fileName}</div>
-                      <div className="text-slate-500 text-[11px] flex items-center gap-2 flex-wrap">
-                        {inv.vendor && <span className="text-accent">{inv.vendor}</span>}
-                        {inv.date && <span>{inv.date}</span>}
-                        {inv.amount && <span className="text-green-400 font-medium">{fmt(inv.amount)}</span>}
-                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase ${
-                          inv.status === "confirmed"
-                            ? "bg-green-500/10 text-green-400"
-                            : "bg-amber-500/10 text-amber-400"
-                        }`}>
-                          {inv.status === "confirmed" ? "Confirmed" : "Pending Review"}
-                        </span>
-                        <span className="text-slate-600">{(inv.fileSize / 1024).toFixed(0)}KB</span>
+                  <div key={inv._id} className="p-3 hover:bg-slate-800/30 transition-colors">
+                    {editingInvoice === inv._id ? (
+                      /* Edit mode */
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          <input type="text" placeholder="Vendor" value={editForm.vendor}
+                            onChange={(e) => setEditForm((f) => ({ ...f, vendor: e.target.value }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none" />
+                          <input type="number" step="0.01" placeholder="Amount" value={editForm.amount}
+                            onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none" />
+                          <input type="date" value={editForm.date}
+                            onChange={(e) => setEditForm((f) => ({ ...f, date: e.target.value }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none" />
+                          <select value={editForm.categoryId}
+                            onChange={(e) => setEditForm((f) => ({ ...f, categoryId: e.target.value }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none">
+                            <option value="">Category</option>
+                            {categories.filter((c) => c.type === "expense").map((c) => (
+                              <option key={c._id} value={c._id}>{c.icon} {c.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleSaveEdit(inv._id)}
+                            className="px-3 py-1 rounded text-xs bg-accent/10 text-accent border border-accent/20">Save</button>
+                          <button onClick={() => setEditingInvoice(null)}
+                            className="px-3 py-1 rounded text-xs text-slate-400 hover:text-white">Cancel</button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <a
-                        href={inv.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent transition-colors"
-                      >
-                        View
-                      </a>
-                      <button
-                        onClick={() => handleDeleteInvoice(inv._id)}
-                        className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-red-400 transition-colors"
-                      >
-                        Del
-                      </button>
-                    </div>
+                    ) : (
+                      /* View mode */
+                      <div className="flex items-center gap-3">
+                        <div className="text-xl shrink-0">
+                          {inv.fileType === "application/pdf" ? "📄" : "🖼️"}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-white text-sm font-medium truncate">{inv.vendor || inv.fileName}</div>
+                          <div className="text-slate-500 text-[11px] flex items-center gap-2 flex-wrap">
+                            {inv.vendor && <span className="text-slate-600 truncate">{inv.fileName}</span>}
+                            {inv.date && <span>{inv.date}</span>}
+                            {inv.amount != null && <span className="text-green-400 font-medium">{fmt(inv.amount)}</span>}
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase ${
+                              inv.status === "confirmed" ? "bg-green-500/10 text-green-400"
+                                : inv.ocrStatus === "processing" || ocrProcessing.has(inv._id) ? "bg-blue-500/10 text-blue-400"
+                                : inv.ocrStatus === "complete" ? "bg-amber-500/10 text-amber-400"
+                                : inv.ocrStatus === "error" ? "bg-red-500/10 text-red-400"
+                                : "bg-slate-500/10 text-slate-400"
+                            }`}>
+                              {inv.status === "confirmed" ? "Confirmed"
+                                : ocrProcessing.has(inv._id) ? "Reading..."
+                                : inv.ocrStatus === "processing" ? "Reading..."
+                                : inv.ocrStatus === "complete" ? "Review"
+                                : inv.ocrStatus === "error" ? "OCR Failed"
+                                : "Pending"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                          {inv.ocrStatus !== "complete" && inv.status !== "confirmed" && !ocrProcessing.has(inv._id) && (
+                            <button onClick={() => triggerOcr(inv._id)}
+                              className="px-2 py-1 rounded text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 hover:bg-blue-500/20 transition-colors">
+                              OCR
+                            </button>
+                          )}
+                          {inv.ocrStatus === "complete" && inv.status !== "confirmed" && (
+                            <button onClick={() => handleConfirmInvoice(inv)}
+                              className="px-2 py-1 rounded text-[10px] bg-green-500/10 text-green-400 border border-green-500/20 hover:bg-green-500/20 transition-colors">
+                              Confirm
+                            </button>
+                          )}
+                          {inv.status !== "confirmed" && (
+                            <button onClick={() => handleStartEdit(inv)}
+                              className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent transition-colors">
+                              Edit
+                            </button>
+                          )}
+                          <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer"
+                            className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent transition-colors">
+                            View
+                          </a>
+                          <button onClick={() => handleDeleteInvoice(inv._id)}
+                            className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-red-400 transition-colors">
+                            Del
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
