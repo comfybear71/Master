@@ -482,7 +482,7 @@ export default function AccountingPage() {
                               Edit
                             </button>
                           )}
-                          <a href={inv.fileUrl} target="_blank" rel="noopener noreferrer"
+                          <a href={`/api/accounting/file?id=${inv._id}`} target="_blank" rel="noopener noreferrer"
                             className="px-2 py-1 rounded text-[10px] bg-slate-700 text-slate-300 hover:text-accent transition-colors">
                             View
                           </a>
