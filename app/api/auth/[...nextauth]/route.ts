@@ -4,10 +4,9 @@ import GoogleProvider from "next-auth/providers/google";
 const handler = NextAuth({
   providers: [
     GoogleProvider({
-      // Separate credentials from YouTube OAuth (GOOGLE_CLIENT_ID/SECRET)
-      // These are specifically for MasterHQ login
-      clientId: process.env.MASTER_GOOGLE_CLIENT_ID || "",
-      clientSecret: process.env.MASTER_GOOGLE_CLIENT_SECRET || "",
+      // Falls back to existing GOOGLE_CLIENT_ID/SECRET (YouTube OAuth — same client)
+      clientId: process.env.MASTER_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.MASTER_GOOGLE_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET || "",
     }),
   ],
   callbacks: {
