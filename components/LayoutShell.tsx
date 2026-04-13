@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  // Login page gets no sidebar — it has its own full-screen layout
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
 
   // Load theme from localStorage
   useEffect(() => {
