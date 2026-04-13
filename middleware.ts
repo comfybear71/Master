@@ -1,13 +1,10 @@
 export { default } from "next-auth/middleware";
 
-// Protect ALL routes except:
-// - /login (the login page itself)
-// - /api/auth/* (NextAuth endpoints — needed for OAuth flow)
-// - /_next/* (Next.js internals)
-// - /favicon.ico, /manifest.json (static assets)
-// - Public HTML files that may be shared externally (media-kit, sponsor-onboarding, grant-pitch)
+// Protect page routes only — NOT API routes
+// API routes handle their own auth (TERMINAL_PASSWORD, CRON_SECRET, session checks)
+// Redirecting API calls to a login page doesn't make sense — they should return 401
 export const config = {
   matcher: [
-    "/((?!login|api/auth|_next/static|_next/image|favicon\\.ico|manifest\\.json|media-kit\\.html|sponsor-onboarding\\.html|grant-pitch\\.html).*)",
+    "/((?!login|api|_next/static|_next/image|favicon\\.ico|manifest\\.json|media-kit\\.html|sponsor-onboarding\\.html|grant-pitch\\.html).*)",
   ],
 };
