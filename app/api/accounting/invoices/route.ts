@@ -133,8 +133,13 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
 
-    // Delete from MongoDB
+    // Delete the invoice from MongoDB
     await db.collection("accounting_invoices").deleteOne({ _id: new ObjectId(id) });
+
+    // Also delete any transactions linked to this invoice
+    const txDeleteResult = await db
+      .collection("accounting_transactions")
+      .deleteMany({ invoiceId: id });
 
     // Note: Blob deletion would require del() from @vercel/blob
     // For now we just remove the DB record — blob files persist as orphans
