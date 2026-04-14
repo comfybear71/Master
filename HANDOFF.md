@@ -240,21 +240,23 @@ All environment variables are configured in Vercel. TheMaster has full runtime a
 
 ## Next Session — Start Here
 
-### 🚨 URGENT: Dev droplet compromised (2026-04-13)
-Before anything else, verify secrets have been rotated:
-- [ ] **MongoDB password** rotated + MONGODB_URI updated in Vercel (all projects)
-- [ ] **GITHUB_TOKEN** rotated
-- [ ] **TERMINAL_PASSWORD** rotated
-- [ ] **VPS_API_SECRET** rotated
-- [ ] Compromised droplet destroyed (DO dashboard)
-- [ ] New droplet created with hardening (UFW, SSH keys only, fail2ban, unattended-upgrades)
-- [ ] ttyd rebuilt per `docs/DEV-DROPLET-SETUP.md`
-- [ ] `TTYD_URL` updated in Vercel env vars
-- [ ] `terminal.masterhq.dev` DNS updated to new droplet IP
-- [ ] BUDJU: ML model retrained (`python3 vps/ml/train.py`), budju-ml systemd service restored
-- [ ] Check all Vercel deploys + MongoDB for unusual activity in last 24h (compromise window)
+### 🚨 URGENT: Dev droplet compromised (2026-04-13) — RESOLVED
+Incident: masterhq-dev-syd1 (170.64.133.9) was compromised and used in a DDoS attack. DigitalOcean disconnected it. GitHub audit log confirmed NO unauthorized activity (all IPs from user's Perth location). Emergency response completed same day:
 
-Until this is done, the terminal feature on masterhq.dev/terminal is broken and the BUDJU perp ML filter is in fallback mode (trades allowed without ML scoring).
+- [x] **MongoDB password rotated** — flubuser on flub cluster, new URI updated in all Vercel projects (MasterHQ, propfolio, BUDJU). AIG!itch uses Neon, mathly uses Neon, others N/A.
+- [x] **GitHub audit clean** — no suspicious activity, no SSH keys attached. 2 orphaned PATs (`master`, `masterhq`) deleted. New PAT created: `MasterHQ — rotated 2026-04-13` (repo scope, 90-day expiry, in Vercel as GITHUB_TOKEN).
+- [x] **TERMINAL_PASSWORD rotated** in Vercel, MasterHQ redeployed.
+- [x] **Compromised droplet destroyed** (DO dashboard, 2026-04-13).
+
+### ⏳ Still pending from droplet incident (not urgent)
+- [ ] Rebuild dev droplet with hardening: UFW firewall, SSH keys only, fail2ban, unattended-upgrades, non-root user
+- [ ] ttyd rebuilt per `docs/DEV-DROPLET-SETUP.md`
+- [ ] `TTYD_URL` env var in Vercel updated to new droplet IP
+- [ ] `terminal.masterhq.dev` DNS updated to new IP
+- [ ] BUDJU: ML model retrained (`python3 vps/ml/train.py`), budju-ml systemd service restored on new droplet
+- [ ] Currently `masterhq.dev/terminal` is broken (iframe points at dead IP) — will be fixed when new droplet is up
+
+Until droplet is rebuilt: terminal feature broken, BUDJU perp ML filter in fallback mode (trades allowed without ML scoring — not a safety issue, just no filtering).
 
 ### 🛡️ How to start a session on MasterHQ
 Paste the starter prompt from `docs/prompts/starter-prompt.md` (or copy from masterhq.dev/docs → Prompts → New Session Starter). All sessions follow the web-only PR workflow:
@@ -363,7 +365,7 @@ Prospect receives email → clicks $50/$100 tier link
 | 2026-04-10 | Grant pitch email page: fixed mobile UI (non-sticky controls, full-width inputs, iOS Safari 16px font fix, 2x2 stats grid, horizontal table scroll). Added send action to `/api/outreach` with proper inline-styled email template (email clients strip CSS classes) + recipient name personalization + media kit/sponsor onboarding/social links sections. **CODE PRESERVATION PROTOCOL:** Created `docs/code-preservation-protocol.md` — 7-layer backup strategy (branch protection, backup remote, tags, local clones, DB backups, Blob backups, weekly checklist). Added to SAFETY-RULES.md, CLAUDE.md rules #17-24, and docs page. Every production project must now have branch protection + backup remote. | Claude Code |
 | 2026-04-10 (cont) | **FULL PRESERVATION PROTOCOL ROLLOUT (epic session).** Branch protection ruleset "Protect Master" applied to all 7 production repos. Stable release tags on all 7. Careful-dance merges for togogo + propfolio (Vercel production branch switches). Blob mirror endpoint + weekly cron. Prompts collection (starter, resume, PR handoff, circuit breaker) with copy buttons. Fix-spiral counting rule. Docs page improvements. Full details in prior session log entry. | Claude Code |
 | 2026-04-13 | **GOOGLE AUTH + ACCOUNTING SYSTEM.** Built manual Google OAuth for entire site (replaced NextAuth after 5+ failed attempts — NextAuth had persistent "invalid_client" token exchange error despite correct credentials). Only sfrench71@gmail.com can access. 7-day encrypted session cookie (AES-256-CBC). Dark-themed login page. **Accounting system expanded:** Claude Vision OCR auto-reads invoices AND payslips (gross pay, PAYG tax, super, pay period, YTD). 22+ Anthropic invoices uploaded and OCR'd. Private Blob Store (accounting-vault) for secure invoice storage + proxy endpoint for viewing. ATO Tax Guide tab (2025-26 brackets, super rates, home office 67c/hr, business deductions, instant asset write-off $20k, GST threshold). Pagination (25/page) + search + vendor/status filters + sort + bulk confirm for invoice list. Employment Income category added. Cleanup: removed dead NextAuth code (AuthProvider.tsx, next-auth dependency). Fixed Vercel MasterHQ production branch (was on old feature branch — same Rule #12 pattern as togogo/propfolio). PRs merged: #44-#58. Tags: v1.0 through v1.8-2026-04-13. | Claude Code |
-| 2026-04-13 (END) | 🚨 **DEV DROPLET COMPROMISED — DDoS attack.** masterhq-dev-syd1 (170.64.133.9) disconnected by DigitalOcean after participating in DDoS (44,578 pps of 138,990 total). Malicious software installed on droplet. **NOT affected:** trading bot (other droplet 134.199.149.205), all Vercel deploys (MasterHQ, AIG!itch, togogo, BUDJU Vercel trades, etc.), MongoDB, GitHub. **Affected:** ttyd terminal (dead), terminal.masterhq.dev DNS (still points at dead IP), BUDJU ML classifier (model.joblib lost — retrainable from MongoDB). **Chosen path: Path 1 (destroy + rebuild).** Action items for next session: (1) Rotate MongoDB password — URGENT (ML training used MONGODB_URI on the droplet). Update in Vercel for MasterHQ, AIG!itch, BUDJU, others. (2) Rotate GITHUB_TOKEN if Claude Code was authenticated on the droplet. (3) Rotate TERMINAL_PASSWORD + VPS_API_SECRET. (4) Destroy compromised droplet. (5) Create new droplet with hardening: UFW firewall, SSH keys only (no password), fail2ban, unattended-upgrades, non-root user. (6) Rebuild: ttyd setup per docs/DEV-DROPLET-SETUP.md. (7) BUDJU side: retrain ML model (python3 vps/ml/train.py), restore budju-ml systemd service. (8) Update TTYD_URL env var in Vercel to new droplet IP. (9) Update terminal.masterhq.dev DNS to new IP. | Claude Code |
+| 2026-04-13 (END) | 🚨 **DEV DROPLET COMPROMISED + EMERGENCY RESPONSE COMPLETE.** masterhq-dev-syd1 (170.64.133.9) disconnected by DigitalOcean after participating in DDoS (44,578 pps). **NOT affected:** trading bot (separate droplet), all Vercel deploys, MongoDB data, GitHub, accounting system, auth. **Affected:** ttyd terminal (dead), BUDJU ML classifier (retrainable). **Response completed same day:** (1) MongoDB password rotated (flubuser on flub cluster), URI updated in MasterHQ/propfolio/BUDJU Vercel env vars + redeployed. (2) GitHub audit log verified clean (no unauthorized access, all IPs from Perth). (3) 2 orphaned GitHub PATs deleted, new PAT created with 90-day expiry added as GITHUB_TOKEN. (4) TERMINAL_PASSWORD rotated in Vercel + redeployed. (5) Compromised droplet destroyed. **Pending for future session:** rebuild new droplet with hardening (UFW, SSH keys only, fail2ban), restore ttyd, update TTYD_URL + terminal.masterhq.dev DNS, retrain BUDJU ML model. User stayed calm and methodical throughout — no additional damage beyond the original DDoS participation. | Claude Code |
 
 > Claude Code should append a new row here after every session summarising what was built or fixed.
 
