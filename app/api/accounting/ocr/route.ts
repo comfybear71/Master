@@ -265,6 +265,18 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // Determine scope: payslips are personal, invoices default to invoice's existing scope
+      // or the matched category's scope, or "business" as fallback
+      let determinedScope = invoice.scope || "business";
+      if (isPayslip) {
+        determinedScope = "personal";
+      } else if (matchedCategoryId && !invoice.scope) {
+        const matchedCat = await db
+          .collection("accounting_categories")
+          .findOne({ _id: new ObjectId(matchedCategoryId) });
+        if (matchedCat?.scope) determinedScope = matchedCat.scope;
+      }
+
       await db
         .collection("accounting_invoices")
         .updateOne(
@@ -276,6 +288,7 @@ export async function POST(req: NextRequest) {
               date: ocrResult.date || invoice.date,
               gstAmount: ocrResult.gstAmount,
               categoryId: matchedCategoryId || invoice.categoryId,
+              scope: determinedScope,
               documentType: ocrResult.documentType || "invoice",
               payslipData: ocrResult.payslipData || null,
               ocrStatus: "complete",

@@ -2,11 +2,14 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 
+type Scope = "business" | "personal" | "shared";
+
 interface Category {
   _id: string;
   name: string;
   type: "income" | "expense";
   icon: string;
+  scope?: Scope;
 }
 
 interface Invoice {
@@ -22,6 +25,8 @@ interface Invoice {
   gstAmount: number | null;
   status: string;
   ocrStatus: string;
+  scope?: Scope;
+  paidBy?: "director" | "company";
   documentType?: "invoice" | "payslip";
   payslipData?: {
     grossPay: number | null;
@@ -48,8 +53,18 @@ interface Transaction {
   description: string;
   categoryId: string | null;
   invoiceId: string | null;
+  scope?: Scope;
+  paidBy?: "director" | "company";
   notes: string | null;
   createdAt: string;
+}
+
+interface ScopedSummary {
+  income: number;
+  expenses: number;
+  netProfit: number;
+  incomeCount: number;
+  expenseCount: number;
 }
 
 interface Summary {
@@ -58,6 +73,12 @@ interface Summary {
   netProfit: number;
   incomeCount: number;
   expenseCount: number;
+  business?: ScopedSummary;
+  personal?: ScopedSummary;
+  shared?: ScopedSummary;
+  directorLoanBalance?: number;
+  directorLoanExpenses?: number;
+  directorLoanRepayments?: number;
 }
 
 type Tab = "invoices" | "ledger" | "summary" | "tax";
@@ -79,7 +100,7 @@ export default function AccountingPage() {
   const [uploadMsg, setUploadMsg] = useState("");
   const [ocrProcessing, setOcrProcessing] = useState<Set<string>>(new Set());
   const [editingInvoice, setEditingInvoice] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ vendor: "", amount: "", date: "", categoryId: "", notes: "" });
+  const [editForm, setEditForm] = useState({ vendor: "", amount: "", date: "", categoryId: "", notes: "", scope: "business" as Scope, paidBy: "director" as "director" | "company" });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Invoice filters, pagination, search, sort, bulk select
@@ -91,6 +112,10 @@ export default function AccountingPage() {
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const INVOICES_PER_PAGE = 25;
 
+  // Global scope filter (applies across all tabs)
+  const [scopeFilter, setScopeFilter] = useState<"all" | Scope>("all");
+  const [defaultScope, setDefaultScope] = useState<Scope>("business");
+
   // New transaction form
   const [showTxForm, setShowTxForm] = useState(false);
   const [txForm, setTxForm] = useState({
@@ -100,11 +125,13 @@ export default function AccountingPage() {
     description: "",
     categoryId: "",
     notes: "",
+    scope: "business" as Scope,
+    paidBy: "director" as "director" | "company",
   });
 
   // New category form
   const [showCatForm, setShowCatForm] = useState(false);
-  const [catForm, setCatForm] = useState({ name: "", type: "expense" as "income" | "expense", icon: "" });
+  const [catForm, setCatForm] = useState({ name: "", type: "expense" as "income" | "expense", icon: "", scope: "business" as Scope });
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -151,6 +178,8 @@ export default function AccountingPage() {
       for (let i = 0; i < files.length; i++) {
         formData.append("files", files[i]);
       }
+      formData.append("scope", defaultScope);
+      formData.append("paidBy", "director"); // Default: you (director) are paying, creates loan to company
       const res = await fetch("/api/accounting/upload", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
@@ -190,9 +219,10 @@ export default function AccountingPage() {
   const handleConfirmInvoice = async (inv: Invoice) => {
     if (!inv.amount || !inv.date) return;
     const isPayslip = inv.documentType === "payslip";
+    // Payslips always personal; otherwise use invoice's scope or default business
+    const scope: Scope = isPayslip ? "personal" : (inv.scope || "business");
+    const paidBy: "director" | "company" = inv.paidBy || "director";
     try {
-      // Create a transaction from the confirmed document
-      // Payslips → income (gross pay), Invoices → expense
       await fetch("/api/accounting/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -205,6 +235,8 @@ export default function AccountingPage() {
             : inv.vendor ? `${inv.vendor} invoice` : inv.fileName,
           categoryId: inv.categoryId || "",
           invoiceId: inv._id,
+          scope,
+          paidBy,
         }),
       });
       // Mark invoice as confirmed
@@ -226,6 +258,8 @@ export default function AccountingPage() {
       date: inv.date || "",
       categoryId: inv.categoryId || "",
       notes: inv.notes || "",
+      scope: inv.scope || "business",
+      paidBy: inv.paidBy || "director",
     });
   };
 
@@ -241,6 +275,8 @@ export default function AccountingPage() {
           date: editForm.date,
           categoryId: editForm.categoryId,
           notes: editForm.notes,
+          scope: editForm.scope,
+          paidBy: editForm.paidBy,
         }),
       });
       setEditingInvoice(null);
@@ -259,7 +295,7 @@ export default function AccountingPage() {
       const data = await res.json();
       if (data._id) {
         setShowTxForm(false);
-        setTxForm({ type: "expense", amount: "", date: new Date().toISOString().split("T")[0], description: "", categoryId: "", notes: "" });
+        setTxForm({ type: "expense", amount: "", date: new Date().toISOString().split("T")[0], description: "", categoryId: "", notes: "", scope: "business", paidBy: "director" });
         fetchTransactions();
       }
     } catch { /* ignore */ }
@@ -275,7 +311,7 @@ export default function AccountingPage() {
       });
       if (res.ok) {
         setShowCatForm(false);
-        setCatForm({ name: "", type: "expense", icon: "" });
+        setCatForm({ name: "", type: "expense", icon: "", scope: "business" });
         fetchCategories();
       }
     } catch { /* ignore */ }
@@ -313,6 +349,7 @@ export default function AccountingPage() {
   // Computed: filtered, searched, sorted, paginated invoices
   const filteredInvoices = invoices
     .filter((inv) => {
+      if (scopeFilter !== "all" && (inv.scope || "business") !== scopeFilter) return false;
       if (invoiceFilter === "pending" && inv.status === "confirmed") return false;
       if (invoiceFilter === "confirmed" && inv.status !== "confirmed") return false;
       if (invoiceVendorFilter && inv.vendor !== invoiceVendorFilter) return false;
@@ -377,31 +414,86 @@ export default function AccountingPage() {
     return cat ? `${cat.icon} ${cat.name}` : "Unknown";
   };
 
+  const scopeBadge = (scope?: Scope) => {
+    const s = scope || "business";
+    if (s === "business") return <span className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase bg-blue-500/10 text-blue-400">Business</span>;
+    if (s === "personal") return <span className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase bg-purple-500/10 text-purple-400">Personal</span>;
+    return <span className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase bg-amber-500/10 text-amber-400">Shared</span>;
+  };
+
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold text-white mb-1">Accounting</h1>
-      <p className="text-slate-400 text-sm mb-6">
-        Invoice vault, ledger, and P&L — Australian FY (Jul 1 – Jun 30)
+      <p className="text-slate-400 text-sm mb-4">
+        Invoice vault, ledger, and P&L — Australian FY (Jul 1 – Jun 30) — AIG!itch Pty Ltd + Personal
       </p>
 
+      {/* Scope filter bar — applies across all tabs */}
+      <div className="flex gap-1 mb-4 bg-base-card rounded-lg border border-slate-800 p-1 w-fit">
+        {(["all", "business", "personal", "shared"] as const).map((s) => (
+          <button
+            key={s}
+            onClick={() => setScopeFilter(s)}
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              scopeFilter === s
+                ? s === "business" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                : s === "personal" ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                : s === "shared" ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                : "bg-accent/10 text-accent border border-accent/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+          </button>
+        ))}
+      </div>
+
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
         <div className="bg-base-card rounded-xl border border-slate-800 p-4">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Income</div>
-          <div className="text-lg font-bold text-green-400">{fmt(summary.totalIncome)}</div>
-          <div className="text-[10px] text-slate-600">{summary.incomeCount} entries</div>
+          <div className="text-lg font-bold text-green-400">
+            {fmt(scopeFilter === "all" ? summary.totalIncome
+              : scopeFilter === "business" ? summary.business?.income || 0
+              : scopeFilter === "personal" ? summary.personal?.income || 0
+              : summary.shared?.income || 0)}
+          </div>
+          <div className="text-[10px] text-slate-600">
+            {scopeFilter === "all" ? summary.incomeCount
+              : scopeFilter === "business" ? summary.business?.incomeCount || 0
+              : scopeFilter === "personal" ? summary.personal?.incomeCount || 0
+              : summary.shared?.incomeCount || 0} entries
+          </div>
         </div>
         <div className="bg-base-card rounded-xl border border-slate-800 p-4">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Expenses</div>
-          <div className="text-lg font-bold text-red-400">{fmt(summary.totalExpenses)}</div>
-          <div className="text-[10px] text-slate-600">{summary.expenseCount} entries</div>
+          <div className="text-lg font-bold text-red-400">
+            {fmt(scopeFilter === "all" ? summary.totalExpenses
+              : scopeFilter === "business" ? summary.business?.expenses || 0
+              : scopeFilter === "personal" ? summary.personal?.expenses || 0
+              : summary.shared?.expenses || 0)}
+          </div>
+          <div className="text-[10px] text-slate-600">
+            {scopeFilter === "all" ? summary.expenseCount
+              : scopeFilter === "business" ? summary.business?.expenseCount || 0
+              : scopeFilter === "personal" ? summary.personal?.expenseCount || 0
+              : summary.shared?.expenseCount || 0} entries
+          </div>
         </div>
         <div className="bg-base-card rounded-xl border border-slate-800 p-4">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Net P&L</div>
-          <div className={`text-lg font-bold ${summary.netProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {fmt(summary.netProfit)}
+          <div className={`text-lg font-bold ${
+            (scopeFilter === "all" ? summary.netProfit
+              : scopeFilter === "business" ? summary.business?.netProfit || 0
+              : scopeFilter === "personal" ? summary.personal?.netProfit || 0
+              : summary.shared?.netProfit || 0) >= 0 ? "text-green-400" : "text-red-400"
+          }`}>
+            {fmt(scopeFilter === "all" ? summary.netProfit
+              : scopeFilter === "business" ? summary.business?.netProfit || 0
+              : scopeFilter === "personal" ? summary.personal?.netProfit || 0
+              : summary.shared?.netProfit || 0)}
           </div>
-          <div className="text-[10px] text-slate-600">{summary.netProfit >= 0 ? "Profit" : "Loss"}</div>
+          <div className="text-[10px] text-slate-600">{scopeFilter === "all" ? "All" : scopeFilter.charAt(0).toUpperCase() + scopeFilter.slice(1)}</div>
         </div>
         <div className="bg-base-card rounded-xl border border-slate-800 p-4">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Invoices</div>
@@ -409,6 +501,28 @@ export default function AccountingPage() {
           <div className="text-[10px] text-slate-600">{fmt(invoiceTotals.amount)} total</div>
         </div>
       </div>
+
+      {/* Director Loan Balance card */}
+      {(summary.directorLoanBalance !== undefined && summary.directorLoanBalance !== 0) && (
+        <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-purple-300 uppercase tracking-wider mb-1">💼 Director Loan Balance</div>
+              <div className="text-xl font-bold text-white">{fmt(summary.directorLoanBalance)}</div>
+              <div className="text-[11px] text-slate-400 mt-1">
+                AIG!itch Pty Ltd owes you this amount for business expenses you paid personally.
+              </div>
+            </div>
+            <div className="text-right text-[10px] text-slate-500">
+              <div>Loaned: <span className="text-white">{fmt(summary.directorLoanExpenses || 0)}</span></div>
+              <div>Repaid: <span className="text-white">{fmt(summary.directorLoanRepayments || 0)}</span></div>
+            </div>
+          </div>
+        </div>
+      )}
+      {summary.directorLoanBalance === 0 && (
+        <div className="h-2 mb-6" />
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 bg-base-card rounded-lg border border-slate-800 p-1 w-fit">
@@ -430,6 +544,29 @@ export default function AccountingPage() {
       {/* INVOICES TAB */}
       {tab === "invoices" && (
         <div className="space-y-4">
+          {/* Upload scope selector — choose before uploading */}
+          <div className="flex items-center gap-2 text-xs text-slate-400">
+            <span>New upload scope:</span>
+            {(["business", "personal", "shared"] as Scope[]).map((s) => (
+              <button
+                key={s}
+                onClick={(e) => { e.stopPropagation(); setDefaultScope(s); }}
+                className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                  defaultScope === s
+                    ? s === "business" ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                    : s === "personal" ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                    : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                    : "text-slate-500 hover:text-white border border-slate-700"
+                }`}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            ))}
+            <span className="text-slate-600 text-[10px] ml-auto">
+              Defaults to <strong>paid by director</strong> (loan to AIG!itch Pty Ltd)
+            </span>
+          </div>
+
           {/* Upload zone */}
           <div
             className="bg-base-card rounded-xl border-2 border-dashed border-slate-700 hover:border-accent/40 p-6 text-center transition-colors cursor-pointer"
@@ -603,6 +740,21 @@ export default function AccountingPage() {
                             ))}
                           </select>
                         </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <select value={editForm.scope}
+                            onChange={(e) => setEditForm((f) => ({ ...f, scope: e.target.value as Scope }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none">
+                            <option value="business">🔵 Business (AIG!itch Pty Ltd)</option>
+                            <option value="personal">🟣 Personal</option>
+                            <option value="shared">🟡 Shared</option>
+                          </select>
+                          <select value={editForm.paidBy}
+                            onChange={(e) => setEditForm((f) => ({ ...f, paidBy: e.target.value as "director" | "company" }))}
+                            className="bg-black/40 border border-slate-700 rounded px-2 py-1.5 text-white text-sm focus:border-accent outline-none">
+                            <option value="director">Paid by Director (= loan to company)</option>
+                            <option value="company">Paid by Company</option>
+                          </select>
+                        </div>
                         <div className="flex gap-2">
                           <button onClick={() => handleSaveEdit(inv._id)}
                             className="px-3 py-1 rounded text-xs bg-accent/10 text-accent border border-accent/20">Save</button>
@@ -644,6 +796,7 @@ export default function AccountingPage() {
                                 {inv.payslipData.superannuation != null && <span className="text-amber-400">Super: {fmt(inv.payslipData.superannuation)}</span>}
                               </>
                             )}
+                            {scopeBadge(inv.scope)}
                             <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium uppercase ${
                               inv.status === "confirmed" ? "bg-green-500/10 text-green-400"
                                 : inv.ocrStatus === "processing" || ocrProcessing.has(inv._id) ? "bg-blue-500/10 text-blue-400"
@@ -743,6 +896,15 @@ export default function AccountingPage() {
                   <option value="expense">Expense</option>
                   <option value="income">Income</option>
                 </select>
+                <select
+                  value={catForm.scope}
+                  onChange={(e) => setCatForm((f) => ({ ...f, scope: e.target.value as Scope }))}
+                  className="bg-black/40 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-accent outline-none"
+                >
+                  <option value="business">🔵 Business</option>
+                  <option value="personal">🟣 Personal</option>
+                  <option value="shared">🟡 Shared</option>
+                </select>
                 <input
                   type="text"
                   placeholder="Icon (emoji)"
@@ -802,6 +964,27 @@ export default function AccountingPage() {
                 onChange={(e) => setTxForm((f) => ({ ...f, description: e.target.value }))}
                 className="w-full bg-black/40 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-accent outline-none"
               />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <select
+                  value={txForm.scope}
+                  onChange={(e) => setTxForm((f) => ({ ...f, scope: e.target.value as Scope }))}
+                  className="bg-black/40 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-accent outline-none"
+                >
+                  <option value="business">🔵 Business (AIG!itch Pty Ltd)</option>
+                  <option value="personal">🟣 Personal</option>
+                  <option value="shared">🟡 Shared</option>
+                </select>
+                {txForm.type === "expense" && (
+                  <select
+                    value={txForm.paidBy}
+                    onChange={(e) => setTxForm((f) => ({ ...f, paidBy: e.target.value as "director" | "company" }))}
+                    className="bg-black/40 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:border-accent outline-none"
+                  >
+                    <option value="director">Paid by Director (= loan to company)</option>
+                    <option value="company">Paid by Company</option>
+                  </select>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button onClick={handleAddTransaction} className={`px-4 py-2 rounded-lg text-sm font-medium ${
                   txForm.type === "income"
@@ -820,15 +1003,20 @@ export default function AccountingPage() {
           {/* Transactions list */}
           <div className="bg-base-card rounded-xl border border-slate-800">
             <div className="p-4 border-b border-slate-800">
-              <h2 className="text-white font-semibold text-sm">{transactions.length} Transactions</h2>
+              <h2 className="text-white font-semibold text-sm">
+                {transactions.filter((tx) => scopeFilter === "all" || (tx.scope || "business") === scopeFilter).length} Transactions
+                {scopeFilter !== "all" && <span className="text-slate-500 text-xs ml-2">({scopeFilter} only)</span>}
+              </h2>
             </div>
-            {transactions.length === 0 ? (
+            {transactions.filter((tx) => scopeFilter === "all" || (tx.scope || "business") === scopeFilter).length === 0 ? (
               <div className="p-8 text-center text-slate-500 text-sm">
-                No transactions yet. Click &quot;+ Expense&quot; or &quot;+ Income&quot; to add one.
+                No transactions {scopeFilter !== "all" ? `for ${scopeFilter} scope` : ""} yet. Click &quot;+ Expense&quot; or &quot;+ Income&quot; to add one.
               </div>
             ) : (
               <div className="divide-y divide-slate-800">
-                {transactions.map((tx) => (
+                {transactions
+                  .filter((tx) => scopeFilter === "all" || (tx.scope || "business") === scopeFilter)
+                  .map((tx) => (
                   <div key={tx._id} className="p-3 flex items-center gap-3 hover:bg-slate-800/30 transition-colors">
                     <div className={`text-lg shrink-0 w-8 text-center ${
                       tx.type === "income" ? "text-green-400" : "text-red-400"
@@ -839,9 +1027,15 @@ export default function AccountingPage() {
                       <div className="text-white text-sm font-medium truncate">
                         {tx.description || getCatName(tx.categoryId)}
                       </div>
-                      <div className="text-slate-500 text-[11px] flex items-center gap-2">
+                      <div className="text-slate-500 text-[11px] flex items-center gap-2 flex-wrap">
                         <span>{tx.date}</span>
                         <span className="text-slate-600">{getCatName(tx.categoryId)}</span>
+                        {scopeBadge(tx.scope)}
+                        {tx.paidBy === "director" && tx.type === "expense" && (tx.scope || "business") === "business" && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-medium uppercase bg-purple-500/10 text-purple-400">
+                            Dir Loan
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className={`text-sm font-bold shrink-0 ${
@@ -866,9 +1060,83 @@ export default function AccountingPage() {
       {/* SUMMARY TAB */}
       {tab === "summary" && (
         <div className="space-y-4">
-          {/* P&L Overview */}
+          {/* Business P&L (AIG!itch Pty Ltd) */}
+          <div className="bg-base-card rounded-xl border border-blue-500/20 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-semibold">🔵 Business P&L — AIG!itch Pty Ltd</h2>
+              <span className="text-[10px] text-blue-400 uppercase tracking-wider">Company</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-800/50">
+                <span className="text-slate-400 text-sm">Business Income (sponsors, etc.)</span>
+                <span className="text-green-400 font-bold">{fmt(summary.business?.income || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-800/50">
+                <span className="text-slate-400 text-sm">Business Expenses</span>
+                <span className="text-red-400 font-bold">{fmt(summary.business?.expenses || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-white font-semibold text-sm">Business Net P&L</span>
+                <span className={`font-bold ${(summary.business?.netProfit || 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {fmt(summary.business?.netProfit || 0)}
+                </span>
+              </div>
+            </div>
+            {(summary.directorLoanBalance || 0) !== 0 && (
+              <div className="mt-3 pt-3 border-t border-slate-800 text-xs">
+                <div className="flex justify-between text-purple-400">
+                  <span>Director Loan Balance (company owes you)</span>
+                  <span className="font-bold">{fmt(summary.directorLoanBalance || 0)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Personal P&L */}
+          <div className="bg-base-card rounded-xl border border-purple-500/20 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white font-semibold">🟣 Personal P&L</h2>
+              <span className="text-[10px] text-purple-400 uppercase tracking-wider">You</span>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-800/50">
+                <span className="text-slate-400 text-sm">Personal Income (rent, salary)</span>
+                <span className="text-green-400 font-bold">{fmt(summary.personal?.income || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center py-1.5 border-b border-slate-800/50">
+                <span className="text-slate-400 text-sm">Personal Expenses</span>
+                <span className="text-red-400 font-bold">{fmt(summary.personal?.expenses || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-white font-semibold text-sm">Personal Net P&L</span>
+                <span className={`font-bold ${(summary.personal?.netProfit || 0) >= 0 ? "text-green-400" : "text-red-400"}`}>
+                  {fmt(summary.personal?.netProfit || 0)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Shared expenses */}
+          {(summary.shared?.expenses || 0) > 0 && (
+            <div className="bg-base-card rounded-xl border border-amber-500/20 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-white font-semibold">🟡 Shared Expenses</h2>
+                <span className="text-[10px] text-amber-400 uppercase tracking-wider">Mixed</span>
+              </div>
+              <div className="text-slate-400 text-xs mb-3">
+                These expenses are used for both personal and business (e.g. Starlink, home office, hardware).
+                Your accountant will determine the business % at tax time.
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-white font-semibold text-sm">Total Shared Expenses</span>
+                <span className="text-red-400 font-bold">{fmt(summary.shared?.expenses || 0)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Combined P&L */}
           <div className="bg-base-card rounded-xl border border-slate-800 p-6">
-            <h2 className="text-white font-semibold mb-4">Profit & Loss — Since January 2026</h2>
+            <h2 className="text-white font-semibold mb-4">Combined P&L — All Scopes — Since January 2026</h2>
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-slate-800">
                 <span className="text-slate-400">Total Income</span>

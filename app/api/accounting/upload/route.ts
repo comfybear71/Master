@@ -33,6 +33,11 @@ export async function POST(req: NextRequest) {
     const date = formData.get("date") as string | null;
     const amount = formData.get("amount") as string | null;
     const notes = formData.get("notes") as string | null;
+    const scopeRaw = formData.get("scope") as string | null;
+    const paidByRaw = formData.get("paidBy") as string | null;
+    const scope: "business" | "personal" | "shared" =
+      scopeRaw === "personal" || scopeRaw === "shared" ? scopeRaw : "business";
+    const paidBy: "director" | "company" = paidByRaw === "company" ? "company" : "director";
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -94,6 +99,8 @@ export async function POST(req: NextRequest) {
         amount: amount ? parseFloat(amount) : null,
         gstAmount: null as number | null,
         currency: "AUD",
+        scope, // business | personal | shared
+        paidBy, // director | company — tracks director loans for pre-company expenses
         ocrStatus: "pending" as const,
         ocrData: null,
         status: "pending_review" as const,

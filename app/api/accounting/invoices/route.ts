@@ -87,6 +87,8 @@ export async function PATCH(req: NextRequest) {
       "notes",
       "ocrStatus",
       "ocrData",
+      "scope",
+      "paidBy",
     ];
     const safeUpdates: Record<string, unknown> = {};
     for (const key of allowedFields) {

@@ -4,22 +4,23 @@ import { getDb } from "@/lib/mongodb";
 export const runtime = "nodejs";
 
 // GET — list transactions with filters and summaries
-// Query params: ?type=income|expense&category=X&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200
+// Query params: ?type=income|expense&category=X&scope=business|personal|shared&from=YYYY-MM-DD&to=YYYY-MM-DD&limit=200
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get("type"); // "income" or "expense"
+    const type = searchParams.get("type");
     const category = searchParams.get("category");
+    const scope = searchParams.get("scope");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
-    const limit = parseInt(searchParams.get("limit") || "200");
+    const limit = parseInt(searchParams.get("limit") || "500");
 
     const db = await getDb();
 
-    // Build query filter
     const filter: Record<string, unknown> = {};
     if (type) filter.type = type;
     if (category) filter.categoryId = category;
+    if (scope) filter.scope = scope;
     if (from || to) {
       filter.date = {};
       if (from) (filter.date as Record<string, string>).$gte = from;
@@ -33,12 +34,12 @@ export async function GET(req: NextRequest) {
       .limit(limit)
       .toArray();
 
-    // Calculate summaries
+    // Summary grouped by type AND scope
     const summaryPipeline = [
       { $match: filter },
       {
         $group: {
-          _id: "$type",
+          _id: { type: "$type", scope: "$scope" },
           total: { $sum: "$amount" },
           count: { $sum: 1 },
         },
@@ -49,17 +50,106 @@ export async function GET(req: NextRequest) {
       .aggregate(summaryPipeline)
       .toArray();
 
-    const income = summaryResult.find((s) => s._id === "income");
-    const expense = summaryResult.find((s) => s._id === "expense");
+    // Build per-scope totals
+    const scopeTotals = {
+      business: { income: 0, expense: 0, incomeCount: 0, expenseCount: 0 },
+      personal: { income: 0, expense: 0, incomeCount: 0, expenseCount: 0 },
+      shared: { income: 0, expense: 0, incomeCount: 0, expenseCount: 0 },
+    };
+    for (const r of summaryResult) {
+      const s = (r._id.scope || "business") as "business" | "personal" | "shared";
+      const t = r._id.type as "income" | "expense";
+      if (scopeTotals[s]) {
+        if (t === "income") {
+          scopeTotals[s].income = r.total;
+          scopeTotals[s].incomeCount = r.count;
+        } else {
+          scopeTotals[s].expense = r.total;
+          scopeTotals[s].expenseCount = r.count;
+        }
+      }
+    }
+
+    // Director loan balance: sum of business expenses paidBy=director,
+    // minus sum of Director Loan Repayment transactions
+    const loanPipeline = [
+      { $match: { scope: "business", type: "expense", paidBy: "director" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } },
+    ];
+    const loanExpensesResult = await db
+      .collection("accounting_transactions")
+      .aggregate(loanPipeline)
+      .toArray();
+    const loanExpensesTotal = loanExpensesResult[0]?.total || 0;
+
+    // Repayments: find categories named "Director Loan Repayment" and sum their business-expense transactions
+    const repaymentCategories = await db
+      .collection("accounting_categories")
+      .find({ name: { $regex: /director loan repayment/i } })
+      .toArray();
+    const repaymentCategoryIds = repaymentCategories.map((c) => c._id.toString());
+    let loanRepayments = 0;
+    if (repaymentCategoryIds.length > 0) {
+      const repaymentPipeline = [
+        {
+          $match: {
+            categoryId: { $in: repaymentCategoryIds },
+            type: "expense",
+            scope: "business",
+          },
+        },
+        { $group: { _id: null, total: { $sum: "$amount" } } },
+      ];
+      const repaymentResult = await db
+        .collection("accounting_transactions")
+        .aggregate(repaymentPipeline)
+        .toArray();
+      loanRepayments = repaymentResult[0]?.total || 0;
+    }
+    const directorLoanBalance = loanExpensesTotal - loanRepayments;
+
+    // Legacy combined totals (for backwards compat)
+    const totalIncome = scopeTotals.business.income + scopeTotals.personal.income + scopeTotals.shared.income;
+    const totalExpenses = scopeTotals.business.expense + scopeTotals.personal.expense + scopeTotals.shared.expense;
+    const totalIncomeCount = scopeTotals.business.incomeCount + scopeTotals.personal.incomeCount + scopeTotals.shared.incomeCount;
+    const totalExpenseCount = scopeTotals.business.expenseCount + scopeTotals.personal.expenseCount + scopeTotals.shared.expenseCount;
 
     return NextResponse.json({
       transactions,
       summary: {
-        totalIncome: income?.total || 0,
-        incomeCount: income?.count || 0,
-        totalExpenses: expense?.total || 0,
-        expenseCount: expense?.count || 0,
-        netProfit: (income?.total || 0) - (expense?.total || 0),
+        // Combined (legacy)
+        totalIncome,
+        incomeCount: totalIncomeCount,
+        totalExpenses,
+        expenseCount: totalExpenseCount,
+        netProfit: totalIncome - totalExpenses,
+        // Per-scope breakdown
+        business: {
+          income: scopeTotals.business.income,
+          expenses: scopeTotals.business.expense,
+          netProfit: scopeTotals.business.income - scopeTotals.business.expense,
+          incomeCount: scopeTotals.business.incomeCount,
+          expenseCount: scopeTotals.business.expenseCount,
+        },
+        personal: {
+          income: scopeTotals.personal.income,
+          expenses: scopeTotals.personal.expense,
+          netProfit: scopeTotals.personal.income - scopeTotals.personal.expense,
+          incomeCount: scopeTotals.personal.incomeCount,
+          expenseCount: scopeTotals.personal.expenseCount,
+        },
+        shared: {
+          income: scopeTotals.shared.income,
+          expenses: scopeTotals.shared.expense,
+          netProfit: scopeTotals.shared.income - scopeTotals.shared.expense,
+          incomeCount: scopeTotals.shared.incomeCount,
+          expenseCount: scopeTotals.shared.expenseCount,
+        },
+        // Director loan balance: how much the company owes the director
+        // (sum of business expenses paid by director minus any repayments)
+        directorLoanBalance,
+        directorLoanExpenses: loanExpensesTotal,
+        directorLoanRepayments: loanRepayments,
       },
     });
   } catch (error) {
@@ -71,7 +161,7 @@ export async function GET(req: NextRequest) {
 // POST — create a new transaction (manual entry or auto-created from invoice OCR)
 export async function POST(req: NextRequest) {
   try {
-    const { type, amount, date, description, categoryId, invoiceId, notes } =
+    const { type, amount, date, description, categoryId, invoiceId, notes, scope, paidBy } =
       await req.json();
 
     if (!type || !amount || !date) {
@@ -95,6 +185,10 @@ export async function POST(req: NextRequest) {
 
     const db = await getDb();
 
+    const finalScope: "business" | "personal" | "shared" =
+      scope === "personal" || scope === "shared" ? scope : "business";
+    const finalPaidBy: "director" | "company" = paidBy === "company" ? "company" : "director";
+
     const transaction = {
       type,
       amount: parseFloat(amount),
@@ -103,6 +197,8 @@ export async function POST(req: NextRequest) {
       categoryId: categoryId || null,
       invoiceId: invoiceId || null,
       currency: "AUD",
+      scope: finalScope,
+      paidBy: finalPaidBy,
       notes: notes || null,
       createdAt: new Date().toISOString(),
     };
@@ -137,6 +233,8 @@ export async function PATCH(req: NextRequest) {
       "categoryId",
       "invoiceId",
       "notes",
+      "scope",
+      "paidBy",
     ];
     const safeUpdates: Record<string, unknown> = {};
     for (const key of allowedFields) {
