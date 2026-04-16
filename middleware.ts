@@ -11,7 +11,10 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico" ||
     pathname === "/manifest.json" ||
-    pathname.endsWith(".html") // public HTML files (media-kit, sponsor-onboarding, grant-pitch)
+    pathname.endsWith(".html") || // public HTML files
+    pathname === "/media-kit" || // public pages accessible to sponsors without login
+    pathname === "/sponsor-onboarding" ||
+    pathname === "/grant-pitch"
   ) {
     return NextResponse.next();
   }
