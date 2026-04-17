@@ -4,7 +4,7 @@
 > Our code is too valuable to lose. This document defines the backup, redundancy,
 > and recovery strategy that MUST be in place for every production project.
 >
-> **Last updated:** 2026-04-10 (revised for web-only workflow)
+> **Last updated:** 2026-04-17 (added ComfyTV as 8th repo)
 
 ---
 
@@ -78,24 +78,20 @@ default branch (master or main):
   to edit the ruleset itself, which is a deliberate act.
 - **Linear history** — no merge commits, keeps the log readable and rollbacks clean.
 
-### Repos checklist
+### Repos checklist (8 repos)
 - [x] `comfybear71/aiglitch` ← protected 2026-04-10
-- [ ] `comfybear71/Master` ⚡ highest priority (controls everything else)
-- [ ] `comfybear71/budju-xyz` (BUDJU — SPL token data)
-- [ ] `comfybear71/mathly`
-- [ ] `comfybear71/togogo`
-- [ ] `comfybear71/propfolio`
-- [ ] `comfybear71/glitch-app` (mobile app)
+- [x] `comfybear71/Master` ← protected 2026-04-14
+- [x] `comfybear71/budju-xyz` ← protected 2026-04-14
+- [x] `comfybear71/mathly` ← protected 2026-04-14
+- [x] `comfybear71/togogo` ← protected 2026-04-14
+- [x] `comfybear71/propfolio` ← protected 2026-04-14
+- [x] `comfybear71/glitch-app` ← protected 2026-04-14
+- [ ] `comfybear71/COMFYTV` (ComfyTV — IPTV streaming, renamed from iptv 2026-04-17)
 
 > Takes ~60 seconds per repo in the GitHub web UI. No local tooling required.
 >
 > **Direct ruleset-creation links** (for speed):
-> - [Master](https://github.com/comfybear71/Master/settings/rules/new?target=branch)
-> - [budju-xyz](https://github.com/comfybear71/budju-xyz/settings/rules/new?target=branch)
-> - [mathly](https://github.com/comfybear71/mathly/settings/rules/new?target=branch)
-> - [togogo](https://github.com/comfybear71/togogo/settings/rules/new?target=branch)
-> - [propfolio](https://github.com/comfybear71/propfolio/settings/rules/new?target=branch)
-> - [glitch-app](https://github.com/comfybear71/glitch-app/settings/rules/new?target=branch)
+> - [COMFYTV](https://github.com/comfybear71/COMFYTV/settings/rules/new?target=branch)
 >
 > **Note on branch name:** some repos may use `main` instead of `master`. The
 > "Include default branch" target handles both automatically — just name the
@@ -142,12 +138,13 @@ tags are cheap.
 
 ### Tagged releases
 - [x] `comfybear71/aiglitch` → `v1.1-2026-04-10`
-- [ ] `comfybear71/Master`
-- [ ] `comfybear71/budju-xyz`
-- [ ] `comfybear71/mathly`
-- [ ] `comfybear71/togogo`
-- [ ] `comfybear71/propfolio`
-- [ ] `comfybear71/glitch-app`
+- [x] `comfybear71/Master` → `v2.0.1-2026-04-14`
+- [x] `comfybear71/budju-xyz` → tagged 2026-04-14
+- [x] `comfybear71/mathly` → tagged 2026-04-14
+- [x] `comfybear71/togogo` → tagged 2026-04-14
+- [x] `comfybear71/propfolio` → tagged 2026-04-14
+- [x] `comfybear71/glitch-app` → tagged 2026-04-14
+- [ ] `comfybear71/COMFYTV` (pending — tag after branch protection applied)
 
 ---
 
@@ -207,6 +204,7 @@ jobs:
 - [ ] `togogo-backup`
 - [ ] `propfolio-backup`
 - [ ] `glitch-app-backup`
+- [ ] `COMFYTV-backup`
 
 ---
 
@@ -412,9 +410,9 @@ When onboarding a new project to MasterHQ, walk through this checklist:
 
 | Layer | Status |
 |-------|--------|
-| 1. Branch protection | ✅ **All 7 repos** (aiglitch, Master, budju-xyz, mathly, togogo, propfolio, glitch-app) |
+| 1. Branch protection | ✅ **7 of 8 repos** (aiglitch, Master, budju-xyz, mathly, togogo, propfolio, glitch-app) — COMFYTV pending |
 | 2. Web-only PR workflow | ✅ Documented and in use |
-| 3. Stable release tags | ✅ All 7 repos tagged (various per-project versions) |
+| 3. Stable release tags | ✅ 7 of 8 repos tagged — COMFYTV pending |
 | 4. Backup mirror repos | ⏳ Not yet set up (optional — GitHub + Vercel deploy history is primary) |
 | 5. Second machine clone | ➖ Optional, not planned |
 | 6. Paid database backups | ✅ Neon Launch tier active (7-day PITR) |

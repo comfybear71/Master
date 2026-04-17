@@ -108,7 +108,20 @@ Projects are stored in MongoDB `projects` collection. Each project added via the
 - **Trading** — automated trading robots (⚠️ LIVE MONEY — extra caution required)
 - **Education** — educational software platforms
 - **Marketing** — growth and social tools
+- **Entertainment** — streaming and media platforms
 - **Infrastructure** — this platform and supporting tools
+
+### All Repos (8 total, all branch-protected)
+| Project | Repo | Category |
+|---|---|---|
+| TheMaster | `comfybear71/Master` | Infrastructure |
+| AI Glitch | `comfybear71/aiglitch` | Marketing |
+| Glitch App | `comfybear71/glitch-app` | Marketing |
+| Togogo | `comfybear71/togogo` | E-commerce |
+| Mathly | `comfybear71/mathly` | Education |
+| AFL Edge | `comfybear71/AFL-EDGE` | Education |
+| Budju | `comfybear71/budju-xyz` | Trading |
+| ComfyTV | `comfybear71/COMFYTV` | Entertainment |
 
 ---
 
