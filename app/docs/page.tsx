@@ -20,6 +20,9 @@ const DOC_CATEGORIES: { key: string; label: string; icon: string; links?: { titl
   { key: "master", label: "TheMaster", icon: "\u{1F3AF}" },
   { key: "sessions", label: "Session Logs", icon: "\u{1F4CB}" },
   { key: "prompts", label: "Prompts", icon: "\u{1F680}" },
+  { key: "tutorials", label: "Tutorials", icon: "\u{1F4DA}", links: [
+    { title: "Working Copy Guide", icon: "\u{1F4F1}", href: "https://workingcopyapp.com/users-guide" },
+  ]},
 ];
 
 const docs: DocSection[] = [
@@ -3029,6 +3032,542 @@ Then wait for me to give you the task.
 
 ### Full template
 Complete discuss-first rule prompt with concrete example of a handoff output is at \`docs/prompts/discuss-first-rule-prompt.md\` in the MasterHQ repo.`,
+  },
+  {
+    id: "git-concepts",
+    title: "Git Concepts \u2014 The WHY",
+    category: "tutorials",
+    icon: "\u{1F9E0}",
+    content: `## Git Concepts \u2014 What Everything Is and Why It Exists
+
+Before using any tool (Working Copy or VS Code), you need to understand **what** these things are and **why** they exist. This section explains every git concept you\u2019ll use.
+
+---
+
+### Repositories (Repos)
+
+**What:** A folder of code tracked by git. Every file, every change, every version \u2014 all stored.
+
+**Why:** Without a repo, code is just files on a disk. One wrong save and it\u2019s gone. A repo keeps the entire history so you can always go back.
+
+**Your repos:** All 8 projects (Master, AIGlitch, ComfyTV, etc.) are repos on GitHub under \`comfybear71/\`.
+
+---
+
+### Branches
+
+**What:** A separate copy of your code where you can make changes without affecting the main version (\`master\`).
+
+**Why:** If you edit \`master\` directly and break something, production is broken for everyone. Branches let you experiment safely. If it works \u2192 merge it in. If it doesn\u2019t \u2192 delete the branch, no harm done.
+
+**Your workflow:** Claude creates \`claude/feature-name\` branches. You\u2019ll create branches like \`fix/afl-icon-size\` or \`feature/new-channel\`.
+
+**Naming conventions:**
+- \`fix/\` \u2014 bug fixes
+- \`feature/\` \u2014 new functionality
+- \`claude/\` \u2014 Claude Code created it
+- \`hotfix/\` \u2014 urgent production fix
+
+---
+
+### Commits
+
+**What:** A snapshot of your code at a specific moment. Like a save point in a game.
+
+**Why:** If you make 5 changes and the 4th one breaks everything, you can undo just that one commit without losing the other 4. Each commit has a message describing what changed and why.
+
+**Golden rule:** Small, atomic commits. One logical change per commit. "Fix AFL icon size" is good. "Fix icon, add new channel, update styles, refactor sidebar" is bad \u2014 that\u2019s 4 commits.
+
+---
+
+### Staging (The Index)
+
+**What:** A waiting area between your changes and a commit. You choose which files go into the next commit.
+
+**Why:** You might have edited 5 files but only want to commit 3 of them right now. Staging lets you pick exactly what goes in each commit. Think of it as packing a suitcase \u2014 not everything in the room goes in.
+
+**VS Code:** Changed files appear in the Source Control panel. Click the \`+\` icon to stage a file.
+
+**Working Copy:** Tap files in the Repository Status Sheet to stage/unstage them. Long-press and swipe on diff hunks to stage individual changes within a file.
+
+---
+
+### Diffs
+
+**What:** A comparison showing exactly what changed \u2014 lines added (green), lines removed (red), lines unchanged (grey).
+
+**Why:** Before committing, you MUST review the diff. It catches accidental changes, debug code left in, or files you didn\u2019t mean to touch. Reading diffs is the single most important habit for safe coding.
+
+**VS Code:** Click any changed file in Source Control to see the diff. Left side = old, right side = new.
+
+**Working Copy:** Tap the **Changes tab** on any file. iPad shows a two-panel split view. Badge shows lines added/deleted.
+
+---
+
+### Push and Pull
+
+**What:**
+- **Push** \u2014 upload your local commits to GitHub (remote)
+- **Pull** \u2014 download the latest commits from GitHub to your device
+
+**Why:** Your code lives in two places: your device (local) and GitHub (remote). Push shares your work. Pull gets other people\u2019s work (or Claude\u2019s commits). Always pull before starting work, always push when you\u2019re done.
+
+---
+
+### Fetch vs Pull
+
+**What:**
+- **Fetch** \u2014 downloads new data from GitHub but does NOT change your files. It\u2019s just "check what\u2019s new."
+- **Pull** \u2014 does a fetch AND merges those changes into your current branch. It changes your files.
+
+**Why:** Fetch is safe \u2014 it never modifies your work. Pull modifies your files, which can cause merge conflicts if you\u2019ve also made changes. When in doubt, fetch first to see what\u2019s coming, then pull when ready.
+
+---
+
+### Merge
+
+**What:** Combining two branches together. Usually merging a feature branch into \`master\`.
+
+**Why:** After you\u2019ve finished work on a branch and tested it, merge brings those changes into master so they go live. Our projects use **squash merge** \u2014 all the branch\u2019s commits get combined into one clean commit on master.
+
+**Squash merge vs regular merge:**
+- **Regular merge:** keeps every commit from the branch (messy history)
+- **Squash merge:** combines all commits into one (clean, linear history) \u2190 **we use this**
+
+---
+
+### Rebase
+
+**What:** Takes your branch\u2019s commits and replays them on top of the latest master, as if you started your branch from today\u2019s master instead of yesterday\u2019s.
+
+**Why:** If master has moved forward while you were working on your branch, rebase updates your branch to include those new changes. The result is a clean, linear history with no "merge bubbles."
+
+**When to use:** Before creating a PR, if master has moved ahead. Rebase your branch onto master so the diff is clean.
+
+**Warning:** Never rebase commits that are already pushed and shared with others. It rewrites history, which confuses anyone who pulled the old version. For solo work on your own branch, it\u2019s fine.
+
+**VS Code:** \`git rebase master\` in the terminal.
+
+**Working Copy:** Access from the branch detail view or merge options.
+
+---
+
+### Stash
+
+**What:** Temporarily shelves all your uncommitted changes and gives you a clean working directory. Like putting your half-finished work in a drawer.
+
+**Why:** You\u2019re halfway through a change when something urgent comes up on another branch. You can\u2019t switch branches with uncommitted changes. Stash saves them, you switch branches, fix the urgent thing, switch back, and \`stash pop\` restores your half-finished work exactly where you left off.
+
+**VS Code:** \`git stash\` to save, \`git stash pop\` to restore. Or use the Source Control menu \u2192 Stash.
+
+**Working Copy:** Access from repository actions. Create a stash, switch branches, do your work, come back, apply the stash.
+
+---
+
+### Cherry-Pick
+
+**What:** Grabs one specific commit from another branch and applies it to your current branch.
+
+**Why:** Maybe Claude fixed a bug on \`claude/feature-x\` but you need that fix on \`master\` NOW without merging the whole branch. Cherry-pick lets you take just that one commit.
+
+**VS Code:** \`git cherry-pick <commit-hash>\` in the terminal.
+
+**Working Copy:** Navigate to commit history, find the commit, apply it to the current branch.
+
+---
+
+### Revert
+
+**What:** Creates a NEW commit that undoes a previous commit. The old commit stays in history.
+
+**Why:** The safe way to undo something that\u2019s already been pushed. Unlike reset, revert doesn\u2019t rewrite history \u2014 it adds a new commit that cancels out the old one. Everyone can see what happened and why.
+
+**VS Code:** \`git revert <commit-hash>\` in the terminal.
+
+**Working Copy:** Long-press a commit in the history to access revert options.
+
+---
+
+### Reset (DANGEROUS)
+
+**What:** Moves your branch pointer backwards, potentially erasing commits from history.
+
+**Why it exists:** Sometimes you commit something terrible and want to pretend it never happened.
+
+**Why it\u2019s dangerous:** It rewrites history. If you\u2019ve pushed those commits, other people (or other Claude sessions) may have based work on them. Resetting causes chaos. Our branch protection blocks force-push to master specifically to prevent this.
+
+**Three modes:**
+- \`--soft\` \u2014 moves pointer back but keeps your changes staged (safest)
+- \`--mixed\` \u2014 moves pointer back, unstages changes but keeps files (default)
+- \`--hard\` \u2014 moves pointer back AND deletes all changes (DESTRUCTIVE, no undo)
+
+**Rule:** Almost never use reset. Use revert instead. The only exception: undoing a local commit you haven\u2019t pushed yet.
+
+---
+
+### Tags
+
+**What:** Permanent bookmarks pointing to a specific commit. Like naming a save point "v1.2.0".
+
+**Why:** If everything goes wrong, you can restore to a tagged release. Tags are immutable \u2014 unlike branches, they don\u2019t move. Every PR we merge gets a tag so we always have known-good checkpoints.
+
+**Our format:** \`v1.2.0-2026-04-17\` (semver + date)
+
+---
+
+### Pull Requests (PRs)
+
+**What:** A formal request to merge your branch into master. Shows the diff, allows review, and creates a record of what changed and why.
+
+**Why:** Even though you\u2019re a solo dev with 0 required approvals, PRs are your safety net:
+- You see the complete diff before it goes live
+- You get a permanent record of every change
+- Branch protection ensures all changes go through this gate
+- Squash merge keeps history clean
+
+**Your workflow:** Claude (or you) pushes a branch \u2192 you open a PR on GitHub web UI \u2192 review the diff \u2192 squash and merge \u2192 delete the branch \u2192 tag the release.`,
+  },
+  {
+    id: "safe-workflow",
+    title: "Safe Change Workflow",
+    category: "tutorials",
+    icon: "\u{1F6E1}\uFE0F",
+    content: `## The Safe Change Workflow \u2014 Step by Step
+
+This is the complete process for safely making a code change, testing it, and getting it into production. Every step is shown for both **Working Copy (iPad)** and **VS Code + Terminal (PC)**.
+
+**Example task:** Make the AFL icon bigger on the ComfyTV sports page.
+
+---
+
+### Step 1 \u2014 Pull Latest Master
+
+Always start by getting the latest code. Never work on stale code.
+
+**VS Code + Terminal:**
+\`\`\`
+cd ~/projects/COMFYTV
+git checkout master
+git pull origin master
+\`\`\`
+
+**Working Copy (iPad):**
+1. Open the repository from your repo list
+2. Tap the branch name \u2192 select **master** \u2192 tap **Checkout**
+3. Tap the floating fingerprint button (bottom right) \u2192 tap **Pull**
+4. Or: tap the remote name \u2192 tap **Sync** (does Fetch + Merge + Push in one go)
+
+---
+
+### Step 2 \u2014 Create a Branch
+
+Never edit master directly. Always create a branch first.
+
+**VS Code + Terminal:**
+\`\`\`
+git checkout -b fix/afl-icon-size
+\`\`\`
+
+**Working Copy (iPad):**
+1. Tap the **branch name** between the Status cell and file listing
+2. Tap the **+ button** (upper right of the branch picker)
+3. Type the branch name: \`fix/afl-icon-size\`
+4. Tap **Create**
+
+---
+
+### Step 3 \u2014 Find the File
+
+Search for the code you need to change.
+
+**VS Code + Terminal:**
+1. Press **Ctrl+Shift+F** (or Cmd+Shift+F on Mac) to open Search
+2. Type \`AFL\` or the image filename
+3. Results show every file containing that text
+4. Click a result to jump to that file and line
+
+**Working Copy (iPad):**
+1. Navigate through the file browser to find the file
+2. Or use the iOS Files app search if the repo is linked
+3. Open the file \u2192 tap the **Content tab** to view/edit
+
+---
+
+### Step 4 \u2014 Make the Change
+
+Edit the code. In this example, changing an image size class.
+
+**VS Code + Terminal:**
+1. Open the file in the editor
+2. Find the image element (e.g. \`<img className="w-8 h-8" .../>\`)
+3. Change it to \`w-16 h-16\` (or whatever size you want)
+4. Save the file (**Ctrl+S**)
+
+**Working Copy (iPad):**
+1. Tap the file to open it
+2. Tap anywhere in the code to enter edit mode
+3. Find and change the image size class
+4. Tap **Done** (upper right) to save
+
+---
+
+### Step 5 \u2014 Test Your Change
+
+Always verify the change works before committing.
+
+**VS Code + Terminal:**
+\`\`\`
+npm run dev
+\`\`\`
+Open \`http://localhost:3000\` in your browser. Navigate to the page and confirm the icon looks right. Check for regressions \u2014 did anything else break?
+
+**Working Copy (iPad):**
+If the repo is connected to Vercel, push the branch (Step 7) and Vercel will create a **preview deployment**. Open the preview URL to test. This is the easiest way to test from iPad.
+
+---
+
+### Step 6 \u2014 Review the Diff
+
+**This is the most important step.** Look at exactly what changed before committing.
+
+**VS Code + Terminal:**
+1. Click the **Source Control** icon in the left sidebar (branch icon with a badge)
+2. You\u2019ll see a list of changed files
+3. Click each file to see the diff (old on left, new on right)
+4. Look for: accidental changes, debug code, files you didn\u2019t mean to touch
+5. Or use terminal: \`git diff\` to see all unstaged changes
+
+**Working Copy (iPad):**
+1. Tap the floating **fingerprint button** (bottom right)
+2. The Repository Status Sheet shows all modified files
+3. Tap any file \u2192 tap the **Changes tab**
+4. Badge shows lines added/deleted
+5. On iPad landscape, you get a two-panel split view (old vs new)
+6. Swipe between files to review each one
+
+---
+
+### Step 7 \u2014 Stage and Commit
+
+Stage the files you want to include, then commit with a clear message.
+
+**VS Code + Terminal:**
+\`\`\`
+git add app/dashboard/sports/page.tsx
+git commit -m "Increase AFL icon size from w-8 to w-16"
+\`\`\`
+
+Or stage via the GUI: click the **+** icon next to each file in Source Control, then type your message in the commit message box and click the checkmark.
+
+**Working Copy (iPad):**
+1. On the Repository Status Sheet, **tap files to stage** them (checkmark appears)
+2. For partial staging: view the diff, **long-press and swipe on individual hunks** to stage specific changes
+3. Type your commit message in the message field
+4. Tip: the small button left of the message field shows previous messages and can suggest messages using AI
+5. Tap **Commit**
+
+---
+
+### Step 8 \u2014 Push to GitHub
+
+Upload your branch to GitHub so it\u2019s safe and visible.
+
+**VS Code + Terminal:**
+\`\`\`
+git push -u origin fix/afl-icon-size
+\`\`\`
+The \`-u\` flag links your local branch to the remote. After the first push, just \`git push\` works.
+
+**Working Copy (iPad):**
+1. Tap the floating **fingerprint button** \u2192 tap **Push**
+2. Or: tap the remote name \u2192 tap **Push**
+3. Push progress shows as a Live Activity on your lock screen
+4. If you see a log thumbnail appear (lower right), tap it to check for errors
+
+---
+
+### Step 9 \u2014 Create a Pull Request
+
+Open a PR on GitHub to formally request merging your branch into master.
+
+**VS Code + Terminal:**
+1. Open GitHub in your browser
+2. Go to the repo page \u2014 GitHub will show a yellow banner: "fix/afl-icon-size had recent pushes"
+3. Click **Compare & pull request**
+4. Review the diff one more time
+5. Add a title and description
+6. Click **Create pull request**
+
+**Working Copy (iPad):**
+1. Open the branch list
+2. Tap **PR** on your branch
+3. Select \`master\` as the target branch
+4. Fill in PR details and submit
+5. Or: open GitHub in Safari and create the PR from the web UI (same as above)
+
+---
+
+### Step 10 \u2014 Squash and Merge
+
+Once you\u2019re happy with the PR, merge it into master.
+
+**Both platforms (GitHub web UI):**
+1. Open the PR on GitHub
+2. Scroll to the bottom of the PR page
+3. Click the **dropdown arrow** next to the merge button
+4. Select **Squash and merge** (not "Create a merge commit")
+5. Review the squashed commit message
+6. Click **Confirm squash and merge**
+7. Click **Delete branch** when prompted
+
+---
+
+### Step 11 \u2014 Tag the Release
+
+Every merged PR gets a release tag. No exceptions.
+
+**Both platforms (GitHub web UI):**
+1. Go to the repo \u2192 **Releases** \u2192 **Draft a new release**
+2. Tag version: \`v1.0.1-2026-04-17\` (patch for small fix)
+3. Target: \`master\`
+4. Title: \`v1.0.1 \u2014 Increase AFL icon size\`
+5. Description: what changed
+6. Click **Publish release**
+
+---
+
+### Step 12 \u2014 Clean Up Locally
+
+Get your local copy back in sync.
+
+**VS Code + Terminal:**
+\`\`\`
+git checkout master
+git pull origin master
+git branch -d fix/afl-icon-size
+\`\`\`
+
+**Working Copy (iPad):**
+1. Tap the branch name \u2192 select **master** \u2192 **Checkout**
+2. Tap **Pull** to get the squash-merged commit
+3. Swipe left on the old branch \u2192 **Delete**`,
+  },
+  {
+    id: "git-quick-ref",
+    title: "Quick Reference Card",
+    category: "tutorials",
+    icon: "\u{1F4CB}",
+    content: `## Quick Reference Card
+
+Common operations at a glance. Bookmark this page.
+
+---
+
+### Daily Workflow Cheat Sheet
+
+| Step | VS Code + Terminal | Working Copy (iPad) |
+|---|---|---|
+| Get latest | \`git pull origin master\` | Fingerprint button \u2192 Pull |
+| New branch | \`git checkout -b fix/name\` | Branch name \u2192 + button |
+| See changes | \`git diff\` or Source Control panel | Fingerprint button \u2192 tap file \u2192 Changes tab |
+| Stage files | \`git add file.tsx\` or click + in Source Control | Tap files in Status Sheet |
+| Commit | \`git commit -m "message"\` | Type message \u2192 tap Commit |
+| Push | \`git push -u origin branch-name\` | Fingerprint button \u2192 Push |
+| Switch branch | \`git checkout branch-name\` | Branch name \u2192 select \u2192 Checkout |
+| Delete branch | \`git branch -d branch-name\` | Swipe left on branch \u2192 Delete |
+| Create PR | GitHub web UI | Branch list \u2192 PR, or GitHub Safari |
+| Pull latest | \`git pull origin master\` | Remote \u2192 Sync |
+
+---
+
+### Emergency Commands
+
+| Situation | VS Code + Terminal | Working Copy (iPad) |
+|---|---|---|
+| Undo last commit (not pushed) | \`git reset --soft HEAD~1\` | Swipe left on commit \u2192 Undo |
+| Undo a pushed commit (safe) | \`git revert <hash>\` | Long-press commit \u2192 Revert |
+| Save work temporarily | \`git stash\` | Repository actions \u2192 Stash |
+| Restore saved work | \`git stash pop\` | Stash list \u2192 Apply |
+| See commit history | \`git log --oneline -20\` | Commit history view |
+| Grab one commit from another branch | \`git cherry-pick <hash>\` | Commit history \u2192 apply to branch |
+| Discard all local changes | \`git checkout .\` (DESTRUCTIVE) | Fingerprint \u2192 Revert |
+| See what branch you\u2019re on | \`git branch\` | Shown at top of repo screen |
+
+---
+
+### VS Code Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| **Ctrl+Shift+F** | Search across all files |
+| **Ctrl+P** | Quick open file by name |
+| **Ctrl+S** | Save current file |
+| **Ctrl+\`** | Toggle terminal panel |
+| **Ctrl+Shift+G** | Open Source Control panel |
+| **Ctrl+Shift+E** | Open Explorer (file tree) |
+| **Ctrl+Z** | Undo |
+| **Ctrl+Shift+Z** | Redo |
+| **Ctrl+/** | Toggle comment on selected lines |
+| **Alt+Up/Down** | Move line up/down |
+| **Ctrl+D** | Select next occurrence of word |
+
+---
+
+### Working Copy Gestures
+
+| Gesture | Where | What It Does |
+|---|---|---|
+| **Swipe left** on branch | Branch list | Checkout, Rename, or Delete |
+| **Swipe left** on file | File browser | Quick Commit |
+| **Swipe left** on commit | Commit history | Undo the commit |
+| **Swipe right** on file | File browser | Commit, Revert, Share |
+| **Swipe from right edge** | File content | Toggle edit/preview |
+| **Long-press + swipe** on diff hunk | Changes view | Stage/unstage individual changes |
+| **Long-press** on commit | Commit history | Delete, Edit Message, Squash |
+| **Pinch to zoom** | Commit Graph | Show full details |
+| **Tap fingerprint button** | Any screen | Open Status Sheet (commit, push, pull) |
+
+---
+
+### Branch Naming
+
+| Type | Pattern | Example |
+|---|---|---|
+| Bug fix | \`fix/description\` | \`fix/afl-icon-size\` |
+| New feature | \`feature/description\` | \`feature/new-sports-channel\` |
+| Claude-created | \`claude/description\` | \`claude/add-comfytv\` |
+| Urgent fix | \`hotfix/description\` | \`hotfix/login-crash\` |
+
+---
+
+### Tag Naming
+
+| Change type | Pattern | Example |
+|---|---|---|
+| Small fix | \`v1.2.3-YYYY-MM-DD\` | \`v1.0.1-2026-04-17\` |
+| New feature | \`v1.3.0-YYYY-MM-DD\` | \`v1.1.0-2026-04-17\` |
+| Breaking change | \`v2.0.0-YYYY-MM-DD\` | \`v2.0.0-2026-04-17\` |
+| Docs only | \`v1.2.3-docs-YYYY-MM-DD\` | \`v1.0.1-docs-2026-04-17\` |
+
+---
+
+### Working Copy Pro Features (Paid)
+
+These features require the Pro unlock (~$30 AUD):
+- **Push** to remote repositories
+- **Branch Editing** (reorder, squash, delete, edit commits)
+- **Submodule management**
+- **Custom fonts**
+- Free for GitHub Student accounts
+
+---
+
+### Useful Links
+
+- [Working Copy User Guide](https://workingcopyapp.com/users-guide)
+- [VS Code Git Documentation](https://code.visualstudio.com/docs/sourcecontrol/overview)
+- [GitHub PR Documentation](https://docs.github.com/en/pull-requests)
+- [Git Cheat Sheet (GitHub)](https://education.github.com/git-cheat-sheet-education.pdf)`,
   },
 ];
 
