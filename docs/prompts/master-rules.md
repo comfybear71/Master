@@ -37,7 +37,7 @@ If you want to modify these, ask first. If a previous Claude deleted or corrupte
 
 ## RULE 3 — Branch protection is ACTIVE on master
 
-All 7 repos have branch protection under the "Protect Master" ruleset:
+All 8 repos have branch protection under the "Protect Master" ruleset:
 
 - You **CANNOT** push directly to master. Ever.
 - You **CANNOT** force-push anything.
@@ -86,6 +86,8 @@ explicitly tell me to continue with a specific approach.
 
 4. Do **NOT** restart the counter for the same underlying task.
 5. "Each fix felt trivial" is **NOT** an excuse to skip counting.
+
+**Counter scope (added 2026-04-18):** Count per UNDERLYING ISSUE, not per symptom. If `npm install` fails on a version pin, you fix the pin, install succeeds, but lint now fails — that's a **NEW** counter, because the underlying issue (lint compatibility) is different from the first (version resolution). Legitimate progress resets the counter. Chasing the same error through 3 different surface changes does NOT — same issue, still attempt 3.
 
 ---
 
@@ -150,8 +152,20 @@ Then the tag description inside a code block:
 **Rules about release tags:**
 - Every PR gets a tag. No exceptions. Small or large change.
 - Check existing tags first (`git tag --list` or GitHub Releases page).
-- Tag naming: patch `v1.2.3`, minor `v1.3.0`, major `v2.0.0`, docs `v1.2.3-docs`, recovery `v1.2.3-recovery`.
 - Never create the tag yourself — only suggest it. I create via GitHub UI.
+
+**Release tag schema (confirmed 2026-04-18, battle-tested across 12 tags):**
+
+| Change type | Bump | Example |
+|---|---|---|
+| Patch / docs / tooling | `vX.Y.Z+1` | `v0.3.0` → `v0.3.1` |
+| New endpoint or feature | `vX.Y+1.0` | `v0.3.1` → `v0.4.0` |
+| Breaking API change | `vX+1.0.0` | `v0.4.0` → `v1.0.0` |
+| Docs-only | suffix `-docs` | `v1.2.3-docs-YYYY-MM-DD` |
+| Crash recovery | suffix `-recovery` | `v1.2.3-recovery-YYYY-MM-DD` |
+
+- **Date suffix ALWAYS appended:** `vX.Y.Z-YYYY-MM-DD`
+- **Tag title format:** `vX.Y.Z — <one-line change summary>`
 
 ---
 
@@ -185,11 +199,77 @@ Before wrapping up:
 
 ---
 
+## RULE 9 — Slice-by-slice migrations (added 2026-04-18)
+
+When porting a substantial endpoint or module from one repo to another:
+
+1. **Split by orthogonal variant** (URL params, pagination modes, response shapes) into independent slices.
+2. **Each slice = its own branch, its own PR, its own release tag.**
+3. **Unmigrated variants return `501 mode_not_yet_migrated`** with the exact param name that wasn't handled — consumers see an honest signal, not silent drift.
+4. **Write a verify harness early** (shape + set match against the legacy endpoint) and run it after every slice lands.
+5. **Only flip the consumer** after all slices are shipped and verified.
+
+This keeps PR diffs small, makes rollback per-slice, and turns "migrate an endpoint" from a scary monolith into a series of 30-60 minute jobs.
+
+**Battle-tested:** 10 sessions, 12 tags, 74 tests, zero downtime on `aiglitch-api` migration (2026-04-18).
+
+---
+
+## RULE 10 — Strangler config lives in the new repo (added 2026-04-18)
+
+When migrating from a legacy backend to a new one, choose between:
+- **(a)** Stand up a dedicated proxy project, or
+- **(b)** Use the new-backend project itself as the strangler ← **PREFER THIS**
+
+**How:** Add a `fallback` rewrite in the new repo's `next.config.ts` that forwards unmatched `/api/*` paths to the legacy origin. Point the public subdomain (e.g. `api.example.com`) at the new project.
+
+**Result:** As endpoints migrate, they add a local route and automatically stop falling through. Zero proxy-config maintenance per endpoint.
+
+**Critical detail for Next.js:** Use `beforeFiles` for strangler rewrites so the rewrite takes precedence. Default (`afterFiles`) means your local `/api/feed` wins even when you wanted the rewrite.
+
+---
+
+## RULE 11 — Sandbox network boundary (added 2026-04-18)
+
+Claude's sandbox **cannot reach external HTTP URLs** from its environment.
+
+- Any verification that requires hitting a live domain (deployed app, external API) must be run **BY THE USER** on their machine (local terminal, Codespace, or browser).
+- Write the verification scripts and commit them; do not try to run them yourself.
+- When a script fails with 403 on every URL, that's the sandbox — not a real bug. Don't debug it; hand it to the user.
+
+---
+
+## RULE 12 — Cross-repo handoffs (added 2026-04-18)
+
+When work on one repo requires coordinated changes in another repo that Claude doesn't have access to:
+
+Deliver a **self-contained brief** the user can paste into the sibling Claude session. The brief MUST include:
+
+- **(a)** What changed in THIS repo
+- **(b)** What the sibling repo owns vs what the migrated repo owns
+- **(c)** Off-limits areas (don't touch these)
+- **(d)** Rollback path (how to back out if the sibling change breaks something)
+
+Do not assume the sibling session has context from this one. It doesn't.
+
+---
+
+## Known Gotchas (appendix)
+
+Not rules — just facts that save 30 minutes of debugging next time:
+
+- **`tsconfig.json` is modified by `next build`** on every run (`jsx preserve → react-jsx`, adds `.next/dev/types` to include). Commit the modified version once; future reminders are safe to ignore unless the actual contents changed.
+- **Vercel strips `s-maxage` and `stale-while-revalidate`** from `Cache-Control` before sending downstream. Client sees just `public`. Edge caching still works. Documented Vercel behaviour, not a bug.
+- **Vercel fallback 403s all non-whitelisted origins.** If new deployments 403 for no apparent reason, check project domain bindings first.
+- **Next.js frontend strangler rewrites:** use `beforeFiles` so the rewrite takes precedence over local route files (see Rule 10).
+
+---
+
 ## Your acknowledgement
 
 After reading these rules, respond with:
 
-"All 8 rules acknowledged. I'll discuss before coding, count fix attempts out loud, deliver complete PR handoffs with release tags, and never delete sacred files. Waiting for your task."
+"All 12 rules acknowledged. I'll discuss before coding, count fix attempts out loud (per underlying issue), deliver complete PR handoffs with release tags, slice migrations into orthogonal variants, respect the sandbox network boundary, and never delete sacred files. Waiting for your task."
 
 Then wait for me to give you the specific task for this session.
 
