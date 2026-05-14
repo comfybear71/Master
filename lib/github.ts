@@ -190,4 +190,33 @@ export async function getRecentCommits(owner: string, repo: string, count = 10) 
   }
 }
 
+export async function getPackageJson(owner: string, repo: string) {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/package.json?ref=master`,
+      {
+        headers: { 'Accept': 'application/vnd.github.v3+json' },
+        next: { revalidate: 3600 } // cache 1 hour
+      }
+    );
+
+    if (!response.ok) {
+      // Try 'main' branch as fallback
+      const mainRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/package.json?ref=main`,
+        { headers: { 'Accept': 'application/vnd.github.v3+json' }, next: { revalidate: 3600 } }
+      );
+      if (!mainRes.ok) throw new Error('No package.json found');
+      const data = await mainRes.json();
+      return JSON.parse(atob(data.content));
+    }
+
+    const data = await response.json();
+    return JSON.parse(atob(data.content)); // decode base64
+  } catch (error) {
+    console.error('GitHub package.json error:', error);
+    return null;
+  }
+}
+
 export { GITHUB_USERNAME };
