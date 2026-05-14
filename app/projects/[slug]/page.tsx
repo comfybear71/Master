@@ -3,13 +3,13 @@ import { notFound } from 'next/navigation';
 import { getReleases, getRecentCommits } from '@/lib/github';
 
 const projectsRegistry = [
-  { 
-    slug: 'comfy-ai', 
-    name: 'Comfy AI', 
-    owner: 'comfybear71', 
-    repo: 'Comfy-AI' 
-  },
-  // Add more later
+  { slug: 'comfy-ai',     name: 'Comfy AI',     owner: 'comfybear71', repo: 'Comfy-AI' },
+  { slug: 'aig-litch',    name: 'AIG!itch',     owner: 'comfybear71', repo: 'AIGlitch' },
+  { slug: 'togogo',       name: 'Togogo',       owner: 'comfybear71', repo: 'Togogo' },
+  { slug: 'mathly',       name: 'Mathly',       owner: 'comfybear71', repo: 'Mathly' },
+  { slug: 'afl-edge',     name: 'AFL Edge',     owner: 'comfybear71', repo: 'AFL-Edge' },
+  { slug: 'budju',        name: 'Budju',        owner: 'comfybear71', repo: 'Budju' },
+  // Add any others you have
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
