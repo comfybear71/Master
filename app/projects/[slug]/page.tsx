@@ -3,16 +3,32 @@ import Link from "next/link";
 import { getReleases, getRecentCommits, getPackageJson, getFileContent } from "@/lib/github";
 import ProjectTabs from "@/components/ProjectTabs";
 
-const PROJECTS = [
-  { slug: "Master", owner: "comfybear71", repo: "Master", name: "TheMaster", category: "Infrastructure", icon: "🎯", vercel: "master-six-ashen", liveUrl: "https://masterhq.dev" },
-  { slug: "aiglitch", owner: "comfybear71", repo: "aiglitch", name: "AIG!itch", category: "Marketing", icon: "⚡", vercel: "aiglitch", liveUrl: "https://aiglitch.app" },
-  { slug: "glitch-app", owner: "comfybear71", repo: "glitch-app", name: "Glitch App", category: "Marketing", icon: "📱", vercel: "glitch-app", liveUrl: "" },
-  { slug: "togogo", owner: "comfybear71", repo: "togogo", name: "Togogo", category: "E-commerce", icon: "🛒", vercel: "togogo", liveUrl: "" },
-  { slug: "mathly", owner: "comfybear71", repo: "mathly", name: "Mathly", category: "Education", icon: "📐", vercel: "mathly", liveUrl: "" },
-  { slug: "AFL-EDGE", owner: "comfybear71", repo: "AFL-EDGE", name: "AFL Edge", category: "Education", icon: "🏈", vercel: "afl-edge", liveUrl: "" },
-  { slug: "budju-xyz", owner: "comfybear71", repo: "budju-xyz", name: "Budju", category: "Trading", icon: "💹", vercel: "budju-xyz", liveUrl: "" },
-  { slug: "COMFYTV", owner: "comfybear71", repo: "COMFYTV", name: "ComfyTV", category: "Entertainment", icon: "📺", vercel: "COMFYTV", liveUrl: "https://comfytv.xyz" },
-];
+const KNOWN_PROJECTS: Record<string, { name: string; category: string; icon: string; vercel: string; liveUrl: string }> = {
+  "Master": { name: "TheMaster", category: "Infrastructure", icon: "🎯", vercel: "master-six-ashen", liveUrl: "https://masterhq.dev" },
+  "aiglitch": { name: "AIG!itch", category: "Marketing", icon: "⚡", vercel: "aiglitch", liveUrl: "https://aiglitch.app" },
+  "aiglitch-api": { name: "AIG!itch API", category: "Marketing", icon: "⚡", vercel: "aiglitch-api", liveUrl: "https://api.aiglitch.app" },
+  "glitch-app": { name: "Glitch App", category: "Marketing", icon: "📱", vercel: "glitch-app", liveUrl: "" },
+  "togogo": { name: "Togogo", category: "E-commerce", icon: "🛒", vercel: "togogo", liveUrl: "" },
+  "mathly": { name: "Mathly", category: "Education", icon: "📐", vercel: "mathly", liveUrl: "" },
+  "AFL-EDGE": { name: "AFL Edge", category: "Education", icon: "🏈", vercel: "afl-edge", liveUrl: "" },
+  "budju-xyz": { name: "Budju", category: "Trading", icon: "💹", vercel: "budju-xyz", liveUrl: "" },
+  "COMFYTV": { name: "ComfyTV", category: "Entertainment", icon: "📺", vercel: "COMFYTV", liveUrl: "https://comfytv.xyz" },
+  "propfolio": { name: "Propfolio", category: "Finance", icon: "🏠", vercel: "propfolio", liveUrl: "" },
+  "comfymart": { name: "ComfyMart", category: "E-commerce", icon: "🛍️", vercel: "comfymart", liveUrl: "" },
+  "happy-kilojoule-kitchen": { name: "Happy Kilojoule Kitchen", category: "Entertainment", icon: "🍳", vercel: "happy-kilojoule-kitchen", liveUrl: "" },
+};
+
+function resolveProject(slug: string) {
+  const exactMatch = KNOWN_PROJECTS[slug];
+  if (exactMatch) {
+    return { slug, owner: "comfybear71", repo: slug, ...exactMatch };
+  }
+  const caseKey = Object.keys(KNOWN_PROJECTS).find((k) => k.toLowerCase() === slug.toLowerCase());
+  if (caseKey) {
+    return { slug, owner: "comfybear71", repo: caseKey, ...KNOWN_PROJECTS[caseKey] };
+  }
+  return { slug, owner: "comfybear71", repo: slug, name: slug, category: "Project", icon: "📂", vercel: slug.toLowerCase(), liveUrl: "" };
+}
 
 function extractSection(md: string, heading: string): string | null {
   const regex = new RegExp(`##\\s+${heading}[\\s\\S]*?(?=\\n##\\s|$)`, "i");
@@ -37,8 +53,7 @@ function extractCodeBlock(md: string, heading: string): string | null {
 
 export default async function ProjectConsole({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const project = PROJECTS.find((p) => p.slug === slug);
-  if (!project) notFound();
+  const project = resolveProject(slug);
 
   const [releases, commits, pkg, handoffMd, claudeMd] = await Promise.all([
     getReleases(project.owner, project.repo),
