@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 
 const projectsRegistry = [
-  { slug: 'comfy-ai', name: 'Comfy AI', owner: 'comfybear71', repo: 'Comfy-AI' },
-  // We will add one project at a time when you're ready
+  { slug: 'comfy-ai',   name: 'Comfy AI',   owner: 'comfybear71', repo: 'Comfy-AI' },
+  { slug: 'aiglitch',   name: 'AIG!itch',   owner: 'comfybear71', repo: 'aiglitch' },
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
@@ -38,7 +38,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8">
-      {/* Simple Breadcrumb */}
       <div className="mb-6">
         <Link href="/projects" className="text-emerald-400 hover:underline flex items-center gap-1 text-sm">
           ← Back to Projects
@@ -49,7 +48,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
       <p className="text-zinc-500 mb-8">GitHub Intelligence • {project.owner}/{project.repo}</p>
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Releases */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
           <div className="space-y-4">
@@ -65,7 +63,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Dependencies */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📦 Dependencies</h3>
           {pkg ? (
@@ -100,7 +97,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           ) : <p className="text-zinc-500">No package.json found.</p>}
         </div>
 
-        {/* Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-96 overflow-auto">
