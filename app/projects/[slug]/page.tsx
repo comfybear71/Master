@@ -12,12 +12,24 @@ const projectsRegistry = [
   { slug: 'afl-edge',     name: 'AFL Edge',     owner: 'comfybear71', repo: 'AFL-EDGE' },
   { slug: 'budju',        name: 'Budju',        owner: 'comfybear71', repo: 'budju-xyz' },
   { slug: 'comfymart',    name: 'comfymart',    owner: 'comfybear71', repo: 'comfymart' },
-  // Add any others from your registry as needed
+  { slug: 'aiglitch-api', name: 'AIGlitch API', owner: 'comfybear71', repo: 'aiglitch-api' },
+  // Add more as needed
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
   if (!project) notFound();
+
+    let releases = [], commits = [], pkg = null;
+  try {
+    [releases, commits, pkg] = await Promise.all([
+      getReleases(project.owner, project.repo),
+      getRecentCommits(project.owner, project.repo, 8),
+      getPackageJson(project.owner, project.repo)
+    ]);
+  } catch (e) {
+    console.error('Data fetch failed for', project.slug, e);
+  }
 
   const [releases, commits, pkg] = await Promise.all([
     getReleases(project.owner, project.repo),
