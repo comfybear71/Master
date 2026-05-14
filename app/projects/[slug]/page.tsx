@@ -15,6 +15,8 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
   let releases: any[] = [];
   let commits: any[] = [];
   let pkg: any = null;
+  let handoffMd = "No HANDOFF.md found.";
+  let claudeMd = "No CLAUDE.md found.";
 
   try {
     [releases, commits, pkg] = await Promise.all([
@@ -22,6 +24,25 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
       getRecentCommits(project.owner, project.repo, 8),
       getPackageJson(project.owner, project.repo)
     ]);
+
+    // Pull docs safely
+    const handoffRes = await fetch(`https://api.github.com/repos/${project.owner}/${project.repo}/contents/HANDOFF.md`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' },
+      next: { revalidate: 3600 }
+    });
+    if (handoffRes.ok) {
+      const data = await handoffRes.json();
+      handoffMd = atob(data.content);
+    }
+
+    const claudeRes = await fetch(`https://api.github.com/repos/${project.owner}/${project.repo}/contents/CLAUDE.md`, {
+      headers: { 'Accept': 'application/vnd.github.v3+json' },
+      next: { revalidate: 3600 }
+    });
+    if (claudeRes.ok) {
+      const data = await claudeRes.json();
+      claudeMd = atob(data.content);
+    }
   } catch (e) {
     console.error('Data fetch failed for', project.slug, e);
   }
@@ -112,24 +133,13 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🔧 Rebuild Blueprint</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             <div>
-              <p className="text-emerald-400 font-medium mb-2">Core Stack</p>
-              <ul className="space-y-1 text-zinc-400">
-                <li>• Next.js 14 + TypeScript + Tailwind</li>
-                <li>• MongoDB</li>
-                <li>• Grok / Claude AI</li>
-              </ul>
+              <p className="text-emerald-400 mb-2 font-medium">HANDOFF.md</p>
+              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-64 overflow-auto whitespace-pre-wrap">{handoffMd.slice(0, 800)}...</pre>
             </div>
             <div>
-              <p className="text-emerald-400 font-medium mb-2">Key Services</p>
-              <ul className="space-y-1 text-zinc-400">
-                <li>• GitHub + Vercel</li>
-                <li>• Authentication (TBD)</li>
-                <li>• External APIs (TBD)</li>
-              </ul>
+              <p className="text-emerald-400 mb-2 font-medium">CLAUDE.md</p>
+              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-64 overflow-auto whitespace-pre-wrap">{claudeMd.slice(0, 800)}...</pre>
             </div>
-          </div>
-          <div className="mt-6 p-4 bg-zinc-950 rounded-lg text-xs text-zinc-400">
-            Full env vars, auth flow, and step-by-step rebuild guide coming next.
           </div>
         </div>
       </div>
