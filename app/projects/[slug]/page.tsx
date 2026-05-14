@@ -1,5 +1,6 @@
 // app/projects/[slug]/page.tsx
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 
 const projectsRegistry = [
@@ -10,8 +11,8 @@ const projectsRegistry = [
   { slug: 'mathly',       name: 'Mathly',       owner: 'comfybear71', repo: 'mathly' },
   { slug: 'afl-edge',     name: 'AFL Edge',     owner: 'comfybear71', repo: 'AFL-EDGE' },
   { slug: 'budju',        name: 'Budju',        owner: 'comfybear71', repo: 'budju-xyz' },
-  // Bonus ones you might want later:
-  // { slug: 'comfymart', name: 'Comfymart', owner: 'comfybear71', repo: 'comfymart' },
+  { slug: 'comfymart',    name: 'comfymart',    owner: 'comfybear71', repo: 'comfymart' },
+  // Add any others from your registry as needed
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
@@ -27,22 +28,58 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
   const dependencies = pkg?.dependencies 
     ? Object.entries(pkg.dependencies) as [string, string][] 
     : [];
-  
   const devDependencies = pkg?.devDependencies 
     ? Object.entries(pkg.devDependencies) as [string, string][] 
     : [];
 
+  const githubUrl = `https://github.com/${project.owner}/${project.repo}`;
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8">
+      {/* Breadcrumb + Quick Actions */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 text-sm text-zinc-400">
+          <Link href="/projects" className="hover:text-emerald-400 flex items-center gap-1">
+            ← Projects
+          </Link>
+          <span className="text-zinc-500">/</span>
+          <span className="text-emerald-400 font-medium">{project.name} Console</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <a
+            href={githubUrl}
+            target="_blank"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2 transition-colors"
+          >
+            <span>GitHub</span>
+          </a>
+          <a
+            href="https://vercel.com/dashboard"
+            target="_blank"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2 transition-colors"
+          >
+            <span>Vercel</span>
+          </a>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 rounded-xl text-sm font-medium transition-colors"
+          >
+            Refresh Data
+          </button>
+        </div>
+      </div>
+
       <h1 className="text-2xl md:text-3xl font-bold mb-1 flex items-center gap-3">
         {project.name} <span className="text-emerald-400 text-lg md:text-xl">Console</span>
       </h1>
-      <p className="text-zinc-500 mb-6 text-sm md:text-base">
+      <p className="text-zinc-500 mb-8 text-sm md:text-base">
         GitHub Intelligence • {project.owner}/{project.repo}
       </p>
 
+      {/* Rest of your existing cards (Releases, Dependencies, Commits) unchanged */}
       <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Releases */}
+        {/* Releases card - unchanged from before */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
           <div className="space-y-4">
@@ -60,7 +97,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Dependencies */}
+        {/* Dependencies card - unchanged */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6 flex flex-col">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📦 Dependencies</h3>
           {pkg ? (
@@ -97,7 +134,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           )}
         </div>
 
-        {/* Recent Commits */}
+        {/* Commits card - unchanged */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-[420px] overflow-auto pr-2">
