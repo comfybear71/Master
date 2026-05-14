@@ -219,4 +219,26 @@ export async function getPackageJson(owner: string, repo: string) {
   }
 }
 
+export async function getFileContent(owner: string, repo: string, path: string): Promise<string | null> {
+  try {
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=master`,
+      { headers, next: { revalidate: 3600 } }
+    );
+    if (!response.ok) {
+      const mainRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=main`,
+        { headers, next: { revalidate: 3600 } }
+      );
+      if (!mainRes.ok) return null;
+      const data = await mainRes.json();
+      return atob(data.content);
+    }
+    const data = await response.json();
+    return atob(data.content);
+  } catch {
+    return null;
+  }
+}
+
 export { GITHUB_USERNAME };

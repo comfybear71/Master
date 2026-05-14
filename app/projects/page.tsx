@@ -13,6 +13,7 @@ const REGISTERED_REPOS = [
   { repo: "comfybear71/glitch-app", name: "Glitch App", category: "marketing" as const, priority: 3, description: "AI social platform (frontend)" },
   { repo: "comfybear71/budju-xyz", name: "Budju", category: "trading" as const, priority: 4, description: "Trading platform" },
   { repo: "comfybear71/AFL-EDGE", name: "AFL Edge", category: "education" as const, priority: 5, description: "AFL predictions" },
+  { repo: "comfybear71/COMFYTV", name: "ComfyTV", category: "entertainment" as const, priority: 6, description: "IPTV streaming platform" },
 ];
 
 interface OnboardResult {

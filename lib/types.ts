@@ -4,7 +4,7 @@ export interface Project {
   repo: string;
   vercelProjectId: string;
   stack: string;
-  category: "ecommerce" | "trading" | "education" | "marketing" | "infrastructure" | "finance";
+  category: "ecommerce" | "trading" | "education" | "marketing" | "infrastructure" | "finance" | "entertainment";
   description: string;
   status: "active" | "paused" | "broken";
   liveUrl: string;
