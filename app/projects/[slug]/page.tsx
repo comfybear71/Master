@@ -64,9 +64,13 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           <a href="https://vercel.com/dashboard" target="_blank" className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2">
             Vercel
           </a>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 rounded-xl text-sm font-medium">
+          {/* Fixed Refresh - uses plain link instead of onClick */}
+          <a 
+            href={window.location.href} 
+            className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 rounded-xl text-sm font-medium transition-colors"
+          >
             Refresh
-          </button>
+          </a>
         </div>
       </div>
 
