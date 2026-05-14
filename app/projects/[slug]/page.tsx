@@ -6,7 +6,6 @@ import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 const projectsRegistry = [
   { slug: 'comfy-ai',   name: 'Comfy AI',   owner: 'comfybear71', repo: 'Comfy-AI' },
   { slug: 'aiglitch',   name: 'AIG!itch',   owner: 'comfybear71', repo: 'aiglitch' },
-  // Add more when ready
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
@@ -33,30 +32,17 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
 
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8">
-      <div className="mb-6">
-        <Link href="/projects" className="text-emerald-400 hover:underline flex items-center gap-1 text-sm">
-          ← Back to Projects
-        </Link>
-      </div>
+      <Link href="/projects" className="text-emerald-400 hover:underline flex items-center gap-1 text-sm mb-6">
+        ← Back to Projects
+      </Link>
 
       <h1 className="text-3xl font-bold mb-1">{project.name} Console</h1>
       <p className="text-zinc-500 mb-8">GitHub Intelligence • {project.owner}/{project.repo}</p>
 
-      {/* Simple Tabs */}
-      <div className="border-b border-zinc-800 mb-6">
-        <div className="flex gap-8 text-sm font-medium">
-          <div className="pb-3 border-b-2 border-emerald-400 text-emerald-400">Overview</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Dependencies</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Releases</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Blueprint</div>
-        </div>
-      </div>
-
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Overview Cards */}
+        {/* Releases */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
-          {/* ... your existing releases code ... */}
           <div className="space-y-4">
             {releases.length > 0 ? releases.map((rel: any) => (
               <div key={rel.id} className="p-4 bg-zinc-950 rounded-lg">
@@ -70,9 +56,9 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
+        {/* Dependencies */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📦 Dependencies</h3>
-          {/* ... your existing dependencies code ... */}
           {pkg ? (
             <div className="space-y-6 text-sm">
               {dependencies.length > 0 && (
@@ -108,7 +94,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
         {/* Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
-          {/* ... your existing commits code ... */}
           <div className="space-y-3 text-sm max-h-96 overflow-auto">
             {commits.map((c: any) => (
               <div key={c.sha} className="flex gap-3">
@@ -131,13 +116,13 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
               <ul className="space-y-1 text-zinc-400">
                 <li>• Next.js 14 + TypeScript + Tailwind</li>
                 <li>• MongoDB</li>
-                <li>• Grok / Claude integration</li>
+                <li>• Grok / Claude AI</li>
               </ul>
             </div>
             <div>
               <p className="text-emerald-400 font-medium mb-2">Key Services</p>
               <ul className="space-y-1 text-zinc-400">
-                <li>• GitHub + Vercel Deployments</li>
+                <li>• GitHub + Vercel</li>
                 <li>• Authentication (TBD)</li>
                 <li>• External APIs (TBD)</li>
               </ul>
