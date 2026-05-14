@@ -4,22 +4,23 @@ import Link from 'next/link';
 import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 
 const projectsRegistry = [
-  { slug: 'comfy-ai',     name: 'Comfy AI',     owner: 'comfybear71', repo: 'Comfy-AI' },
-  { slug: 'aig-litch',    name: 'AIG!itch',     owner: 'comfybear71', repo: 'aiglitch' },
-  { slug: 'glitch-app',   name: 'Glitch App',   owner: 'comfybear71', repo: 'glitch-app' },
-  { slug: 'togogo',       name: 'Togogo',       owner: 'comfybear71', repo: 'togogo' },
-  { slug: 'mathly',       name: 'Mathly',       owner: 'comfybear71', repo: 'mathly' },
-  { slug: 'afl-edge',     name: 'AFL Edge',     owner: 'comfybear71', repo: 'AFL-EDGE' },
-  { slug: 'budju',        name: 'Budju',        owner: 'comfybear71', repo: 'budju-xyz' },
-  { slug: 'comfymart',    name: 'comfymart',    owner: 'comfybear71', repo: 'comfymart' },
-  { slug: 'aiglitch-api', name: 'AIGlitch API', owner: 'comfybear71', repo: 'aiglitch-api' },
+  { slug: 'comfy-ai',      name: 'Comfy AI',      owner: 'comfybear71', repo: 'Comfy-AI' },
+  { slug: 'aig-litch',     name: 'AIG!itch',      owner: 'comfybear71', repo: 'aiglitch' },
+  { slug: 'glitch-app',    name: 'Glitch App',    owner: 'comfybear71', repo: 'glitch-app' },
+  { slug: 'togogo',        name: 'Togogo',        owner: 'comfybear71', repo: 'togogo' },
+  { slug: 'mathly',        name: 'Mathly',        owner: 'comfybear71', repo: 'mathly' },
+  { slug: 'budju',         name: 'Budju',         owner: 'comfybear71', repo: 'budju-xyz' },
+  { slug: 'master',        name: 'TheMaster',     owner: 'comfybear71', repo: 'Master' },
+  { slug: 'afl-edge',      name: 'AFL Edge',      owner: 'comfybear71', repo: 'AFL-EDGE' },
+  { slug: 'hkk',           name: 'Hkk',           owner: 'comfybear71', repo: 'Hkk' },
+  { slug: 'propfolio',     name: 'Propfolio',     owner: 'comfybear71', repo: 'propfolio' },
+  { slug: 'aiglitch-api',  name: 'AIGlitch API',  owner: 'comfybear71', repo: 'aiglitch-api' },
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
   if (!project) notFound();
 
-  // Safe data fetching
   let releases: any[] = [];
   let commits: any[] = [];
   let pkg: any = null;
@@ -57,24 +58,13 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
         </div>
 
         <div className="flex items-center gap-2">
-          <a 
-            href={githubUrl} 
-            target="_blank" 
-            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2 transition-colors"
-          >
+          <a href={githubUrl} target="_blank" className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2">
             GitHub
           </a>
-          <a 
-            href="https://vercel.com/dashboard" 
-            target="_blank" 
-            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2 transition-colors"
-          >
+          <a href="https://vercel.com/dashboard" target="_blank" className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 rounded-xl text-sm flex items-center gap-2">
             Vercel
           </a>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 rounded-xl text-sm font-medium transition-colors"
-          >
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 rounded-xl text-sm font-medium">
             Refresh
           </button>
         </div>
@@ -141,7 +131,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           )}
         </div>
 
-        {/* Recent Commits */}
+        {/* Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-[420px] overflow-auto pr-2">
