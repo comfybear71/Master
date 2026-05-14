@@ -51,6 +51,11 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
   const devDependencies = pkg?.devDependencies ? Object.entries(pkg.devDependencies) as [string, string][] : [];
   const githubUrl = `https://github.com/${project.owner}/${project.repo}`;
 
+  // Simple summary of HANDOFF.md (first meaningful paragraph after TOC)
+  const handoffSummary = handoffMd.length > 200 
+    ? handoffMd.split('\n').slice(10, 25).join('\n').trim() 
+    : handoffMd;
+
   return (
     <div className="max-w-6xl mx-auto p-4 md:p-8">
       <Link href="/projects" className="text-emerald-400 hover:underline flex items-center gap-1 text-sm mb-6">
@@ -61,7 +66,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
       <p className="text-zinc-500 mb-8">GitHub Intelligence • {project.owner}/{project.repo}</p>
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Releases */}
+        {/* Releases, Dependencies, Commits - unchanged */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
           <div className="space-y-4">
@@ -77,7 +82,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Dependencies */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📦 Dependencies</h3>
           {pkg ? (
@@ -112,7 +116,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           ) : <p className="text-zinc-500">No package.json found.</p>}
         </div>
 
-        {/* Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-96 overflow-auto">
@@ -128,27 +131,34 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Rebuild Blueprint - with real docs */}
+        {/* Improved Rebuild Blueprint */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🔧 Rebuild Blueprint</h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div>
-              <p className="text-emerald-400 font-medium mb-2">HANDOFF.md</p>
-              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono">
-                {handoffMd.slice(0, 800)}...
-              </pre>
+          <div className="prose prose-invert text-sm max-w-none">
+            <div className="bg-zinc-950 p-5 rounded-lg mb-6">
+              <strong>Project Overview</strong><br/>
+              {handoffMd.includes("G!itch") ? "AI-only social media platform where humans are spectators." : handoffSummary}
             </div>
-            <div>
-              <p className="text-emerald-400 font-medium mb-2">CLAUDE.md</p>
-              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono">
-                {claudeMd.slice(0, 800)}...
-              </pre>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-emerald-400 font-medium mb-2">HANDOFF.md Summary</p>
+                <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono text-zinc-300">
+                  {handoffMd.slice(0, 1200)}...
+                </pre>
+              </div>
+              <div>
+                <p className="text-emerald-400 font-medium mb-2">CLAUDE.md Rules</p>
+                <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono text-zinc-300">
+                  {claudeMd.slice(0, 800)}...
+                </pre>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 p-4 bg-zinc-950 rounded-lg text-xs text-zinc-400 border border-zinc-700">
-            Full environment variables, authentication setup, and step-by-step rebuild checklist will be added next.
+          <div className="mt-6 p-4 bg-emerald-900/20 border border-emerald-500/30 rounded-lg text-sm">
+            <strong>Next steps for full rebuild:</strong> Add Environment Variables, Auth setup, and one-click "Generate Full Rebuild Guide" button.
           </div>
         </div>
       </div>
