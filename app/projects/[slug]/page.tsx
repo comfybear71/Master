@@ -25,7 +25,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
       getPackageJson(project.owner, project.repo)
     ]);
 
-    // Pull docs safely
+    // Pull docs
     const handoffRes = await fetch(`https://api.github.com/repos/${project.owner}/${project.repo}/contents/HANDOFF.md`, {
       headers: { 'Accept': 'application/vnd.github.v3+json' },
       next: { revalidate: 3600 }
@@ -128,18 +128,27 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Rebuild Blueprint */}
+        {/* Rebuild Blueprint - with real docs */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🔧 Rebuild Blueprint</h3>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
             <div>
-              <p className="text-emerald-400 mb-2 font-medium">HANDOFF.md</p>
-              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-64 overflow-auto whitespace-pre-wrap">{handoffMd.slice(0, 800)}...</pre>
+              <p className="text-emerald-400 font-medium mb-2">HANDOFF.md</p>
+              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono">
+                {handoffMd.slice(0, 800)}...
+              </pre>
             </div>
             <div>
-              <p className="text-emerald-400 mb-2 font-medium">CLAUDE.md</p>
-              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-64 overflow-auto whitespace-pre-wrap">{claudeMd.slice(0, 800)}...</pre>
+              <p className="text-emerald-400 font-medium mb-2">CLAUDE.md</p>
+              <pre className="bg-zinc-950 p-4 rounded text-xs max-h-80 overflow-auto whitespace-pre-wrap font-mono">
+                {claudeMd.slice(0, 800)}...
+              </pre>
             </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-zinc-950 rounded-lg text-xs text-zinc-400 border border-zinc-700">
+            Full environment variables, authentication setup, and step-by-step rebuild checklist will be added next.
           </div>
         </div>
       </div>
