@@ -3,8 +3,15 @@ import { notFound } from 'next/navigation';
 import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 
 const projectsRegistry = [
-  { slug: 'comfy-ai', name: 'Comfy AI', owner: 'comfybear71', repo: 'Comfy-AI' },
-  // Add others when ready
+  { slug: 'comfy-ai',     name: 'Comfy AI',     owner: 'comfybear71', repo: 'Comfy-AI' },
+  { slug: 'aig-litch',    name: 'AIG!itch',     owner: 'comfybear71', repo: 'aiglitch' },
+  { slug: 'glitch-app',   name: 'Glitch App',   owner: 'comfybear71', repo: 'glitch-app' },
+  { slug: 'togogo',       name: 'Togogo',       owner: 'comfybear71', repo: 'togogo' },
+  { slug: 'mathly',       name: 'Mathly',       owner: 'comfybear71', repo: 'mathly' },
+  { slug: 'afl-edge',     name: 'AFL Edge',     owner: 'comfybear71', repo: 'AFL-EDGE' },
+  { slug: 'budju',        name: 'Budju',        owner: 'comfybear71', repo: 'budju-xyz' },
+  // Bonus ones you might want later:
+  // { slug: 'comfymart', name: 'Comfymart', owner: 'comfybear71', repo: 'comfymart' },
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
@@ -53,10 +60,9 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
-        {/* Dependencies - better mobile height */}
+        {/* Dependencies */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6 flex flex-col">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">📦 Dependencies</h3>
-          
           {pkg ? (
             <div className="flex-1 space-y-6 text-sm overflow-hidden flex flex-col">
               {dependencies.length > 0 && (
@@ -72,7 +78,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
                   </div>
                 </div>
               )}
-              
               {devDependencies.length > 0 && (
                 <div className="flex-1 flex flex-col min-h-0">
                   <p className="text-amber-400 text-xs mb-2">DEVELOPMENT ({devDependencies.length})</p>
@@ -92,7 +97,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           )}
         </div>
 
-        {/* Recent Commits - full width on mobile */}
+        {/* Recent Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 md:p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-[420px] overflow-auto pr-2">
