@@ -156,16 +156,17 @@ function detectFromPackageJson(content: string): string {
 }
 
 
-// Add at the end of lib/github.ts
+// === ADD / REPLACE at the very bottom of lib/github.ts ===
+
 export async function getReleases(owner: string, repo: string) {
   try {
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=5`, {
       headers: {
         'Accept': 'application/vnd.github.v3+json',
-        // Add your GitHub token here if you hit rate limits later: 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`
       },
-      next: { revalidate: 3600 } // cache for 1 hour
+      next: { revalidate: 3600 }
     });
+
     if (!response.ok) throw new Error('Failed to fetch releases');
     return await response.json();
   } catch (error) {
@@ -178,8 +179,9 @@ export async function getRecentCommits(owner: string, repo: string, count = 10) 
   try {
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=${count}`, {
       headers: { 'Accept': 'application/vnd.github.v3+json' },
-      next: { revalidate: 1800 } // cache for 30 mins
+      next: { revalidate: 1800 }
     });
+
     if (!response.ok) throw new Error('Failed to fetch commits');
     return await response.json();
   } catch (error) {
