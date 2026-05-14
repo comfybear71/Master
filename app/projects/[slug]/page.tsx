@@ -1,34 +1,64 @@
 // app/projects/[slug]/page.tsx
 import { notFound } from 'next/navigation';
+import { getReleases, getRecentCommits } from '@/lib/github';
 
 const projectsRegistry = [
-  { slug: 'comfy-ai', name: 'Comfy AI', repo: 'comfybear71/Comfy-AI' },
-  // Add your other projects here (example):
-  // { slug: 'aig-litch', name: 'AIG!itch', repo: 'comfybear71/AIGlitch' },
-  // { slug: 'togogo', name: 'Togogo', repo: 'comfybear71/Togogo' },
-  // ... etc
+  { slug: 'comfy-ai', name: 'Comfy AI', owner: 'comfybear71', repo: 'Comfy-AI' },
+  // Add others later
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
-  
   if (!project) notFound();
+
+  const [releases, commits] = await Promise.all([
+    getReleases(project.owner, project.repo),
+    getRecentCommits(project.owner, project.repo, 8)
+  ]);
 
   return (
     <div className="max-w-6xl mx-auto p-8">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
         {project.name} <span className="text-emerald-400 text-xl">Console</span>
       </h1>
-      
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
-        <p className="text-zinc-400">This is the new dedicated console for <strong>{project.name}</strong>.</p>
-        <p className="text-sm text-emerald-400 mt-4">Old projects list still works perfectly.</p>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Releases Card */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
+          {releases.length > 0 ? (
+            releases.map((rel: any) => (
+              <div key={rel.id} className="mb-4 p-4 bg-zinc-950 rounded-lg">
+                <div className="flex justify-between">
+                  <span className="font-mono text-emerald-400">{rel.tag_name}</span>
+                  <a href={rel.html_url} target="_blank" className="text-xs underline text-zinc-400">GitHub →</a>
+                </div>
+                <p className="text-sm mt-1 line-clamp-2">{rel.name || rel.body?.slice(0, 120)}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-zinc-500">No releases yet.</p>
+          )}
+        </div>
+
+        {/* Commits Card */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
+          <div className="space-y-3 text-sm">
+            {commits.map((c: any) => (
+              <div key={c.sha} className="flex gap-3 items-start">
+                <div className="font-mono text-xs text-zinc-500 w-16 shrink-0">{c.sha.slice(0,7)}</div>
+                <div className="flex-1 truncate pr-2">{c.commit.message}</div>
+                <div className="text-xs text-zinc-500 shrink-0 whitespace-nowrap">
+                  {new Date(c.commit.author.date).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* We'll add Releases & Commits here in the next step */}
-      <div className="mt-8 text-sm text-zinc-500">
-        Next: Add GitHub Releases + Recent Commits
-      </div>
+      <p className="text-xs text-zinc-500 mt-8">Old /projects list page still works perfectly.</p>
     </div>
   );
 }
