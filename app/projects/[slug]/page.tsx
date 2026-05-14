@@ -6,8 +6,8 @@ import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
 const projectsRegistry = [
   { slug: 'comfy-ai',   name: 'Comfy AI',   owner: 'comfybear71', repo: 'Comfy-AI' },
   { slug: 'aiglitch',   name: 'AIG!itch',   owner: 'comfybear71', repo: 'aiglitch' },
+  // Add more here one by one when ready
 ];
-
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
@@ -27,14 +27,8 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
     console.error('Data fetch failed for', project.slug, e);
   }
 
-  const dependencies = pkg?.dependencies 
-    ? Object.entries(pkg.dependencies) as [string, string][] 
-    : [];
-  
-  const devDependencies = pkg?.devDependencies 
-    ? Object.entries(pkg.devDependencies) as [string, string][] 
-    : [];
-
+  const dependencies = pkg?.dependencies ? Object.entries(pkg.dependencies) as [string, string][] : [];
+  const devDependencies = pkg?.devDependencies ? Object.entries(pkg.devDependencies) as [string, string][] : [];
   const githubUrl = `https://github.com/${project.owner}/${project.repo}`;
 
   return (
@@ -49,6 +43,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
       <p className="text-zinc-500 mb-8">GitHub Intelligence • {project.owner}/{project.repo}</p>
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        {/* Releases */}
         <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
           <div className="space-y-4">
@@ -64,13 +59,14 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           </div>
         </div>
 
+        {/* Dependencies */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📦 Dependencies</h3>
           {pkg ? (
             <div className="space-y-6 text-sm">
               {dependencies.length > 0 && (
                 <div>
-                  <p className="text-emerald-400 text-xs mb-2">PRODUCTION</p>
+                  <p className="text-emerald-400 text-xs mb-2">PRODUCTION ({dependencies.length})</p>
                   <div className="space-y-1 max-h-60 overflow-auto">
                     {dependencies.map(([name, version]) => (
                       <div key={name} className="flex justify-between bg-zinc-950 px-3 py-1 rounded">
@@ -83,7 +79,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
               )}
               {devDependencies.length > 0 && (
                 <div>
-                  <p className="text-amber-400 text-xs mb-2">DEVELOPMENT</p>
+                  <p className="text-amber-400 text-xs mb-2">DEVELOPMENT ({devDependencies.length})</p>
                   <div className="space-y-1 max-h-60 overflow-auto">
                     {devDependencies.map(([name, version]) => (
                       <div key={name} className="flex justify-between bg-zinc-950 px-3 py-1 rounded">
@@ -98,6 +94,7 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
           ) : <p className="text-zinc-500">No package.json found.</p>}
         </div>
 
+        {/* Commits */}
         <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
           <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
           <div className="space-y-3 text-sm max-h-96 overflow-auto">
@@ -110,6 +107,32 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* NEW: Rebuild Blueprint */}
+        <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🔧 Rebuild Blueprint</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div>
+              <p className="text-emerald-400 font-medium mb-2">Tech Stack</p>
+              <ul className="space-y-1 text-zinc-400">
+                <li>• Next.js + TypeScript + Tailwind</li>
+                <li>• MongoDB / Supabase</li>
+                <li>• Grok / Claude AI integration</li>
+              </ul>
+            </div>
+            <div>
+              <p className="text-emerald-400 font-medium mb-2">Key Services</p>
+              <ul className="space-y-1 text-zinc-400">
+                <li>• GitHub + Vercel</li>
+                <li>• Authentication (TBD)</li>
+                <li>• External APIs (TBD)</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-zinc-700 text-xs text-zinc-500">
+            Full rebuild guide + env vars coming in next update
           </div>
         </div>
       </div>
