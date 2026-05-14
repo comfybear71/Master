@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Project } from "@/lib/types";
 import ProjectCard from "@/components/dashboard/ProjectCard";
+import Link from 'next/link';
 
 const REGISTERED_REPOS = [
   { repo: "comfybear71/Master", name: "TheMaster", category: "infrastructure" as const, priority: 0, description: "Command & control platform — manages all projects, deployments, monitoring, social, and growth" },
@@ -355,42 +356,92 @@ export default function ProjectsPage() {
           <p className="text-slate-500 text-sm mb-4">Use &quot;Plug & Play&quot; to auto-onboard a repo, or &quot;Seed All Projects&quot; for your 6 registered repos.</p>
         </div>
       ) : (
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
-              <div key={String(p._id)} className="relative group">
-                {editingProject === String(p._id) ? (
-                  <div className="bg-base-card rounded-xl border border-accent/30 p-4 space-y-3">
-                    <input value={editData.name || ""} onChange={(e) => setEditData({ ...editData, name: e.target.value })} placeholder="Name" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" />
-                    <input value={editData.repo || ""} onChange={(e) => setEditData({ ...editData, repo: e.target.value })} placeholder="Repo (owner/repo)" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" />
-                    <select value={editData.category || "infrastructure"} onChange={(e) => setEditData({ ...editData, category: e.target.value as Project["category"] })} className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none">
-                      <option value="ecommerce">E-commerce</option>
-                      <option value="education">Education</option>
-                      <option value="marketing">Marketing</option>
-                      <option value="trading">Trading</option>
-                      <option value="infrastructure">Infrastructure</option>
-                      <option value="finance">Finance</option>
-                    </select>
-                    <input value={editData.description || ""} onChange={(e) => setEditData({ ...editData, description: e.target.value })} placeholder="Description" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" />
-                    <input value={editData.liveUrl || ""} onChange={(e) => setEditData({ ...editData, liveUrl: e.target.value })} placeholder="Live URL" className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" />
-                    <div className="flex gap-2">
-                      <button onClick={saveEdit} className="px-3 py-1.5 bg-accent text-black text-xs font-bold rounded hover:bg-accent/80">Save</button>
-                      <button onClick={() => setEditingProject(null)} className="px-3 py-1.5 text-slate-400 text-xs hover:text-white">Cancel</button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {projects.map((p) => {
+              // Generate slug from repo name (e.g. comfybear71/aiglitch → aiglitch)
+              const slug = p.repo.split('/')[1]
+                ?.toLowerCase()
+                .replace(/[^a-z0-9-]/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '') || 'unknown';
+
+              return (
+                <div key={String(p._id)} className="relative group">
+                  {editingProject === String(p._id) ? (
+                    <div className="bg-base-card rounded-xl border border-accent/30 p-4 space-y-3">
+                      <input 
+                        value={editData.name || ""} 
+                        onChange={(e) => setEditData({ ...editData, name: e.target.value })} 
+                        placeholder="Name" 
+                        className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" 
+                      />
+                      <input 
+                        value={editData.repo || ""} 
+                        onChange={(e) => setEditData({ ...editData, repo: e.target.value })} 
+                        placeholder="Repo (owner/repo)" 
+                        className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" 
+                      />
+                      <select 
+                        value={editData.category || "infrastructure"} 
+                        onChange={(e) => setEditData({ ...editData, category: e.target.value as Project["category"] })} 
+                        className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none"
+                      >
+                        <option value="ecommerce">E-commerce</option>
+                        <option value="education">Education</option>
+                        <option value="marketing">Marketing</option>
+                        <option value="trading">Trading</option>
+                        <option value="infrastructure">Infrastructure</option>
+                        <option value="finance">Finance</option>
+                      </select>
+                      <input 
+                        value={editData.description || ""} 
+                        onChange={(e) => setEditData({ ...editData, description: e.target.value })} 
+                        placeholder="Description" 
+                        className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none" 
+                      />
+                      <input 
+                        value={editData.liveUrl || ""} 
+                        onChange={(e) => setEditData({ ...editData, liveUrl: e.target.value })} 
+                        placeholder="Live URL" 
+                        className="w-full bg-base border border-slate-700 rounded px-3 py-2 text-sm text-white focus:border-accent focus:outline-none font-mono" 
+                      />
+                      <div className="flex gap-2">
+                        <button onClick={saveEdit} className="px-3 py-1.5 bg-accent text-black text-xs font-bold rounded hover:bg-accent/80">Save</button>
+                        <button onClick={() => setEditingProject(null)} className="px-3 py-1.5 text-slate-400 text-xs hover:text-white">Cancel</button>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    <div onClick={() => viewProjectDocs(p)} className="cursor-pointer">
-                      <ProjectCard project={p} />
-                    </div>
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex gap-1 transition-all">
-                      <button onClick={() => startEdit(p)} className="text-accent text-xs bg-base-card px-2 py-1 rounded border border-accent/20 hover:bg-accent/10">Edit</button>
-                      <button onClick={() => deleteProject(String(p._id))} className="text-danger text-xs bg-base-card px-2 py-1 rounded border border-danger/20 hover:bg-danger/10">Remove</button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
+                  ) : (
+                    <>
+                      <div onClick={() => viewProjectDocs(p)} className="cursor-pointer">
+                        <ProjectCard project={p} />
+                      </div>
+
+                      {/* Console Link + Controls */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 flex flex-col gap-1 transition-all z-10">
+                        <Link
+                          href={`/projects/${slug}`}
+                          className="px-4 py-1.5 bg-emerald-400 hover:bg-emerald-500 text-zinc-950 text-xs font-medium rounded border border-emerald-500/30 flex items-center justify-center gap-1"
+                        >
+                          Open Console →
+                        </Link>
+                        <button 
+                          onClick={() => startEdit(p)} 
+                          className="text-accent text-xs bg-base-card px-2 py-1 rounded border border-accent/20 hover:bg-accent/10"
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => deleteProject(String(p._id))} 
+                          className="text-danger text-xs bg-base-card px-2 py-1 rounded border border-danger/20 hover:bg-danger/10"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* Expanded Project Docs */}
