@@ -24,7 +24,6 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
   return (
     <div className="max-w-6xl mx-auto p-8">
       <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-        {project.name} <span className="text-emerald-400 text-xl">Console</span>
         <p className="text-zinc-500 mb-8">GitHub Intelligence • Live from comfybear71/{project.repo}</p>
       </h1>
 
