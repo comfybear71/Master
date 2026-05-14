@@ -1,18 +1,17 @@
 // app/projects/[slug]/page.tsx
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { getReleases, getRecentCommits, getPackageJson } from '@/lib/github';
+import ClientTabs from './ClientTabs';   // we'll create this small file next
 
 const projectsRegistry = [
   { slug: 'comfy-ai',   name: 'Comfy AI',   owner: 'comfybear71', repo: 'Comfy-AI' },
   { slug: 'aiglitch',   name: 'AIG!itch',   owner: 'comfybear71', repo: 'aiglitch' },
-  // Add more when ready
 ];
 
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
   if (!project) notFound();
 
+  // Fetch data on the server (fast & reliable)
   let releases: any[] = [];
   let commits: any[] = [];
   let pkg: any = null;
@@ -27,127 +26,5 @@ export default async function ProjectConsole({ params }: { params: { slug: strin
     console.error('Data fetch failed for', project.slug, e);
   }
 
-  const dependencies = pkg?.dependencies ? Object.entries(pkg.dependencies) as [string, string][] : [];
-  const devDependencies = pkg?.devDependencies ? Object.entries(pkg.devDependencies) as [string, string][] : [];
-  const githubUrl = `https://github.com/${project.owner}/${project.repo}`;
-
-  return (
-    <div className="max-w-6xl mx-auto p-4 md:p-8">
-      <div className="mb-6">
-        <Link href="/projects" className="text-emerald-400 hover:underline flex items-center gap-1 text-sm">
-          ← Back to Projects
-        </Link>
-      </div>
-
-      <h1 className="text-3xl font-bold mb-1">{project.name} Console</h1>
-      <p className="text-zinc-500 mb-8">GitHub Intelligence • {project.owner}/{project.repo}</p>
-
-      {/* Simple Tabs */}
-      <div className="border-b border-zinc-800 mb-6">
-        <div className="flex gap-8 text-sm font-medium">
-          <div className="pb-3 border-b-2 border-emerald-400 text-emerald-400">Overview</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Dependencies</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Releases</div>
-          <div className="pb-3 text-zinc-400 hover:text-white cursor-pointer">Blueprint</div>
-        </div>
-      </div>
-
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
-        {/* Overview Cards */}
-        <div className="lg:col-span-2 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🚀 Latest Releases</h3>
-          {/* ... your existing releases code ... */}
-          <div className="space-y-4">
-            {releases.length > 0 ? releases.map((rel: any) => (
-              <div key={rel.id} className="p-4 bg-zinc-950 rounded-lg">
-                <div className="flex justify-between">
-                  <span className="font-mono text-emerald-400">{rel.tag_name}</span>
-                  <a href={rel.html_url} target="_blank" className="text-xs underline">GitHub →</a>
-                </div>
-                <p className="text-sm mt-2 text-zinc-300">{rel.name || rel.body}</p>
-              </div>
-            )) : <p className="text-zinc-500">No releases found.</p>}
-          </div>
-        </div>
-
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">📦 Dependencies</h3>
-          {/* ... your existing dependencies code ... */}
-          {pkg ? (
-            <div className="space-y-6 text-sm">
-              {dependencies.length > 0 && (
-                <div>
-                  <p className="text-emerald-400 text-xs mb-2">PRODUCTION ({dependencies.length})</p>
-                  <div className="space-y-1 max-h-60 overflow-auto">
-                    {dependencies.map(([name, version]) => (
-                      <div key={name} className="flex justify-between bg-zinc-950 px-3 py-1 rounded">
-                        <span>{name}</span>
-                        <span className="font-mono text-zinc-400">{version}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {devDependencies.length > 0 && (
-                <div>
-                  <p className="text-amber-400 text-xs mb-2">DEVELOPMENT ({devDependencies.length})</p>
-                  <div className="space-y-1 max-h-60 overflow-auto">
-                    {devDependencies.map(([name, version]) => (
-                      <div key={name} className="flex justify-between bg-zinc-950 px-3 py-1 rounded">
-                        <span>{name}</span>
-                        <span className="font-mono text-zinc-400">{version}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : <p className="text-zinc-500">No package.json found.</p>}
-        </div>
-
-        {/* Commits */}
-        <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4">📜 Recent Commits</h3>
-          {/* ... your existing commits code ... */}
-          <div className="space-y-3 text-sm max-h-96 overflow-auto">
-            {commits.map((c: any) => (
-              <div key={c.sha} className="flex gap-3">
-                <div className="font-mono text-xs text-zinc-500 w-16">{c.sha.slice(0,7)}</div>
-                <div className="flex-1">{c.commit.message}</div>
-                <div className="text-xs text-zinc-500 whitespace-nowrap">
-                  {new Date(c.commit.author.date).toLocaleDateString()}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Rebuild Blueprint */}
-        <div className="lg:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6">
-          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">🔧 Rebuild Blueprint</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div>
-              <p className="text-emerald-400 font-medium mb-2">Core Stack</p>
-              <ul className="space-y-1 text-zinc-400">
-                <li>• Next.js 14 + TypeScript + Tailwind</li>
-                <li>• MongoDB</li>
-                <li>• Grok / Claude integration</li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-emerald-400 font-medium mb-2">Key Services</p>
-              <ul className="space-y-1 text-zinc-400">
-                <li>• GitHub + Vercel Deployments</li>
-                <li>• Authentication (TBD)</li>
-                <li>• External APIs (TBD)</li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-6 p-4 bg-zinc-950 rounded-lg text-xs text-zinc-400">
-            Full env vars, auth flow, and step-by-step rebuild guide coming next.
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <ClientTabs project={project} releases={releases} commits={commits} pkg={pkg} />;
 }
