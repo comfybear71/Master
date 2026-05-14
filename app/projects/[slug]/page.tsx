@@ -8,6 +8,7 @@ const projectsRegistry = [
   { slug: 'aiglitch',   name: 'AIG!itch',   owner: 'comfybear71', repo: 'aiglitch' },
 ];
 
+
 export default async function ProjectConsole({ params }: { params: { slug: string } }) {
   const project = projectsRegistry.find(p => p.slug === params.slug);
   if (!project) notFound();
